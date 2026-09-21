@@ -1,21 +1,23 @@
-# Test2
-import sys
-import importlib.util
+import requests
 
-print("Python :", sys.version)
-print()
+url = "https://www.eia.gov"
 
-libraries = [
-    "pandas",
-    "numpy",
-    "requests",
-    "matplotlib",
-    "plotly",
-    "yfinance",
-    "bs4",
-    "selenium",
-]
+try:
 
-for lib in libraries:
-    available = importlib.util.find_spec(lib) is not None
-    print(f"{lib:12} : {'OK' if available else 'NON'}")
+    response = requests.get(url, timeout=10)
+
+    print("Connexion EIA :", response.status_code)
+
+    if response.ok:
+
+        print("✅ Python peut accéder aux données externes")
+
+    else:
+
+        print("⚠️ EIA accessible mais réponse :", response.status_code)
+
+except Exception as e:
+
+    print("❌ Connexion impossible")
+
+    print(e)
