@@ -2,61 +2,87 @@ import ctypes
 from ctypes import wintypes
 import time
 
-# Important : rendre Python DPI-aware
-ctypes.windll.shcore.SetProcessDpiAwareness(2)
+user32 = ctypes.WinDLL("user32", use_last_error=True)
 
-user32 = ctypes.windll.user32
+# Types exacts des fonctions Windows
+user32.SetWindowPos.argtypes = [
+    wintypes.HWND,
+    wintypes.HWND,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    wintypes.UINT
+]
+user32.SetWindowPos.restype = wintypes.BOOL
 
-CALLBACK = ctypes.WINFUNCTYPE(
-    ctypes.c_bool,
+user32.ShowWindow.argtypes = [
+    wintypes.HWND,
+    ctypes.c_int
+]
+user32.ShowWindow.restype = wintypes.BOOL
+
+user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+user32.GetWindowTextLengthW.restype = ctypes.c_int
+
+user32.GetWindowTextW.argtypes = [
+    wintypes.HWND,
+    wintypes.LPWSTR,
+    ctypes.c_int
+]
+user32.GetWindowTextW.restype = ctypes.c_int
+
+edge_windows = []
+
+WNDENUMPROC = ctypes.WINFUNCTYPE(
+    wintypes.BOOL,
     wintypes.HWND,
     wintypes.LPARAM
 )
 
-edge_windows = []
+def callback(hwnd, lparam):
 
-def callback(hwnd, lParam):
-    if user32.IsWindowVisible(hwnd):
+    length = user32.GetWindowTextLengthW(hwnd)
 
-        length = user32.GetWindowTextLengthW(hwnd)
+    if length > 0:
+        buffer = ctypes.create_unicode_buffer(length + 1)
+        user32.GetWindowTextW(hwnd, buffer, length + 1)
 
-        if length > 0:
-            title = ctypes.create_unicode_buffer(length + 1)
-            user32.GetWindowTextW(hwnd, title, length + 1)
-
-            if "Microsoft Edge" in title.value:
-                edge_windows.append(hwnd)
-                print("EDGE :", hwnd, title.value)
+        if "Microsoft Edge" in buffer.value:
+            edge_windows.append(hwnd)
+            print("Trouvé :", hwnd, buffer.value)
 
     return True
 
-user32.EnumWindows(CALLBACK(callback), 0)
+user32.EnumWindows(WNDENUMPROC(callback), 0)
 
 if edge_windows:
 
     hwnd = edge_windows[0]
 
-    print("Je déplace la fenêtre dans 3 secondes...")
+    print("Déplacement dans 3 secondes...")
     time.sleep(3)
 
-    # Enlève maximisation éventuelle
+    # Restaurer la fenêtre
     user32.ShowWindow(hwnd, 9)
-
     time.sleep(1)
 
-    # TEST :
-    # écran DROIT, petite fenêtre très visible
+    ctypes.set_last_error(0)
+
     result = user32.SetWindowPos(
         hwnd,
-        0,
-        200,     # x
-        150,     # y
-        800,     # largeur
-        600,     # hauteur
-        0x0040
+        None,
+        200,
+        150,
+        800,
+        600,
+        0
     )
 
-    print("Résultat SetWindowPos :", result)
+    error = ctypes.get_last_error()
+
+    print("SetWindowPos =", result)
+    print("Windows error =", error)
 
 else:
     print("Aucune fenêtre Edge trouvée")
