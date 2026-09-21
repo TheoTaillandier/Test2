@@ -1,12 +1,53 @@
 import ctypes
 
+from ctypes import wintypes
+
 user32 = ctypes.windll.user32
 
-print("Largeur écran principal :", user32.GetSystemMetrics(0))
-print("Hauteur écran principal :", user32.GetSystemMetrics(1))
+MONITORENUMPROC = ctypes.WINFUNCTYPE(
 
-print("Largeur totale bureau :", user32.GetSystemMetrics(78))
-print("Hauteur totale bureau :", user32.GetSystemMetrics(79))
+    ctypes.c_int,
 
-print("Position gauche bureau :", user32.GetSystemMetrics(76))
-print("Position haute bureau :", user32.GetSystemMetrics(77))
+    wintypes.HMONITOR,
+
+    wintypes.HDC,
+
+    ctypes.POINTER(wintypes.RECT),
+
+    wintypes.LPARAM
+
+)
+
+def callback(hMonitor, hdcMonitor, lprcMonitor, dwData):
+
+    r = lprcMonitor.contents
+
+    print(
+
+        f"Écran : "
+
+        f"left={r.left}, top={r.top}, "
+
+        f"right={r.right}, bottom={r.bottom}, "
+
+        f"largeur={r.right-r.left}, "
+
+        f"hauteur={r.bottom-r.top}"
+
+    )
+
+    return 1
+
+callback_func = MONITORENUMPROC(callback)
+
+user32.EnumDisplayMonitors(
+
+    0,
+
+    None,
+
+    callback_func,
+
+    0
+
+)
