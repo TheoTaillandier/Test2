@@ -6,7 +6,7 @@ from ctypes import wintypes
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
 # --------------------------------------------------
-# 1. OUVERTURE DES 4 FENÊTRES
+# 1. OUVRIR LES FENÊTRES
 # --------------------------------------------------
 
 pages = [
@@ -20,49 +20,95 @@ for page in pages:
     subprocess.Popen([EDGE, "--new-window", page])
     time.sleep(2)
 
-# Laisse Edge finir de charger
 time.sleep(5)
 
-
 # --------------------------------------------------
-# 2. RÉCUPÉRATION DES FENÊTRES EDGE
+# 2. OUTILS WINDOWS
 # --------------------------------------------------
 
 user32 = ctypes.windll.user32
 
-EnumWindows = user32.EnumWindows
+SW_RESTORE = 9
+SW_MAXIMIZE = 3
+
+def get_title(hwnd):
+    length = user32.GetWindowTextLengthW(hwnd)
+
+    if length == 0:
+        return ""
+
+    buffer = ctypes.create_unicode_buffer(length + 1)
+    user32.GetWindowTextW(hwnd, buffer, length + 1)
+
+    return buffer.value
+
+
+def move_window(hwnd, x, y, width, height):
+    # Important si Edge est actuellement maximisé
+    user32.ShowWindow(hwnd, SW_RESTORE)
+    time.sleep(0.3)
+
+    user32.MoveWindow(
+        hwnd,
+        x,
+        y,
+        width,
+        height,
+        True
+    )
+
+
+# --------------------------------------------------
+# 3. TROUVER ET POSITIONNER LES FENÊTRES
+# --------------------------------------------------
+
 EnumWindowsProc = ctypes.WINFUNCTYPE(
     ctypes.c_bool,
     wintypes.HWND,
     wintypes.LPARAM
 )
 
-GetWindowTextLength = user32.GetWindowTextLengthW
-GetWindowText = user32.GetWindowTextW
-IsWindowVisible = user32.IsWindowVisible
-
-windows = []
-
 def callback(hwnd, lParam):
 
-    if IsWindowVisible(hwnd):
+    if not user32.IsWindowVisible(hwnd):
+        return True
 
-        length = GetWindowTextLength(hwnd)
+    title = get_title(hwnd)
 
-        if length > 0:
-            buffer = ctypes.create_unicode_buffer(length + 1)
-            GetWindowText(hwnd, buffer, length + 1)
+    if "Microsoft Edge" not in title:
+        return True
 
-            title = buffer.value
+    title_lower = title.lower()
 
-            if "Microsoft Edge" in title:
-                windows.append((hwnd, title))
+    print("Trouvé :", title)
+
+    # TRADINGVIEW -> ÉCRAN DROIT COMPLET
+    if "tradingview" in title_lower:
+        move_window(hwnd, 0, 0, 1920, 1080)
+        user32.ShowWindow(hwnd, SW_MAXIMIZE)
+
+    # REUTERS -> HAUT GAUCHE
+    elif "reuters" in title_lower or "energy" in title_lower:
+        move_window(hwnd, -1920, 0, 960, 540)
+
+    # CALENDRIER -> HAUT DROIT DE L'ÉCRAN GAUCHE
+    elif "economic calendar" in title_lower or "trading economics" in title_lower:
+        move_window(hwnd, -960, 0, 960, 540)
+
+    # EIA -> BAS GAUCHE
+    elif (
+        "petroleum" in title_lower
+        or "eia" in title_lower
+        or "energy information" in title_lower
+    ):
+        move_window(hwnd, -1920, 540, 960, 540)
 
     return True
 
-EnumWindows(EnumWindowsProc(callback), 0)
 
-print("\nFenêtres Edge trouvées :")
+user32.EnumWindows(
+    EnumWindowsProc(callback),
+    0
+)
 
-for hwnd, title in windows:
-    print(hwnd, title)
+print("\n✅ Morning Markets lancé")
