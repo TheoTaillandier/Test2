@@ -1,33 +1,15 @@
-import ctypes
-from ctypes import wintypes
+import subprocess
+import time
 
-user32 = ctypes.windll.user32
+EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
-MONITORENUMPROC = ctypes.WINFUNCTYPE(
-    ctypes.c_int,
-    wintypes.HMONITOR,
-    wintypes.HDC,
-    ctypes.POINTER(wintypes.RECT),
-    wintypes.LPARAM
-)
+pages = [
+    "https://www.tradingview.com/chart/",
+    "https://www.reuters.com/business/energy/",
+    "https://tradingeconomics.com/calendar",
+    "https://www.eia.gov/petroleum/supply/weekly/"
+]
 
-def callback(hMonitor, hdcMonitor, lprcMonitor, dwData):
-    r = lprcMonitor.contents
-
-    print(
-        f"Écran : "
-        f"left={r.left}, top={r.top}, "
-        f"right={r.right}, bottom={r.bottom}, "
-        f"largeur={r.right-r.left}, "
-        f"hauteur={r.bottom-r.top}"
-    )
-    return 1
-
-callback_func = MONITORENUMPROC(callback)
-
-user32.EnumDisplayMonitors(
-    0,
-    None,
-    callback_func,
-    0
-)
+for page in pages:
+    subprocess.Popen([EDGE, "--new-window", page])
+    time.sleep(1)
