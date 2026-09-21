@@ -1,15 +1,13 @@
-import requests
+import webbrowser
+import time
 
 sites = [
-    "https://www.google.com",
-    "https://www.tradingview.com",
-    "https://tradingeconomics.com",
+    "https://www.tradingview.com/chart/",
+    "https://www.reuters.com/business/energy/",
+    "https://tradingeconomics.com/calendar",
+    "https://www.eia.gov/petroleum/supply/weekly/"
 ]
 
 for site in sites:
-    try:
-        r = requests.get(site, timeout=5)
-        print(site, "->", r.status_code)
-    except Exception as e:
-        print(site, "-> BLOQUÉ")
-        print(type(e).__name__)
+    webbrowser.open_new(site)
+    time.sleep(1)
