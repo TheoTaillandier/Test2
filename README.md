@@ -1,178 +1,62 @@
-import subprocess
-import time
 import ctypes
 from ctypes import wintypes
+import time
 
-EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+# Important : rendre Python DPI-aware
+ctypes.windll.shcore.SetProcessDpiAwareness(2)
 
 user32 = ctypes.windll.user32
 
-SW_RESTORE = 9
-SW_MAXIMIZE = 3
+CALLBACK = ctypes.WINFUNCTYPE(
+    ctypes.c_bool,
+    wintypes.HWND,
+    wintypes.LPARAM
+)
 
-# --------------------------------------------------
-# Récupère toutes les fenêtres visibles
-# --------------------------------------------------
+edge_windows = []
 
-def get_windows():
+def callback(hwnd, lParam):
+    if user32.IsWindowVisible(hwnd):
 
-    result = set()
+        length = user32.GetWindowTextLengthW(hwnd)
 
-    CALLBACK = ctypes.WINFUNCTYPE(
-        ctypes.c_bool,
-        wintypes.HWND,
-        wintypes.LPARAM
-    )
+        if length > 0:
+            title = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(hwnd, title, length + 1)
 
-    def callback(hwnd, lParam):
+            if "Microsoft Edge" in title.value:
+                edge_windows.append(hwnd)
+                print("EDGE :", hwnd, title.value)
 
-        if user32.IsWindowVisible(hwnd):
-            result.add(hwnd)
+    return True
 
-        return True
+user32.EnumWindows(CALLBACK(callback), 0)
 
-    user32.EnumWindows(CALLBACK(callback), 0)
+if edge_windows:
 
-    return result
+    hwnd = edge_windows[0]
 
+    print("Je déplace la fenêtre dans 3 secondes...")
+    time.sleep(3)
 
-# --------------------------------------------------
-# Ouvre une NOUVELLE fenêtre Edge et récupère son HWND
-# --------------------------------------------------
+    # Enlève maximisation éventuelle
+    user32.ShowWindow(hwnd, 9)
 
-def open_edge(url):
+    time.sleep(1)
 
-    before = get_windows()
-
-    subprocess.Popen([
-        EDGE,
-        "--new-window",
-        url
-    ])
-
-    # Attend que la nouvelle fenêtre apparaisse
-    for _ in range(30):
-
-        time.sleep(0.5)
-
-        after = get_windows()
-
-        new_windows = after - before
-
-        for hwnd in new_windows:
-
-            length = user32.GetWindowTextLengthW(hwnd)
-
-            if length > 0:
-
-                buffer = ctypes.create_unicode_buffer(length + 1)
-
-                user32.GetWindowTextW(
-                    hwnd,
-                    buffer,
-                    length + 1
-                )
-
-                title = buffer.value
-
-                if "Microsoft Edge" in title:
-                    print("Trouvé :", title)
-                    return hwnd
-
-    print("Fenêtre Edge non trouvée")
-    return None
-
-
-# --------------------------------------------------
-# Déplacement
-# --------------------------------------------------
-
-def place(hwnd, x, y, width, height, maximize=False):
-
-    if hwnd is None:
-        return
-
-    user32.ShowWindow(hwnd, SW_RESTORE)
-
-    time.sleep(0.5)
-
-    user32.SetWindowPos(
+    # TEST :
+    # écran DROIT, petite fenêtre très visible
+    result = user32.SetWindowPos(
         hwnd,
         0,
-        x,
-        y,
-        width,
-        height,
+        200,     # x
+        150,     # y
+        800,     # largeur
+        600,     # hauteur
         0x0040
     )
 
-    if maximize:
-        user32.ShowWindow(hwnd, SW_MAXIMIZE)
+    print("Résultat SetWindowPos :", result)
 
-
-# ==================================================
-# TRADINGVIEW
-# écran DROIT
-# ==================================================
-
-tv = open_edge(
-    "https://www.tradingview.com/chart/"
-)
-
-place(
-    tv,
-    0, 0,
-    1920, 1080,
-    maximize=True
-)
-
-
-# ==================================================
-# REUTERS
-# écran GAUCHE — haut gauche
-# ==================================================
-
-reuters = open_edge(
-    "https://www.reuters.com/business/energy/"
-)
-
-place(
-    reuters,
-    -1920, 0,
-    960, 540
-)
-
-
-# ==================================================
-# CALENDAR
-# écran GAUCHE — haut droite
-# ==================================================
-
-calendar = open_edge(
-    "https://tradingeconomics.com/calendar"
-)
-
-place(
-    calendar,
-    -960, 0,
-    960, 540
-)
-
-
-# ==================================================
-# FUNDAMENTALS / EIA
-# écran GAUCHE — bas gauche
-# ==================================================
-
-eia = open_edge(
-    "https://www.eia.gov/petroleum/supply/weekly/"
-)
-
-place(
-    eia,
-    -1920, 540,
-    960, 540
-)
-
-
-print("Morning Markets prêt.")
+else:
+    print("Aucune fenêtre Edge trouvée")
