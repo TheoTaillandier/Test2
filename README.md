@@ -28,10 +28,11 @@ user32.SetWindowPos.restype = wintypes.BOOL
 
 
 # --------------------------------------------------
-# TROUVER LES FENÊTRES
+# TROUVER TOUTES LES FENÊTRES
 # --------------------------------------------------
 
 windows = []
+
 
 def callback(hwnd, lparam):
 
@@ -41,7 +42,6 @@ def callback(hwnd, lparam):
     length = user32.GetWindowTextLengthW(hwnd)
 
     if length > 0:
-
         title = ctypes.create_unicode_buffer(length + 1)
         user32.GetWindowTextW(hwnd, title, length + 1)
 
@@ -54,22 +54,30 @@ user32.EnumWindows(WNDENUMPROC(callback), 0)
 
 
 # --------------------------------------------------
-# PLACEMENT
+# PLACER TRADINGVIEW + REUTERS
 # --------------------------------------------------
 
 for hwnd, title in windows:
 
     title_lower = title.lower()
 
-    # TRADINGVIEW → écran commodity DROIT
+    # ==============================
+    # TRADINGVIEW
+    # ÉCRAN DROIT COMPLET
+    # ==============================
+
     if "tradingview" in title_lower:
 
-        print("TradingView trouvé :", title)
+        print("\nTRADINGVIEW TROUVÉ")
+        print("HWND :", hwnd)
+        print("Titre :", title)
 
         user32.ShowWindow(hwnd, 9)
-        time.sleep(0.5)
+        time.sleep(1)
 
-        user32.SetWindowPos(
+        ctypes.set_last_error(0)
+
+        result = user32.SetWindowPos(
             hwnd,
             None,
             0, 0,
@@ -77,15 +85,27 @@ for hwnd, title in windows:
             0
         )
 
-    # REUTERS → écran commodity GAUCHE / haut gauche
+        print("Résultat TradingView :", result)
+        print("Erreur Windows :", ctypes.get_last_error())
+
+
+    # ==============================
+    # REUTERS
+    # ÉCRAN GAUCHE / HAUT GAUCHE
+    # ==============================
+
     elif "reuters" in title_lower:
 
-        print("Reuters trouvé :", title)
+        print("\nREUTERS TROUVÉ")
+        print("HWND :", hwnd)
+        print("Titre :", title)
 
         user32.ShowWindow(hwnd, 9)
-        time.sleep(0.5)
+        time.sleep(1)
 
-        user32.SetWindowPos(
+        ctypes.set_last_error(0)
+
+        result = user32.SetWindowPos(
             hwnd,
             None,
             -1920, 0,
@@ -93,4 +113,10 @@ for hwnd, title in windows:
             0
         )
 
-print("Placement terminé.")
+        print("Résultat Reuters :", result)
+        print("Erreur Windows :", ctypes.get_last_error())
+
+
+print("\n--------------------------")
+print("PLACEMENT TERMINÉ")
+print("--------------------------")
