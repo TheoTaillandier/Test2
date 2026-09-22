@@ -5,7 +5,7 @@ import time
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 
 # --------------------------------------------------
-# TYPES WINDOWS
+# CONFIG WINDOWS API
 # --------------------------------------------------
 
 WNDENUMPROC = ctypes.WINFUNCTYPE(
@@ -23,12 +23,12 @@ user32.SetWindowPos.argtypes = [
     ctypes.c_int,
     wintypes.UINT
 ]
+
 user32.SetWindowPos.restype = wintypes.BOOL
 
 
 # --------------------------------------------------
-# TROUVER LES FENÊTRES EDGE PAR LEUR TITRE
-# (sans dépendre de "Microsoft Edge")
+# TROUVER LES FENÊTRES
 # --------------------------------------------------
 
 windows = []
@@ -45,48 +45,52 @@ def callback(hwnd, lparam):
         title = ctypes.create_unicode_buffer(length + 1)
         user32.GetWindowTextW(hwnd, title, length + 1)
 
-        text = title.value
-
-        # On exclut PyCharm et les fenêtres système
-        if (
-            text
-            and "morning_markets" not in text
-            and "Explorateur de fichiers" not in text
-            and "Excel" not in text
-            and "Paramètres" not in text
-        ):
-            windows.append((hwnd, text))
+        windows.append((hwnd, title.value))
 
     return True
 
 
 user32.EnumWindows(WNDENUMPROC(callback), 0)
 
-print("Fenêtres candidates :")
-
-for i, (hwnd, title) in enumerate(windows):
-    print(i, "|", hwnd, "|", title)
-
 
 # --------------------------------------------------
-# TEST
+# PLACEMENT
 # --------------------------------------------------
 
-if windows:
+for hwnd, title in windows:
 
-    hwnd = windows[0][0]
+    title_lower = title.lower()
 
-    print("\nTest déplacement :", windows[0][1])
-    time.sleep(3)
+    # TRADINGVIEW → écran commodity DROIT
+    if "tradingview" in title_lower:
 
-    user32.ShowWindow(hwnd, 9)
+        print("TradingView trouvé :", title)
 
-    user32.SetWindowPos(
-        hwnd,
-        None,
-        200,
-        150,
-        800,
-        600,
-        0
-    )
+        user32.ShowWindow(hwnd, 9)
+        time.sleep(0.5)
+
+        user32.SetWindowPos(
+            hwnd,
+            None,
+            0, 0,
+            1920, 1080,
+            0
+        )
+
+    # REUTERS → écran commodity GAUCHE / haut gauche
+    elif "reuters" in title_lower:
+
+        print("Reuters trouvé :", title)
+
+        user32.ShowWindow(hwnd, 9)
+        time.sleep(0.5)
+
+        user32.SetWindowPos(
+            hwnd,
+            None,
+            -1920, 0,
+            960, 540,
+            0
+        )
+
+print("Placement terminé.")
