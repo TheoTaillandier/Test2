@@ -22,34 +22,73 @@ URLS = {
 # COORDONNÉES DES ÉCRANS
 # ============================================================
 
-# ÉCRAN 1 = Teams
-# LEFT = -1920 / TOP = 993 / 1280x720
-# >>> LE SCRIPT N'Y TOUCHE PAS <<<
+# PETIT ÉCRAN
+# Teams uniquement
+# >>> LE SCRIPT N'Y TOUCHE JAMAIS <<<
 
-# ÉCRAN 2 = Intelligence commodities
-SCREEN_2_X = 0
-SCREEN_2_Y = 0
-SCREEN_2_W = 1920
-SCREEN_2_H = 1080
 
-# ÉCRAN 3 = TradingView
-SCREEN_3_X = 1920
-SCREEN_3_Y = 0
-SCREEN_3_W = 1920
-SCREEN_3_H = 1080
+# GRAND ÉCRAN GAUCHE
+# TradingView
+TRADINGVIEW_X = 0
+TRADINGVIEW_Y = 0
+TRADINGVIEW_W = 1920
+TRADINGVIEW_H = 1080
+
+
+# GRAND ÉCRAN DROITE
+# Intelligence commodities
+INTEL_X = 1920
+INTEL_Y = 0
+INTEL_W = 1920
+INTEL_H = 1080
+
+
+# Chaque quadrant fait 960 x 540
+
+REUTERS_POSITION = (
+    1920,   # x
+    0,      # y
+    960,    # largeur
+    540     # hauteur
+)
+
+CALENDAR_POSITION = (
+    2880,   # 1920 + 960
+    0,
+    960,
+    540
+)
+
+EIA_POSITION = (
+    1920,
+    540,
+    960,
+    540
+)
+
+# Bas droite :
+# x = 2880
+# y = 540
+# 960 x 540
+#
+# Réservé au futur dashboard Python
 
 
 # ============================================================
 # WINDOWS API
 # ============================================================
 
-user32 = ctypes.WinDLL("user32", use_last_error=True)
+user32 = ctypes.WinDLL(
+    "user32",
+    use_last_error=True
+)
 
 WNDENUMPROC = ctypes.WINFUNCTYPE(
     wintypes.BOOL,
     wintypes.HWND,
     wintypes.LPARAM
 )
+
 
 user32.SetWindowPos.argtypes = [
     wintypes.HWND,
@@ -81,7 +120,9 @@ def get_windows():
 
         if length > 0:
 
-            title = ctypes.create_unicode_buffer(length + 1)
+            title = ctypes.create_unicode_buffer(
+                length + 1
+            )
 
             user32.GetWindowTextW(
                 hwnd,
@@ -110,9 +151,14 @@ def get_windows():
 def move_window(hwnd, x, y, width, height):
 
     # Restaure la fenêtre si elle est maximisée
-    user32.ShowWindow(hwnd, 9)
+    user32.ShowWindow(
+        hwnd,
+        9
+    )
 
     time.sleep(0.3)
+
+    ctypes.set_last_error(0)
 
     result = user32.SetWindowPos(
         hwnd,
@@ -124,18 +170,28 @@ def move_window(hwnd, x, y, width, height):
         0
     )
 
-    return result
+    if result:
+        print("Déplacement OK")
+    else:
+        print(
+            "Erreur déplacement :",
+            ctypes.get_last_error()
+        )
 
 
 # ============================================================
-# OUVERTURE DES 4 FENÊTRES EDGE
+# OUVERTURE DU COCKPIT
 # ============================================================
 
-print("\n====================================")
-print("   MORNING COMMODITY COCKPIT")
-print("====================================\n")
+print()
+print("========================================")
+print("       MORNING COMMODITY COCKPIT")
+print("========================================")
+print()
 
-print("Ouverture des marchés...")
+print("Ouverture des pages...")
+print()
+
 
 for name, url in URLS.items():
 
@@ -149,20 +205,26 @@ for name, url in URLS.items():
         ]
     )
 
-    # Important pour laisser Edge créer une vraie fenêtre
+    # Laisse Edge créer la fenêtre
     time.sleep(2)
 
 
-print("\nAttente du chargement des pages...")
+# ============================================================
+# ATTENTE CHARGEMENT
+# ============================================================
+
+print()
+print("Chargement des pages...")
 
 time.sleep(6)
 
 
 # ============================================================
-# DÉTECTION + PLACEMENT
+# DÉTECTION DES FENÊTRES
 # ============================================================
 
 windows = get_windows()
+
 
 found = {
     "tradingview": False,
@@ -172,6 +234,10 @@ found = {
 }
 
 
+# ============================================================
+# PLACEMENT
+# ============================================================
+
 for hwnd, title in windows:
 
     t = title.lower()
@@ -179,20 +245,21 @@ for hwnd, title in windows:
 
     # --------------------------------------------------------
     # TRADINGVIEW
-    # ÉCRAN 3 COMPLET
+    # GRAND ÉCRAN GAUCHE COMPLET
     # --------------------------------------------------------
 
     if "tradingview" in t:
 
-        print("\nTradingView trouvé")
+        print()
+        print("TRADINGVIEW TROUVÉ")
         print(title)
 
         move_window(
             hwnd,
-            SCREEN_3_X,
-            SCREEN_3_Y,
-            SCREEN_3_W,
-            SCREEN_3_H
+            TRADINGVIEW_X,
+            TRADINGVIEW_Y,
+            TRADINGVIEW_W,
+            TRADINGVIEW_H
         )
 
         found["tradingview"] = True
@@ -200,20 +267,19 @@ for hwnd, title in windows:
 
     # --------------------------------------------------------
     # REUTERS
-    # ÉCRAN 2 - HAUT GAUCHE
+    # GRAND ÉCRAN DROITE
+    # HAUT GAUCHE
     # --------------------------------------------------------
 
     elif "reuters" in t:
 
-        print("\nReuters trouvé")
+        print()
+        print("REUTERS TROUVÉ")
         print(title)
 
         move_window(
             hwnd,
-            0,
-            0,
-            960,
-            540
+            *REUTERS_POSITION
         )
 
         found["reuters"] = True
@@ -221,7 +287,8 @@ for hwnd, title in windows:
 
     # --------------------------------------------------------
     # TRADING ECONOMICS
-    # ÉCRAN 2 - HAUT DROITE
+    # GRAND ÉCRAN DROITE
+    # HAUT DROITE
     # --------------------------------------------------------
 
     elif (
@@ -229,15 +296,13 @@ for hwnd, title in windows:
         or "economic calendar" in t
     ):
 
-        print("\nTrading Economics trouvé")
+        print()
+        print("CALENDAR TROUVÉ")
         print(title)
 
         move_window(
             hwnd,
-            960,
-            0,
-            960,
-            540
+            *CALENDAR_POSITION
         )
 
         found["calendar"] = True
@@ -245,7 +310,8 @@ for hwnd, title in windows:
 
     # --------------------------------------------------------
     # EIA
-    # ÉCRAN 2 - BAS GAUCHE
+    # GRAND ÉCRAN DROITE
+    # BAS GAUCHE
     # --------------------------------------------------------
 
     elif (
@@ -253,15 +319,13 @@ for hwnd, title in windows:
         or "eia" in t
     ):
 
-        print("\nEIA trouvé")
+        print()
+        print("EIA TROUVÉ")
         print(title)
 
         move_window(
             hwnd,
-            0,
-            540,
-            960,
-            540
+            *EIA_POSITION
         )
 
         found["eia"] = True
@@ -271,34 +335,47 @@ for hwnd, title in windows:
 # RÉSULTAT
 # ============================================================
 
-print("\n\n====================================")
-print("        RÉSULTAT DU COCKPIT")
-print("====================================")
+print()
+print()
+print("========================================")
+print("              RÉSULTAT")
+print("========================================")
+print()
+
 
 for name, status in found.items():
 
     if status:
-        print(f"[OK] {name}")
+        print("[OK]", name)
+
     else:
-        print(f"[NON TROUVÉ] {name}")
+        print("[NON TROUVÉ]", name)
 
 
-print("\nDisposition :")
-print("")
-print("ÉCRAN 2")
-print("+----------------+----------------+")
-print("| Reuters        | Calendar       |")
-print("+----------------+----------------+")
-print("| EIA            | Python futur   |")
-print("+----------------+----------------+")
-print("")
-print("ÉCRAN 3")
-print("+---------------------------------+")
-print("|          TRADINGVIEW            |")
-print("+---------------------------------+")
-print("")
-print("ÉCRAN 1 : Teams - non modifié")
-print("")
-print("====================================")
-print("       COCKPIT PRÊT")
-print("====================================")
+print()
+print("----------------------------------------")
+print()
+print("GRAND ÉCRAN GAUCHE")
+print()
+print("+--------------------------------------+")
+print("|                                      |")
+print("|             TRADINGVIEW              |")
+print("|                                      |")
+print("+--------------------------------------+")
+print()
+print("GRAND ÉCRAN DROITE")
+print()
+print("+------------------+-------------------+")
+print("| Reuters          | Calendar          |")
+print("|                  |                   |")
+print("+------------------+-------------------+")
+print("| EIA              | Python Dashboard  |")
+print("|                  | futur             |")
+print("+------------------+-------------------+")
+print()
+print("PETIT ÉCRAN : TEAMS")
+print("Aucune modification.")
+print()
+print("========================================")
+print("             COCKPIT PRÊT")
+print("========================================")
