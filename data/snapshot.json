@@ -1,0 +1,546 @@
+{
+  "generated_at": "2026-09-24T15:31:20+00:00",
+  "history": {
+    "oil_crude": [
+      {
+        "date": "2026-03-27",
+        "value": 461.636
+      },
+      {
+        "date": "2026-04-03",
+        "value": 464.717
+      },
+      {
+        "date": "2026-04-10",
+        "value": 463.804
+      },
+      {
+        "date": "2026-04-17",
+        "value": 465.729
+      },
+      {
+        "date": "2026-04-24",
+        "value": 459.495
+      },
+      {
+        "date": "2026-05-01",
+        "value": 457.182
+      },
+      {
+        "date": "2026-05-08",
+        "value": 452.876
+      },
+      {
+        "date": "2026-05-15",
+        "value": 445.013
+      },
+      {
+        "date": "2026-05-22",
+        "value": 441.686
+      },
+      {
+        "date": "2026-05-29",
+        "value": 433.712
+      },
+      {
+        "date": "2026-06-05",
+        "value": 426.485
+      },
+      {
+        "date": "2026-06-12",
+        "value": 418.222
+      },
+      {
+        "date": "2026-06-19",
+        "value": 412.134
+      },
+      {
+        "date": "2026-06-26",
+        "value": 408.359
+      },
+      {
+        "date": "2026-07-03",
+        "value": 411.357
+      },
+      {
+        "date": "2026-07-10",
+        "value": 409.665
+      },
+      {
+        "date": "2026-07-17",
+        "value": 411.675
+      },
+      {
+        "date": "2026-07-24",
+        "value": 404.508
+      },
+      {
+        "date": "2026-07-31",
+        "value": 406.987
+      },
+      {
+        "date": "2026-08-07",
+        "value": 424.41
+      },
+      {
+        "date": "2026-08-14",
+        "value": 428.815
+      },
+      {
+        "date": "2026-08-21",
+        "value": 428.91
+      },
+      {
+        "date": "2026-08-28",
+        "value": 424.46
+      },
+      {
+        "date": "2026-09-04",
+        "value": 424.069
+      },
+      {
+        "date": "2026-09-11",
+        "value": 423.429
+      },
+      {
+        "date": "2026-09-18",
+        "value": 426.398
+      }
+    ]
+  },
+  "metrics": [
+    {
+      "as_of": "2026-09-18",
+      "change": 2.969,
+      "comparison": "sur 1 semaine",
+      "detail": "",
+      "id": "oil_crude",
+      "label": "Stocks commerciaux de brut",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 426.398
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": 2.266,
+      "comparison": "sur 1 semaine",
+      "detail": "",
+      "id": "oil_cushing",
+      "label": "Stocks de Cushing",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 23.748
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": -2.093,
+      "comparison": "sur 1 semaine",
+      "detail": "",
+      "id": "oil_gulf",
+      "label": "Stocks de brut Gulf Coast",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 244.08
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": -1.686,
+      "comparison": "sur 1 semaine",
+      "detail": "",
+      "id": "oil_gasoline",
+      "label": "Stocks d’essence",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 206.046
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": -0.428,
+      "comparison": "sur 1 semaine",
+      "detail": "",
+      "id": "oil_distillate",
+      "label": "Stocks de distillats",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 107.431
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": 0.129,
+      "comparison": "sur 1 semaine",
+      "detail": "",
+      "id": "oil_jet",
+      "label": "Stocks de jet fuel",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 45.466
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": -0.405,
+      "comparison": "sur 1 semaine",
+      "detail": "",
+      "id": "oil_spr",
+      "label": "Réserve stratégique US",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 284.552
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": 53.0,
+      "comparison": "sur 1 semaine",
+      "detail": "+2.9 % vs moyenne 5 ans",
+      "id": "gas_us",
+      "label": "Stockage de gaz US · Lower 48",
+      "sector": "gas",
+      "source": "EIA WNGSR",
+      "unit": "Bcf",
+      "url": "https://ir.eia.gov/ngs/ngs.html",
+      "value": 3351.0
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": 20.0,
+      "comparison": "sur 1 semaine",
+      "detail": "+5.2 % vs moyenne 5 ans",
+      "id": "gas_east",
+      "label": "Stockage gaz · East US",
+      "sector": "gas",
+      "source": "EIA WNGSR",
+      "unit": "Bcf",
+      "url": "https://ir.eia.gov/ngs/ngs.html",
+      "value": 815.0
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": 25.0,
+      "comparison": "sur 1 semaine",
+      "detail": "+3.5 % vs moyenne 5 ans",
+      "id": "gas_midwest",
+      "label": "Stockage gaz · Midwest US",
+      "sector": "gas",
+      "source": "EIA WNGSR",
+      "unit": "Bcf",
+      "url": "https://ir.eia.gov/ngs/ngs.html",
+      "value": 959.0
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": 2.0,
+      "comparison": "sur 1 semaine",
+      "detail": "-1.7 % vs moyenne 5 ans",
+      "id": "gas_south",
+      "label": "Stockage gaz · South Central US",
+      "sector": "gas",
+      "source": "EIA WNGSR",
+      "unit": "Bcf",
+      "url": "https://ir.eia.gov/ngs/ngs.html",
+      "value": 1041.0
+    },
+    {
+      "as_of": "2025",
+      "change": null,
+      "comparison": "estimation annuelle",
+      "detail": "Repère structurel, pas un stock LME",
+      "id": "metal_copper",
+      "label": "Production minière cuivre · monde",
+      "sector": "metals",
+      "source": "USGS MCS 2026",
+      "unit": "Mt",
+      "url": "https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-copper.pdf",
+      "value": 23
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": -0.005,
+      "comparison": "sur 1 semaine",
+      "detail": "Débit quotidien moyen de la semaine",
+      "id": "oil_production",
+      "label": "Production de brut US",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl/j",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 13.939
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": -1.181,
+      "comparison": "sur 1 semaine",
+      "detail": "Débit quotidien moyen de la semaine",
+      "id": "oil_imports",
+      "label": "Importations de brut US",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl/j",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 5.877
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": -1.55,
+      "comparison": "sur 1 semaine",
+      "detail": "Débit quotidien moyen de la semaine",
+      "id": "oil_exports",
+      "label": "Exportations de brut US",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl/j",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 3.281
+    },
+    {
+      "as_of": "2026-09-18",
+      "change": -0.519,
+      "comparison": "sur 1 semaine",
+      "detail": "Débit quotidien moyen de la semaine",
+      "id": "oil_refinery",
+      "label": "Brut traité par les raffineries US",
+      "sector": "oil",
+      "source": "EIA WPSR",
+      "unit": "M bbl/j",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/",
+      "value": 16.811
+    },
+    {
+      "as_of": "2026-09",
+      "change": -213.0,
+      "comparison": "vs rapport précédent",
+      "detail": "Prévision de campagne, révisable",
+      "id": "ag_corn_output",
+      "label": "Production maïs US",
+      "sector": "agri",
+      "source": "USDA WASDE",
+      "unit": "M bu",
+      "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
+      "value": 15800.0
+    },
+    {
+      "as_of": "2026-09",
+      "change": -86.0,
+      "comparison": "vs rapport précédent",
+      "detail": "Prévision de campagne, révisable",
+      "id": "ag_corn_stocks",
+      "label": "Stocks finaux maïs US",
+      "sector": "agri",
+      "source": "USDA WASDE",
+      "unit": "M bu",
+      "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
+      "value": 1567.0
+    },
+    {
+      "as_of": "2026-09",
+      "change": 0.0,
+      "comparison": "vs rapport précédent",
+      "detail": "Prévision de campagne, révisable",
+      "id": "ag_corn_exports",
+      "label": "Exportations prévues maïs US",
+      "sector": "agri",
+      "source": "USDA WASDE",
+      "unit": "M bu",
+      "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
+      "value": 3275.0
+    },
+    {
+      "as_of": "2026-09",
+      "change": 16.0,
+      "comparison": "vs rapport précédent",
+      "detail": "Prévision de campagne, révisable",
+      "id": "ag_soy_output",
+      "label": "Production soja US",
+      "sector": "agri",
+      "source": "USDA WASDE",
+      "unit": "M bu",
+      "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
+      "value": 4535.0
+    },
+    {
+      "as_of": "2026-09",
+      "change": -10.0,
+      "comparison": "vs rapport précédent",
+      "detail": "Prévision de campagne, révisable",
+      "id": "ag_soy_stocks",
+      "label": "Stocks finaux soja US",
+      "sector": "agri",
+      "source": "USDA WASDE",
+      "unit": "M bu",
+      "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
+      "value": 310.0
+    },
+    {
+      "as_of": "2026-09",
+      "change": 25.0,
+      "comparison": "vs rapport précédent",
+      "detail": "Prévision de campagne, révisable",
+      "id": "ag_soy_exports",
+      "label": "Exportations prévues soja US",
+      "sector": "agri",
+      "source": "USDA WASDE",
+      "unit": "M bu",
+      "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
+      "value": 1685.0
+    },
+    {
+      "as_of": "2026-09",
+      "change": -2.56,
+      "comparison": "vs rapport précédent",
+      "detail": "Prévision de campagne, révisable",
+      "id": "ag_world_corn",
+      "label": "Stocks mondiaux de maïs",
+      "sector": "agri",
+      "source": "USDA WASDE",
+      "unit": "Mt",
+      "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
+      "value": 272.1
+    },
+    {
+      "as_of": "2026-09",
+      "change": 3.04,
+      "comparison": "vs rapport précédent",
+      "detail": "Prévision de campagne, révisable",
+      "id": "ag_world_wheat",
+      "label": "Stocks mondiaux de blé",
+      "sector": "agri",
+      "source": "USDA WASDE",
+      "unit": "Mt",
+      "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
+      "value": 276.29
+    },
+    {
+      "as_of": "2026-09",
+      "change": -0.94,
+      "comparison": "vs rapport précédent",
+      "detail": "Prévision de campagne, révisable",
+      "id": "ag_world_wheat_trade",
+      "label": "Commerce mondial de blé prévu",
+      "sector": "agri",
+      "source": "USDA WASDE",
+      "unit": "Mt",
+      "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
+      "value": 211.77
+    }
+  ],
+  "schema": 1,
+  "sources": {
+    "gas": {
+      "as_of": "2026-09-18",
+      "checked_at": "2026-09-24T15:31:20+00:00",
+      "status": "ok",
+      "url": "https://ir.eia.gov/ngs/ngs.html"
+    },
+    "gie": {
+      "message": "Clé personnelle GIE requise.",
+      "status": "needs_key",
+      "url": "https://agsi.gie.eu/"
+    },
+    "metals": {
+      "as_of": "2025",
+      "status": "structural",
+      "url": "https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports"
+    },
+    "news": {
+      "as_of": "2026-09-22",
+      "checked_at": "2026-09-24T15:31:20+00:00",
+      "status": "ok",
+      "url": "https://www.eia.gov/rss/todayinenergy.xml"
+    },
+    "oil": {
+      "as_of": "2026-09-18",
+      "checked_at": "2026-09-24T15:31:20+00:00",
+      "status": "ok",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/"
+    },
+    "oil_flows": {
+      "as_of": "2026-09-18",
+      "checked_at": "2026-09-24T15:31:20+00:00",
+      "status": "ok",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/"
+    },
+    "oil_history": {
+      "as_of": "2026-09-18",
+      "checked_at": "2026-09-24T15:31:20+00:00",
+      "published": "2026-09-23",
+      "status": "ok",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/"
+    },
+    "wasde": {
+      "as_of": "2026-09",
+      "checked_at": "2026-09-24T15:31:20+00:00",
+      "status": "ok",
+      "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt"
+    }
+  },
+  "stories": [
+    {
+      "date": "2026-09-22",
+      "source": "EIA · Today in Energy",
+      "summary": "Publicly traded companies represent a tiny share of the total number of companies producing crude oil and natural gas in the United States, but they make up a large share of U.S. production. In 2025, publicly traded companies accounted for just 2% of about 12,",
+      "title": "Public companies produce most U.S. crude oil and natural gas",
+      "url": "https://www.eia.gov/todayinenergy/detail.php?id=68184"
+    },
+    {
+      "date": "2026-09-18",
+      "source": "EIA · Today in Energy",
+      "summary": "The price of distillate fuel oil, often sold as diesel, is driven by the price of crude oil, retail margins, distribution costs, taxes, and crack spreads, the indicator we use for refining margins. Tight global supplies of distillate fuel oil and elevated crud",
+      "title": "What goes into diesel prices?",
+      "url": "https://www.eia.gov/todayinenergy/detail.php?id=68164"
+    },
+    {
+      "date": "2026-09-15",
+      "source": "EIA · Today in Energy",
+      "summary": "On August 28, 2026, Cheniere Energy, Inc., completed its Corpus Christi Liquefaction Stage 3 Project (CCL Stage 3) in Texas, taking custody and control of the seventh and last liquefied natural gas (LNG) train in the project.",
+      "title": "Corpus Christi LNG expansion makes facility the second-largest in the United States",
+      "url": "https://www.eia.gov/todayinenergy/detail.php?id=68144"
+    },
+    {
+      "date": "2026-09-10",
+      "source": "EIA · Today in Energy",
+      "summary": "We forecast U.S. crude oil production will average 13.8 million barrels per day (b/d) in 2026, surpassing the previous record of 13.7 million b/d set in 2025, in our latest Short-Term Energy Outlook (STEO).",
+      "title": "United States on track for record crude oil production in 2026",
+      "url": "https://www.eia.gov/todayinenergy/detail.php?id=68125"
+    },
+    {
+      "date": "2026-09-09",
+      "source": "EIA · Today in Energy",
+      "summary": "Low-cost Appalachian and Canadian natural gas supplies coupled with lower-than-usual regional consumption have pushed down natural gas prices at a major New England pricing hub in recent months to trade at a discount to the widely cited U.S. benchmark, Henry H",
+      "title": "New England natural gas prices have been trading near record discounts to Henry Hub",
+      "url": "https://www.eia.gov/todayinenergy/detail.php?id=68124"
+    },
+    {
+      "date": "2026-09-04",
+      "source": "EIA · Today in Energy",
+      "summary": "What are crack spreads and why are they elevated? Crack spreads are indicators of the profitability of refining crude oil into petroleum products such as gasoline and diesel. One common crack spread is calculated by subtracting the spot market price of a gallo",
+      "title": "Elevated crack spreads and crude oil prices contribute to higher prices at the pump",
+      "url": "https://www.eia.gov/todayinenergy/detail.php?id=68104"
+    },
+    {
+      "date": "2026-09-03",
+      "source": "EIA · Today in Energy",
+      "summary": "Sustained high temperatures have contributed to persistently high electricity demand in the Electric Reliability Council of Texas (ERCOT), the regional transmission organization for most of the state.",
+      "title": "Weekly average load in ERCOT continues near record high",
+      "url": "https://www.eia.gov/todayinenergy/detail.php?id=68084"
+    },
+    {
+      "date": "2026-09-01",
+      "source": "EIA · Today in Energy",
+      "summary": "U.S. liquefied natural gas (LNG) exports averaged 17.4 billion cubic feet per day (Bcf/d) in the first six months of the year, 23% more than the same period in 2025, according to our Natural Gas Monthly. In our latest Short-Term Energy Outlook, we estimate U.S",
+      "title": "U.S. LNG exports rose 23% in the first half of 2026 because of higher capacity",
+      "url": "https://www.eia.gov/todayinenergy/detail.php?id=68064"
+    }
+  ]
+}
