@@ -1,58 +1,623 @@
 <!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Commodity Cockpit — Marchés & Physique</title>
-  <style>
-    :root{color-scheme:dark;--bg:#08110e;--card:#111d19;--line:#294138;--fg:#edf5ef;--muted:#9fb4a9;--green:#59d5a4}
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:13px Arial,sans-serif}a{color:var(--green);text-decoration:none}a:hover{text-decoration:underline}button{font:inherit;cursor:pointer}
-    header{height:62px;padding:0 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}header strong{font-size:17px}.nav{display:flex;gap:5px}.nav button{color:var(--muted);background:transparent;border:1px solid transparent;border-radius:5px;padding:8px 15px}.nav button.active{background:#1b3328;color:var(--fg);border-color:var(--line)}
-    .page{display:none}.page.active{display:block}.grid{height:calc(100vh - 62px);min-height:720px;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(360px,1fr);gap:12px;padding:12px}.right{min-height:0;display:grid;grid-template-rows:minmax(400px,1fr) 280px;gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:7px;overflow:hidden;min-height:0}.chart,.watch,.calendar{display:flex;flex-direction:column}.bar{height:48px;flex:none;padding:0 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.bar h2{font-size:13px;margin:0}.bar span,.note{color:var(--muted);font-size:11px}.widget{flex:1;min-height:0}.tradingview-widget-container,.tradingview-widget-container__widget{width:100%;height:100%}
-    .watch-body{overflow:auto;padding:0 12px 12px}.public-quotes{height:180px;border-bottom:1px solid var(--line)}.group{margin-top:13px;color:var(--green);font-size:10px;letter-spacing:.12em;font-weight:bold}.row{display:grid;grid-template-columns:minmax(0,1fr) 92px;align-items:center;min-height:36px;border-bottom:1px solid #24372e;gap:6px}.row a:first-child{color:var(--fg);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.row a:last-child{text-align:right;font-size:11px}.watch-help{color:var(--muted);font-size:11px;line-height:1.45;margin:12px 0}
-    .physical{max-width:1400px;margin:auto;padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:14px}.physical .card{padding:18px}.physical h2{font-size:15px;margin:0 0 10px}.physical p{line-height:1.5;color:var(--muted);margin:0 0 14px}.link-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.link-grid a{padding:11px;border:1px solid var(--line);border-radius:5px;background:#172920;font-size:12px}.theme{padding:11px 0;border-bottom:1px solid var(--line)}.theme strong{display:block;font-size:12px;margin-bottom:4px}.theme span{font-size:11px;color:var(--muted);line-height:1.4}.disclaimer{grid-column:1/-1;color:var(--muted);font-size:11px}
-    @media(max-width:920px){.grid{height:auto;grid-template-columns:1fr}.chart{height:620px}.right{grid-template-columns:1fr 1fr;grid-template-rows:500px}.physical{grid-template-columns:1fr}}@media(max-width:650px){.grid{display:block;padding:8px}.chart{height:500px;margin-bottom:10px}.right{display:flex;flex-direction:column}.watch{height:440px;margin-bottom:10px}.calendar{height:330px}.physical{padding:8px}.link-grid{grid-template-columns:1fr 1fr}header strong{font-size:14px}.nav button{padding:7px 8px}}
-  </style>
-</head>
-<body>
-  <header><strong>Commodity Cockpit</strong><nav class="nav" aria-label="Navigation"><button class="active" data-page="markets">Marchés</button><button data-page="physical">Physique</button></nav></header>
-  <div class="page active" id="markets">
-    <main class="grid">
-      <section class="card chart"><div class="bar"><h2>Brent · prix indicatif</h2><a href="https://www.tradingview.com/symbols/UKOIL/" target="_blank" rel="noopener noreferrer">TradingView ↗</a></div><div class="widget">
-        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>{"autosize":true,"symbol":"TVC:UKOIL","interval":"60","timezone":"Europe/Paris","theme":"dark","style":"1","locale":"en","allow_symbol_change":true,"hide_top_toolbar":false,"support_host":"https://www.tradingview.com"}</script></div>
-      </div></section>
-      <aside class="right">
-        <section class="card watch"><div class="bar"><h2>À surveiller</h2><span>Cotations indicatives et contrats exacts ↗</span></div><div class="public-quotes"><div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js" async>{"width":"100%","height":"100%","symbolsGroups":[{"name":"Repères publics","symbols":[{"name":"TVC:UKOIL","displayName":"Brent indicatif"},{"name":"TVC:USOIL","displayName":"WTI indicatif"},{"name":"FX:EURUSD","displayName":"EUR/USD"},{"name":"TVC:DXY","displayName":"DXY"}]}],"showSymbolLogo":false,"isTransparent":true,"colorTheme":"dark","locale":"en"}</script></div></div><div class="watch-body">
-          <p class="watch-help">Les futures de ta photo s'affichent sur TradingView, mais plusieurs sont interdits dans les widgets externes. Leurs cours et variations s'ouvrent donc directement sur TradingView.</p>
-          <div class="group">MACRO</div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/EURUSD/" target="_blank" rel="noopener noreferrer">EUR/USD</a><a href="https://www.tradingview.com/symbols/EURUSD/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/TVC-DXY/" target="_blank" rel="noopener noreferrer">DXY</a><a href="https://www.tradingview.com/symbols/TVC-DXY/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/CME_MINI-ES1%21/" target="_blank" rel="noopener noreferrer">S&P 500 futures</a><a href="https://www.tradingview.com/symbols/CME_MINI-ES1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="group">ENERGY</div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/ICEEUR-BRN1%21/" target="_blank" rel="noopener noreferrer">Brent · BRN1!</a><a href="https://www.tradingview.com/symbols/ICEEUR-BRN1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/NYMEX-CL1%21/" target="_blank" rel="noopener noreferrer">WTI · CL1!</a><a href="https://www.tradingview.com/symbols/NYMEX-CL1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/ICEEUR-TTF1%21/" target="_blank" rel="noopener noreferrer">TTF · TTF1!</a><a href="https://www.tradingview.com/symbols/ICEEUR-TTF1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/NYMEX-NG1%21/" target="_blank" rel="noopener noreferrer">US gas · NG1!</a><a href="https://www.tradingview.com/symbols/NYMEX-NG1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="group">METALS</div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/COMEX-GC1%21/" target="_blank" rel="noopener noreferrer">Gold · GC1!</a><a href="https://www.tradingview.com/symbols/COMEX-GC1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/COMEX-HG1%21/" target="_blank" rel="noopener noreferrer">Copper · HG1!</a><a href="https://www.tradingview.com/symbols/COMEX-HG1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/COMEX-ALI1%21/" target="_blank" rel="noopener noreferrer">Aluminium · ALI1!</a><a href="https://www.tradingview.com/symbols/COMEX-ALI1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="group">AGRI & SOFTS</div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/CBOT-ZW1%21/" target="_blank" rel="noopener noreferrer">Wheat · ZW1!</a><a href="https://www.tradingview.com/symbols/CBOT-ZW1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/CBOT-ZC1%21/" target="_blank" rel="noopener noreferrer">Corn · ZC1!</a><a href="https://www.tradingview.com/symbols/CBOT-ZC1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/CBOT-ZS1%21/" target="_blank" rel="noopener noreferrer">Soybeans · ZS1!</a><a href="https://www.tradingview.com/symbols/CBOT-ZS1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/ICEUS-KC1%21/" target="_blank" rel="noopener noreferrer">Coffee · KC1!</a><a href="https://www.tradingview.com/symbols/ICEUS-KC1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-          <div class="row"><a href="https://www.tradingview.com/symbols/ICEUS-CC1%21/" target="_blank" rel="noopener noreferrer">Cocoa · CC1!</a><a href="https://www.tradingview.com/symbols/ICEUS-CC1%21/" target="_blank" rel="noopener noreferrer">Voir cours ↗</a></div>
-        </div></section>
-        <section class="card calendar"><div class="bar"><h2>Calendrier macro</h2><a href="https://www.tradingview.com/economic-calendar/" target="_blank" rel="noopener noreferrer">Ouvrir ↗</a></div><div class="widget"><div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>{"colorTheme":"dark","isTransparent":true,"locale":"en","width":"100%","height":"100%"}</script></div></div></section>
-      </aside>
-    </main>
-  </div>
-  <div class="page" id="physical"><main class="physical">
-    <section class="card"><h2>Actualités du marché physique</h2><p>Accès direct aux articles récents par secteur. Aucun titre automatique n'est affiché si sa fraîcheur ne peut pas être vérifiée.</p><div class="link-grid"><a href="https://www.reuters.com/business/energy/" target="_blank" rel="noopener noreferrer">Oil, gas & LNG · Reuters ↗</a><a href="https://www.reuters.com/markets/commodities/" target="_blank" rel="noopener noreferrer">Commodities · Reuters ↗</a><a href="https://news.google.com/search?q=oil%20refinery%20pipeline%20supply" target="_blank" rel="noopener noreferrer">Raffinage & flux ↗</a><a href="https://news.google.com/search?q=LNG%20gas%20storage%20pipeline%20Europe" target="_blank" rel="noopener noreferrer">Gaz & LNG ↗</a><a href="https://news.google.com/search?q=copper%20mine%20smelter%20supply" target="_blank" rel="noopener noreferrer">Mines & métaux ↗</a><a href="https://news.google.com/search?q=wheat%20soybeans%20crop%20exports" target="_blank" rel="noopener noreferrer">Récoltes & exports ↗</a></div></section>
-    <section class="card"><h2>Quels événements surveiller ?</h2><div class="theme"><strong>Oil & refined products</strong><span>Arrêts de raffineries, exportations, production OPEP+, stocks EIA, perturbations maritimes.</span></div><div class="theme"><strong>Gas & LNG</strong><span>Flux norvégiens, maintenance, chargements LNG, stocks européens et météo.</span></div><div class="theme"><strong>Metals</strong><span>Arrêts de mines ou de fonderies, stocks LME, demande industrielle et restrictions à l'export.</span></div><div class="theme"><strong>Agri & softs</strong><span>Météo, rendements, récoltes, restrictions commerciales et flux portuaires.</span></div></section>
-    <section class="card"><h2>Publications et données physiques</h2><div class="link-grid"><a href="https://www.eia.gov/petroleum/supply/weekly/" target="_blank" rel="noopener noreferrer">EIA · Pétrole ↗</a><a href="https://ir.eia.gov/" target="_blank" rel="noopener noreferrer">EIA · Horaires ↗</a><a href="https://agsi.gie.eu/" target="_blank" rel="noopener noreferrer">GIE · Stocks gaz UE ↗</a><a href="https://www.lme.com/en/Market-data/Reports-and-data/Warehouse-and-stocks-reports" target="_blank" rel="noopener noreferrer">LME · Stocks métaux ↗</a></div></section>
-    <p class="disclaimer">Le graphique de la page Marchés suit un prix indicatif public du Brent ; les contrats futures exacts et leur éventuel délai de cotation sont consultables sur TradingView. Connexion Internet nécessaire pour les widgets.</p>
-  </main></div>
-  <script>document.querySelectorAll('.nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.nav button,.page').forEach(node=>node.classList.remove('active'));button.classList.add('active');document.getElementById(button.dataset.page).classList.add('active')}));</script>
-</body></html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>
+      Commodity Cockpit — Marchés & Physique
+    </title>
+    <style>
+      :root {
+      color-scheme:dark;
+      --bg:#08110e;
+      --card:#111d19;
+      --line:#294138;
+      --fg:#edf5ef;
+      --muted:#9fb4a9;
+      --green:#59d5a4
+      }
+      * {
+      box-sizing:border-box
+      }
+      body {
+      margin:0;
+      background:var(--bg);
+      color:var(--fg);
+      font:13px Arial,sans-serif
+      }
+      a {
+      color:var(--green);
+      text-decoration:none
+      }
+      a:hover {
+      text-decoration:underline
+      }
+      button {
+      font:inherit;
+      cursor:pointer
+      }
+      header {
+      height:62px;
+      padding:0 18px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px
+      }
+      header strong {
+      font-size:17px
+      }
+      .nav {
+      display:flex;
+      gap:5px
+      }
+      .nav button {
+      color:var(--muted);
+      background:transparent;
+      border:1px solid transparent;
+      border-radius:5px;
+      padding:8px 15px
+      }
+      .nav button.active {
+      background:#1b3328;
+      color:var(--fg);
+      border-color:var(--line)
+      }
+      .page {
+      display:none
+      }
+      .page.active {
+      display:block
+      }
+      .grid {
+      height:calc(100vh - 62px);
+      min-height:720px;
+      display:grid;
+      grid-template-columns:minmax(0,1.55fr) minmax(360px,1fr);
+      gap:12px;
+      padding:12px
+      }
+      .right {
+      min-height:0;
+      display:grid;
+      grid-template-rows:minmax(400px,1fr) 280px;
+      gap:12px
+      }
+      .card {
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:7px;
+      overflow:hidden;
+      min-height:0
+      }
+      .chart,.watch,.calendar {
+      display:flex;
+      flex-direction:column
+      }
+      .bar {
+      height:48px;
+      flex:none;
+      padding:0 14px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px
+      }
+      .bar h2 {
+      font-size:13px;
+      margin:0
+      }
+      .bar span,.note {
+      color:var(--muted);
+      font-size:11px
+      }
+      .widget {
+      flex:1;
+      min-height:0
+      }
+      .tradingview-widget-container,.tradingview-widget-container__widget {
+      width:100%;
+      height:100%
+      }
+      .watch-body {
+      overflow:auto;
+      padding:0 12px 12px
+      }
+      .public-quotes {
+      height:180px;
+      border-bottom:1px solid var(--line)
+      }
+      .group {
+      margin-top:13px;
+      color:var(--green);
+      font-size:10px;
+      letter-spacing:.12em;
+      font-weight:bold
+      }
+      .row {
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 92px;
+      align-items:center;
+      min-height:36px;
+      border-bottom:1px solid #24372e;
+      gap:6px
+      }
+      .row a:first-child {
+      color:var(--fg);
+      overflow:hidden;
+      white-space:nowrap;
+      text-overflow:ellipsis
+      }
+      .row a:last-child {
+      text-align:right;
+      font-size:11px
+      }
+      .watch-help {
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.45;
+      margin:12px 0
+      }
+      .physical {
+      max-width:1400px;
+      margin:auto;
+      padding:18px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px
+      }
+      .physical .card {
+      padding:18px
+      }
+      .physical h2 {
+      font-size:15px;
+      margin:0 0 10px
+      }
+      .physical p {
+      line-height:1.5;
+      color:var(--muted);
+      margin:0 0 14px
+      }
+      .link-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px
+      }
+      .link-grid a {
+      padding:11px;
+      border:1px solid var(--line);
+      border-radius:5px;
+      background:#172920;
+      font-size:12px
+      }
+      .theme {
+      padding:11px 0;
+      border-bottom:1px solid var(--line)
+      }
+      .theme strong {
+      display:block;
+      font-size:12px;
+      margin-bottom:4px
+      }
+      .theme span {
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.4
+      }
+      .disclaimer {
+      grid-column:1/-1;
+      color:var(--muted);
+      font-size:11px
+      }
+      @media(max-width:920px) {
+      .grid {
+      height:auto;
+      grid-template-columns:1fr
+      }
+      .chart {
+      height:620px
+      }
+      .right {
+      grid-template-columns:1fr 1fr;
+      grid-template-rows:500px
+      }
+      .physical {
+      grid-template-columns:1fr
+      }
+      
+      }
+      @media(max-width:650px) {
+      .grid {
+      display:block;
+      padding:8px
+      }
+      .chart {
+      height:500px;
+      margin-bottom:10px
+      }
+      .right {
+      display:flex;
+      flex-direction:column
+      }
+      .watch {
+      height:440px;
+      margin-bottom:10px
+      }
+      .calendar {
+      height:330px
+      }
+      .physical {
+      padding:8px
+      }
+      .link-grid {
+      grid-template-columns:1fr 1fr
+      }
+      header strong {
+      font-size:14px
+      }
+      .nav button {
+      padding:7px 8px
+      }
+      
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>
+        Commodity Cockpit
+      </strong>
+      <nav class="nav" aria-label="Navigation">
+        <button class="active" data-page="markets">
+          Marchés
+        </button>
+        <button data-page="physical">
+          Physique
+        </button>
+      </nav>
+    </header>
+    <div class="page active" id="markets">
+      <main class="grid">
+        <section class="card chart">
+          <div class="bar">
+            <h2>
+              Brent · prix indicatif
+            </h2>
+            <a href="https://www.tradingview.com/symbols/UKOIL/" target="_blank" rel="noopener noreferrer">
+              TradingView ↗
+            </a>
+          </div>
+          <div class="widget">
+            <div class="tradingview-widget-container">
+              <div class="tradingview-widget-container__widget">
+              </div>
+              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+                {
+                  "autosize": true,
+                  "symbol": "TVC:UKOIL",
+                  "interval": "60",
+                  "timezone": "Europe/Paris",
+                  "theme": "dark",
+                  "style": "1",
+                  "locale": "en",
+                  "allow_symbol_change": true,
+                  "hide_top_toolbar": false,
+                  "support_host": "https://www.tradingview.com"
+                }
+              </script>
+            </div>
+          </div>
+        </section>
+        <aside class="right">
+          <section class="card watch">
+            <div class="bar">
+              <h2>
+                À surveiller
+              </h2>
+              <span>
+                Cotations indicatives et contrats exacts ↗
+              </span>
+            </div>
+            <div class="public-quotes">
+              <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget">
+                </div>
+                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js" async>
+                  {
+                    "width": "100%",
+                    "height": "100%",
+                    "symbolsGroups": [
+                      {
+                        "name": "Repères publics",
+                        "symbols": [
+                          {
+                            "name": "TVC:UKOIL",
+                            "displayName": "Brent indicatif"
+                          },
+                          {
+                            "name": "TVC:USOIL",
+                            "displayName": "WTI indicatif"
+                          },
+                          {
+                            "name": "FX:EURUSD",
+                            "displayName": "EUR/USD"
+                          },
+                          {
+                            "name": "TVC:DXY",
+                            "displayName": "DXY"
+                          }
+                        ]
+                      }
+                    ],
+                    "showSymbolLogo": false,
+                    "isTransparent": true,
+                    "colorTheme": "dark",
+                    "locale": "en"
+                  }
+                </script>
+              </div>
+            </div>
+            <div class="watch-body">
+              <p class="watch-help">
+                Les futures de ta photo s'affichent sur TradingView, mais plusieurs sont interdits dans les widgets externes. Leurs cours et variations s'ouvrent donc directement sur TradingView.
+              </p>
+              <div class="group">
+                MACRO
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/EURUSD/" target="_blank" rel="noopener noreferrer">
+                  EUR/USD
+                </a>
+                <a href="https://www.tradingview.com/symbols/EURUSD/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/TVC-DXY/" target="_blank" rel="noopener noreferrer">
+                  DXY
+                </a>
+                <a href="https://www.tradingview.com/symbols/TVC-DXY/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/CME_MINI-ES1%21/" target="_blank" rel="noopener noreferrer">
+                  S&P 500 futures
+                </a>
+                <a href="https://www.tradingview.com/symbols/CME_MINI-ES1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="group">
+                ENERGY
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/ICEEUR-BRN1%21/" target="_blank" rel="noopener noreferrer">
+                  Brent · BRN1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/ICEEUR-BRN1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/NYMEX-CL1%21/" target="_blank" rel="noopener noreferrer">
+                  WTI · CL1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/NYMEX-CL1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/ICEEUR-TTF1%21/" target="_blank" rel="noopener noreferrer">
+                  TTF · TTF1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/ICEEUR-TTF1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/NYMEX-NG1%21/" target="_blank" rel="noopener noreferrer">
+                  US gas · NG1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/NYMEX-NG1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="group">
+                METALS
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/COMEX-GC1%21/" target="_blank" rel="noopener noreferrer">
+                  Gold · GC1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/COMEX-GC1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/COMEX-HG1%21/" target="_blank" rel="noopener noreferrer">
+                  Copper · HG1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/COMEX-HG1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/COMEX-ALI1%21/" target="_blank" rel="noopener noreferrer">
+                  Aluminium · ALI1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/COMEX-ALI1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="group">
+                AGRI & SOFTS
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/CBOT-ZW1%21/" target="_blank" rel="noopener noreferrer">
+                  Wheat · ZW1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/CBOT-ZW1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/CBOT-ZC1%21/" target="_blank" rel="noopener noreferrer">
+                  Corn · ZC1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/CBOT-ZC1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/CBOT-ZS1%21/" target="_blank" rel="noopener noreferrer">
+                  Soybeans · ZS1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/CBOT-ZS1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/ICEUS-KC1%21/" target="_blank" rel="noopener noreferrer">
+                  Coffee · KC1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/ICEUS-KC1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+              <div class="row">
+                <a href="https://www.tradingview.com/symbols/ICEUS-CC1%21/" target="_blank" rel="noopener noreferrer">
+                  Cocoa · CC1!
+                </a>
+                <a href="https://www.tradingview.com/symbols/ICEUS-CC1%21/" target="_blank" rel="noopener noreferrer">
+                  Voir cours ↗
+                </a>
+              </div>
+            </div>
+          </section>
+          <section class="card calendar">
+            <div class="bar">
+              <h2>
+                Calendrier macro
+              </h2>
+              <a href="https://www.tradingview.com/economic-calendar/" target="_blank" rel="noopener noreferrer">
+                Ouvrir ↗
+              </a>
+            </div>
+            <div class="widget">
+              <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget">
+                </div>
+                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+                  {
+                    "colorTheme": "dark",
+                    "isTransparent": true,
+                    "locale": "en",
+                    "width": "100%",
+                    "height": "100%"
+                  }
+                </script>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+    <div class="page" id="physical">
+      <main class="physical">
+        <section class="card">
+          <h2>
+            Actualités du marché physique
+          </h2>
+          <p>
+            Accès direct aux articles récents par secteur. Aucun titre automatique n'est affiché si sa fraîcheur ne peut pas être vérifiée.
+          </p>
+          <div class="link-grid">
+            <a href="https://www.reuters.com/business/energy/" target="_blank" rel="noopener noreferrer">
+              Oil, gas & LNG · Reuters ↗
+            </a>
+            <a href="https://www.reuters.com/markets/commodities/" target="_blank" rel="noopener noreferrer">
+              Commodities · Reuters ↗
+            </a>
+            <a href="https://news.google.com/search?q=oil%20refinery%20pipeline%20supply" target="_blank" rel="noopener noreferrer">
+              Raffinage & flux ↗
+            </a>
+            <a href="https://news.google.com/search?q=LNG%20gas%20storage%20pipeline%20Europe" target="_blank" rel="noopener noreferrer">
+              Gaz & LNG ↗
+            </a>
+            <a href="https://news.google.com/search?q=copper%20mine%20smelter%20supply" target="_blank" rel="noopener noreferrer">
+              Mines & métaux ↗
+            </a>
+            <a href="https://news.google.com/search?q=wheat%20soybeans%20crop%20exports" target="_blank" rel="noopener noreferrer">
+              Récoltes & exports ↗
+            </a>
+          </div>
+        </section>
+        <section class="card">
+          <h2>
+            Quels événements surveiller ?
+          </h2>
+          <div class="theme">
+            <strong>
+              Oil & refined products
+            </strong>
+            <span>
+              Arrêts de raffineries, exportations, production OPEP+, stocks EIA, perturbations maritimes.
+            </span>
+          </div>
+          <div class="theme">
+            <strong>
+              Gas & LNG
+            </strong>
+            <span>
+              Flux norvégiens, maintenance, chargements LNG, stocks européens et météo.
+            </span>
+          </div>
+          <div class="theme">
+            <strong>
+              Metals
+            </strong>
+            <span>
+              Arrêts de mines ou de fonderies, stocks LME, demande industrielle et restrictions à l'export.
+            </span>
+          </div>
+          <div class="theme">
+            <strong>
+              Agri & softs
+            </strong>
+            <span>
+              Météo, rendements, récoltes, restrictions commerciales et flux portuaires.
+            </span>
+          </div>
+        </section>
+        <section class="card">
+          <h2>
+            Publications et données physiques
+          </h2>
+          <div class="link-grid">
+            <a href="https://www.eia.gov/petroleum/supply/weekly/" target="_blank" rel="noopener noreferrer">
+              EIA · Pétrole ↗
+            </a>
+            <a href="https://ir.eia.gov/" target="_blank" rel="noopener noreferrer">
+              EIA · Horaires ↗
+            </a>
+            <a href="https://agsi.gie.eu/" target="_blank" rel="noopener noreferrer">
+              GIE · Stocks gaz UE ↗
+            </a>
+            <a href="https://www.lme.com/en/Market-data/Reports-and-data/Warehouse-and-stocks-reports" target="_blank" rel="noopener noreferrer">
+              LME · Stocks métaux ↗
+            </a>
+          </div>
+        </section>
+        <p class="disclaimer">
+          Le graphique de la page Marchés suit un prix indicatif public du Brent ; les contrats futures exacts et leur éventuel délai de cotation sont consultables sur TradingView. Connexion Internet nécessaire pour les widgets.
+        </p>
+      </main>
+    </div>
+    <script>
+      document.querySelectorAll('.nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.nav button,.page').forEach(node=>node.classList.remove('active'));button.classList.add('active');document.getElementById(button.dataset.page).classList.add('active')}));
+    </script>
+  </body>
+</html>
