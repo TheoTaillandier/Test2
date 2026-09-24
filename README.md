@@ -235,7 +235,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
   <!-- Replaced by scripts/update_data.py; retained inside HTML for one-file opening. -->
   <script id="snapshot-data" type="application/json">
 {
-  "generated_at": "2026-09-24T15:31:20+00:00",
+  "generated_at": "2026-09-24T15:34:32+00:00",
   "history": {
     "oil_crude": [
       {
@@ -675,7 +675,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
   "sources": {
     "gas": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-24T15:31:20+00:00",
+      "checked_at": "2026-09-24T15:34:32+00:00",
       "status": "ok",
       "url": "https://ir.eia.gov/ngs/ngs.html"
     },
@@ -691,32 +691,32 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "news": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-24T15:31:20+00:00",
+      "checked_at": "2026-09-24T15:34:32+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/rss/todayinenergy.xml"
     },
     "oil": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-24T15:31:20+00:00",
+      "checked_at": "2026-09-24T15:34:32+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_flows": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-24T15:31:20+00:00",
+      "checked_at": "2026-09-24T15:34:32+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_history": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-24T15:31:20+00:00",
+      "checked_at": "2026-09-24T15:34:32+00:00",
       "published": "2026-09-23",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "wasde": {
       "as_of": "2026-09",
-      "checked_at": "2026-09-24T15:31:20+00:00",
+      "checked_at": "2026-09-24T15:34:32+00:00",
       "status": "ok",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt"
     }
