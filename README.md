@@ -2,7 +2,7 @@
 
 Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.
 
-Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées.
+Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées. L'onglet **Power FR** affiche les mesures électriques RTE et, avec une clé ENTSO-E, des prévisions de demande France et DE-LU.
 
 ## Sources & automatisation
 
@@ -13,8 +13,11 @@ Les chiffres officiels sont collectés par [la tâche planifiée](.github/workfl
 - Sodir (Norwegian Offshore Directorate) : chiffre mensuel provisoire d'août 2026 (pétrole, LGN et condensats), repère européen daté ; la source refuse actuellement les lectures automatisées du robot GitHub et ce chiffre n'est donc pas rafraîchi automatiquement.
 - EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication.
 - GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.
+- RTE éCO2mix national temps réel : [dataset officiel](https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/) actualisé à la source au quart d'heure ; consommation, nucléaire, gaz, vent, solaire, hydraulique, bioénergies et échanges physiques. Export = solde négatif ; import = positif. Le cockpit collecte un instantané toutes les deux heures via GitHub Actions et indique l'heure de la mesure et de la collecte. Demande résiduelle = consommation − éolien − solaire (calcul indicatif, **pas une prévision du prix**). Aucun compte requis.
+- ENTSO-E : prévision *day-ahead* de demande (A65/A01, Article 6.1.b, données [CC BY 4.0](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions)), France et Allemagne/Luxembourg ; affichage du pic prévu pour les prochaines 24 heures. Pour activer : créer un compte sur https://transparency.entsoe.eu/, demander l'accès API à `transparency@entsoe.eu` (objet `RESTful API access` et adresse enregistrée dans le corps), puis générer le jeton dans « My Account ». Enregistrer le jeton **uniquement** comme secret GitHub Actions `ENTSOE_API_TOKEN` via Settings → Secrets and variables → Actions → New repository secret ; relancer l'action. Ne jamais le coller dans le HTML, un fichier GitHub ou une conversation. Sans clé, RTE Power fonctionne déjà.
+- Prix électriques France/DE : bouton vers le [marché officiel RTE](https://www.rte-france.com/en/data-publications/eco2mix/market-data) ; les prix day-ahead EPEX ne sont pas couverts par la [liste ENTSO-E de réutilisation libre](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions) et RTE interdit la copie de ses prix via éCO2mix. Le jeton ENTSO-E n'est pas un droit de redistribution de ces cotations.
 - Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.
-- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. ENTSO-E fournit des données d'électricité, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.
+- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. ENTSO-E fournit des prévisions électriques ouvertes, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.
 - LME : [rapports de stocks](https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports) à consulter, sans chiffre de stock automatisé tant qu'un flux stable n'est pas vérifié.
 
 Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; TWh = térawattheures ; GWh/j = gigawattheures par jour ; 10³ m³ GNL = milliers de mètres cubes de GNL liquide ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks, prix et flux ne sont jamais additionnés.
@@ -29,7 +32,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Commodity Cockpit — Marchés & physique</title>
+  <title>Commodity Cockpit — Marchés, physique & power</title>
   <style>
     :root {
       color-scheme: dark;
@@ -127,6 +130,33 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     .trend svg { width: 100%; height: 110px; overflow: visible; }
     .trend polyline { stroke: var(--accent); stroke-width: 2; fill: none; vector-effect: non-scaling-stroke; }
     .trend .axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; }
+    .power-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .power-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:12px 0; }
+    .power-card { min-height:123px; padding:14px; }
+    .power-card small { color:var(--muted); }
+    .power-card strong { display:block; font-size:24px; margin:10px 0 3px; line-height:1.1; }
+    .power-card span { font-size:10px; color:var(--warm); }
+    .power-layout { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(300px,.8fr); gap:12px; }
+    .power-layout .card { padding:15px; }
+    .power-layout h2, .power-bottom h2 { font-size:13px; margin:0 0 5px; }
+    .power-layout p, .power-bottom p { color:var(--muted); font-size:11px; margin:3px 0 12px; }
+    .power-chart { height:225px; width:100%; display:block; overflow:visible; }
+    .power-chart polyline { fill:none; stroke-width:2; vector-effect:non-scaling-stroke; }
+    .power-chart .demand-line { stroke:var(--accent); }
+    .power-chart .residual-line { stroke:var(--warm); }
+    .power-chart line { stroke:var(--border); vector-effect:non-scaling-stroke; }
+    .power-legend { display:flex; justify-content:space-between; color:var(--muted); font-size:10px; gap:10px; }
+    .power-legend b { color:var(--text); }
+    .power-mix-row { display:grid; grid-template-columns:90px 1fr 75px; align-items:center; gap:10px; margin:11px 0; font-size:11px; }
+    .power-mix-row .track { height:8px; background:var(--surface-2); border-radius:9px; overflow:hidden; }
+    .power-mix-row i { display:block; height:100%; border-radius:9px; }
+    .power-mix-row strong { text-align:right; }
+    .power-bottom { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:12px; }
+    .power-bottom .card { padding:15px; }
+    .power-forecast { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin:12px 0; }
+    .power-forecast div { background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:10px; }
+    .power-forecast small, .power-forecast span { display:block; color:var(--muted); font-size:10px; }
+    .power-forecast strong { display:block; font-size:18px; margin:3px 0; }
     .empty { padding: 20px; color: var(--muted); }
     .footer { max-width: 1460px; margin: auto; padding: 10px 18px 24px; font-size: 10px; color: var(--muted); }
     @media (max-width: 1050px) {
@@ -135,6 +165,8 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       .right { grid-template-columns: 1fr 1fr; grid-template-rows: 560px; }
       .physical-layout { grid-template-columns: 1fr; }
       .physical-side { grid-template-columns: 1fr 1fr; }
+      .power-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .power-layout { grid-template-columns:1fr; }
     }
     @media (max-width: 680px) {
       .header { padding: 9px; flex-wrap: wrap; }
@@ -150,15 +182,18 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       .page-intro { display: block; }
       .stamp { display: inline-block; margin-top: 10px; }
       .physical-side { grid-template-columns: 1fr; }
+      .power-grid, .power-bottom { grid-template-columns:1fr; }
+      .power-forecast { grid-template-columns:1fr; }
     }
   </style>
 </head>
 <body>
   <header class="header">
-    <div class="brand"><strong>Commodity Cockpit</strong><span>Marchés · stocks · flux · récoltes</span></div>
+    <div class="brand"><strong>Commodity Cockpit</strong><span>Marchés · physique · électricité</span></div>
     <nav class="nav" aria-label="Navigation">
       <button type="button" data-page="markets" aria-selected="true">Marchés</button>
       <button type="button" data-page="physical" aria-selected="false">Physique</button>
+      <button type="button" data-page="power" aria-selected="false">Power FR</button>
     </nav>
   </header>
 
@@ -211,6 +246,24 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
           <section class="card side-pad"><h3>Actualités qui éclairent le physique · EIA</h3><p>Production, stocks, raffinage et GNL. Les articles décrivent des faits publiés ; leur effet sur les prix reste à analyser.</p><div id="stories"></div></section>
           <section class="card side-pad"><h3>Couverture France et Europe</h3><p>Une <a href="https://agsi.gie.eu/account" target="_blank" rel="noopener noreferrer">clé GIE gratuite ↗</a> active AGSI + ALSI : remplissage et volume gaz France/UE, GNL en cuves et émission des terminaux. Sans clé, ces valeurs restent vides. <a href="https://transparency.entsog.eu/" target="_blank" rel="noopener noreferrer">ENTSOG ↗</a> complète avec les flux gaziers. Le cuivre USGS est annuel ; les <a href="https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports" target="_blank" rel="noopener noreferrer">stocks LME ↗</a> ne sont pas chiffrés ici.</p></section>
         </aside>
+      </div>
+    </main>
+  </section>
+
+  <section class="page" id="power" hidden>
+    <main class="workspace">
+      <div class="page-intro"><div><h1>Power · France</h1><p>Demande, mix et échanges physiques RTE ; prévisions J-1 ENTSO-E avec clé.</p></div><span class="stamp" id="power-updated">Instantané en attente</span></div>
+      <div class="power-head"><span class="badge" id="power-rte-status">RTE : collecte en attente</span><span class="badge" id="power-entsoe-status">ENTSO-E : clé en attente</span><span class="badge">Observations ≠ prix de marché</span></div>
+      <div class="power-grid" id="power-grid"></div>
+      <div class="power-layout">
+        <section class="card"><h2>Demande et demande résiduelle · 24 h</h2><p>Résiduelle indicative = consommation − production éolienne − solaire ; un indicateur de tension physique, pas une prévision de prix.</p><div id="power-curve" class="empty">Collecte RTE en attente.</div><div class="power-legend" id="power-axis"></div></section>
+        <section class="card"><h2>Production française · dernière observation</h2><p>Puissance par filière, en MW. Les parts portent sur la production affichée, pas sur la consommation.</p><div id="power-mix" class="empty">Collecte RTE en attente.</div><small id="power-mix-time" class="detail"></small></section>
+      </div>
+      <div class="power-bottom">
+        <section class="card"><h2>Pour surveiller le gaz et les échanges</h2><p id="power-readout">Le gaz électrique, l'éolien, le solaire et le solde d'import/export seront affichés après la première collecte RTE.</p><p>Un solde RTE négatif signifie une exportation nette ; positif, une importation nette. Les données sont des télémesures complétées d'estimations.</p><a href="https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/" target="_blank" rel="noopener noreferrer">Source RTE éCO2mix ↗</a></section>
+        <section class="card"><h2>Demande anticipée · France et DE-LU</h2><p>Point haut prévu dans les prochaines 24 h, prévision day-ahead ENTSO-E sous licence CC BY 4.0. Chaque marché a sa taille : comparer la trajectoire, pas les niveaux bruts.</p><div class="power-forecast" id="power-forecast"></div><p id="power-forecast-note"></p><a href="https://transparency.entsoe.eu/" target="_blank" rel="noopener noreferrer">Transparence ENTSO-E ↗</a></section>
+        <section class="card"><h2>Prix power France / Allemagne</h2><p>Pour le spot day-ahead et son écart, consulter la vue officielle EPEX/RTE. Les prix de bourse ne figurent pas dans la liste ENTSO-E des séries librement redistribuables ; la clé API ne change pas ces droits.</p><a href="https://www.rte-france.com/en/data-publications/eco2mix/market-data" target="_blank" rel="noopener noreferrer">Voir les prix spot RTE ↗</a></section>
+        <section class="card"><h2>Sources, délais et accès</h2><p>RTE actualise sa source au quart d'heure ; cette page reflète la dernière exécution planifiée puis doit être retéléchargée sur GitHub. Heure des mesures et heure de collecte sont affichées séparément.</p><p>La clé ENTSO-E reste dans le secret <code>ENTSOE_API_TOKEN</code> du dépôt. Le flux GIE du gaz utilise séparément <code>GIE_API_KEY</code>.</p></section>
       </div>
     </main>
   </section>
@@ -1415,6 +1468,143 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       renderTrend();
     }
 
+    function parisTime(value) {
+      const stamp = new Date(value);
+      return Number.isNaN(stamp.getTime()) ? 'heure indisponible' :
+        new Intl.DateTimeFormat('fr-FR', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',
+          timeZone:'Europe/Paris'}).format(stamp) + ' · Paris';
+    }
+
+    function renderPower() {
+      const grid = document.getElementById('power-grid');
+      const points = Array.isArray(snapshot.history?.power_fr) ? snapshot.history.power_fr : [];
+      const latest = points[points.length - 1];
+      const measuredAt = latest && Date.parse(latest.at);
+      const powerOld = !measuredAt || Date.now() - measuredAt > 6 * 3600000;
+      const source = snapshot.sources?.rte_power || {};
+      const rte = document.getElementById('power-rte-status');
+      rte.textContent = latest ?
+        'RTE · ' + (powerOld ? 'archive · ' : '') + parisTime(latest.at) +
+          (source.status === 'error' ? ' · dernière valeur conservée' : '') :
+        'RTE · première collecte en attente';
+      rte.classList.toggle('good', !!latest && !powerOld && source.status === 'ok');
+      rte.classList.toggle('warn', !latest || powerOld || source.status === 'error');
+      document.getElementById('power-updated').textContent = snapshot.generated_at ?
+        'Dernière collecte : ' + parisTime(snapshot.generated_at) : 'Instantané local';
+      const picks = [
+        ['power_load', 'consommation observée'],
+        ['power_gaz', 'production électrique au gaz'],
+        ['power_exchange', 'négatif : export / positif : import'],
+        ['power_residual', 'calcul : demande − éolien − solaire']
+      ];
+      for (const [id, hint] of picks) {
+        const item = byId[id];
+        const card = line('', 'article', 'card power-card');
+        card.append(line(item?.label || id, 'small'));
+        card.append(line(item ? number(item.value, 0) + ' MW' : '—', 'strong'));
+        card.append(line(item ? (powerOld ? 'Archive · ' : '') + hint : 'Mesure en attente', 'span'));
+        grid.append(card);
+      }
+      const entsoe = document.getElementById('power-entsoe-status');
+      const entsoeRows = ['fr', 'de'].map(zone => ({zone, item:byId['power_forecast_' + zone],
+        source:snapshot.sources?.['entsoe_' + zone] || {}}));
+      const configured = entsoeRows.some(entry => entry.source.status !== 'needs_key' && entry.source.status);
+      entsoe.textContent = configured ? 'ENTSO-E · ' +
+        (entsoeRows.every(entry => entry.source.status === 'ok') ? 'prévisions collectées' : 'collecte partielle') :
+        'ENTSO-E · clé non configurée';
+      entsoe.classList.toggle('good', entsoeRows.every(entry => entry.source.status === 'ok'));
+      entsoe.classList.toggle('warn', !entsoeRows.every(entry => entry.source.status === 'ok'));
+      const forecast = document.getElementById('power-forecast');
+      for (const entry of entsoeRows) {
+        const box = line('', 'div');
+        box.append(line(entry.zone === 'fr' ? 'France' : 'DE-LU', 'small'));
+        const m = entry.item;
+        box.append(line(m ? number(m.value, 0) + ' MW' : '—', 'strong'));
+        const forecastAt = entry.source.as_of;
+        const valid = m && forecastAt && Date.parse(forecastAt) >= Date.now();
+        box.append(line(m ? (valid ? 'Pic prévu : ' : 'Prévision archivée : ') +
+          parisTime(forecastAt) : entry.source.status === 'needs_key' ? 'Clé requise' :
+          'Publication indisponible', 'span'));
+        forecast.append(box);
+      }
+      document.getElementById('power-forecast-note').textContent = !configured ?
+        'Activer : Settings → Secrets and variables → Actions → ENTSOE_API_TOKEN ; puis relancer le workflow.' :
+        'Prévisions datées : valeur du pic prévu, pas un prix ni la consommation déjà réalisée.';
+      if (!latest) return;
+      const gas = byId.power_gaz?.value;
+      const exchange = byId.power_exchange?.value;
+      const wind = byId.power_eolien?.value;
+      const solar = byId.power_solaire?.value;
+      const facts = [];
+      if (gas !== undefined) facts.push('Gaz mobilisé : ' + number(gas, 0) + ' MW.');
+      if (wind !== undefined && solar !== undefined) facts.push('Éolien + solaire : ' + number(wind + solar, 0) + ' MW.');
+      if (exchange !== undefined) facts.push('Solde physique : ' + number(Math.abs(exchange), 0) +
+        ' MW d’' + (exchange < 0 ? 'exportations nettes' : exchange > 0 ? 'importations nettes' : 'équilibre net') + '.');
+      document.getElementById('power-readout').textContent = facts.join(' ') +
+        ' Observation du ' + parisTime(latest.at) + (powerOld ? ' (archivée).' : '.');
+      const fuels = [
+        ['Nucléaire', 'nucleaire', '#8dc4f5'], ['Gaz', 'gaz', '#f1c984'],
+        ['Éolien', 'eolien', '#78dda8'], ['Solaire', 'solaire', '#edaa75'],
+        ['Hydraulique', 'hydraulique', '#82c8df'], ['Bioénergies', 'bioenergies', '#bba5ef'],
+        ['Charbon', 'charbon', '#b7aa9d'], ['Fioul', 'fioul', '#d9a2a2']
+      ].filter(([, key]) => Number.isFinite(latest[key]) && latest[key] >= 0);
+      const total = fuels.reduce((sum, [,key]) => sum + latest[key], 0);
+      const mix = document.getElementById('power-mix');
+      mix.replaceChildren();
+      if (total) {
+        for (const [name, key, color] of fuels) {
+          const row = line('', 'div', 'power-mix-row');
+          row.append(line(name, 'span'));
+          const track = line('', 'div', 'track');
+          const bar = line('', 'i');
+          bar.style.width = Math.max(0, Math.min(100, latest[key] / total * 100)) + '%';
+          bar.style.background = color;
+          track.append(bar);
+          row.append(track, line(number(latest[key], 0), 'strong'));
+          mix.append(row);
+        }
+        document.getElementById('power-mix-time').textContent = 'Mesure : ' + parisTime(latest.at) + ' · RTE.';
+      } else mix.append(line('Répartition des filières indisponible.', 'span'));
+      const observed = points.filter(row => Number.isFinite(row.load) &&
+        Date.parse(row.at) >= measuredAt - 24 * 3600000);
+      if (observed.length < 3) return;
+      const residual = row => Number.isFinite(row.eolien) && Number.isFinite(row.solaire) ?
+        row.load - row.eolien - row.solaire : null;
+      const all = observed.flatMap(row => [row.load, residual(row)]).filter(Number.isFinite);
+      const min = Math.floor(Math.min(...all) / 5000) * 5000;
+      const max = Math.ceil(Math.max(...all) / 5000) * 5000;
+      const start = Date.parse(observed[0].at), end = Date.parse(observed[observed.length - 1].at);
+      if (max <= min || start === end) return;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 600 225');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.setAttribute('class', 'power-chart');
+      svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', 'Puissance sur 24 heures : demande et demande résiduelle indicatives');
+      for (const level of [0, .5, 1]) {
+        const y = 200 - level * 180;
+        const guide = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        for (const [key, value] of [['x1',0],['x2',600],['y1',y],['y2',y]])
+          guide.setAttribute(key, String(value));
+        svg.append(guide);
+      }
+      for (const [read, css] of [(row => row.load, 'demand-line'), (residual, 'residual-line')]) {
+        const lineSvg = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        lineSvg.setAttribute('class', css);
+        lineSvg.setAttribute('points', observed.map(row => {
+          const value = read(row);
+          if (!Number.isFinite(value)) return null;
+          return ((Date.parse(row.at) - start) / (end - start) * 600).toFixed(1) + ',' +
+                 (200 - (value - min) / (max - min) * 180).toFixed(1);
+        }).filter(Boolean).join(' '));
+        svg.append(lineSvg);
+      }
+      document.getElementById('power-curve').replaceWith(svg);
+      document.getElementById('power-axis').replaceChildren(
+        line('● Demande · ' + parisTime(observed[0].at), 'span'),
+        line('● Résiduelle indicative · ' + parisTime(observed[observed.length - 1].at), 'span'));
+    }
+
     document.querySelectorAll('.filters button').forEach(button => button.addEventListener('click', () => {
       selectedSector = button.dataset.sector;
       renderSector();
@@ -1428,6 +1618,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     renderReleases();
     renderStories();
     renderSector();
+    renderPower();
   </script>
 </body>
 </html>

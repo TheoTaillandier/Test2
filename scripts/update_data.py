@@ -15,12 +15,14 @@ from email.utils import parsedate_to_datetime
 from html import unescape
 from io import StringIO
 import json
+import math
 import os
 from pathlib import Path
 import re
 import sys
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from urllib.parse import urlencode
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
 
@@ -46,6 +48,12 @@ ALSI_URL = "https://alsi.gie.eu/api?type=eu&size=3"
 ALSI_FR_URL = "https://alsi.gie.eu/api?country=fr&size=3"
 ALSI_REPORT_URL = "https://alsi.gie.eu/"
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
+RTE_REPORT_URL = "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
+RTE_URL = ("https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/"
+           "eco2mix-national-tr/records?limit=100&order_by=date_heure%20desc")
+ENTSOE_URL = "https://web-api.tp.entsoe.eu/api"
+ENTSOE_REPORT_URL = "https://transparency.entsoe.eu/"
+POWER_ZONES = {"fr": "10YFR-RTE------C", "de": "10Y1001A1001A82H"}
 
 
 def fetch(url: str, headers: dict[str, str] | None = None) -> bytes:
@@ -64,6 +72,128 @@ def metric(id: str, sector: str, label: str, value: float, unit: str,
                 unit=unit, change=round(change, 3) if change is not None else None,
                 comparison=comparison, as_of=as_of, source=source, url=url,
                 detail=detail)
+
+
+def measured(value: object) -> float | None:
+    """Keep missing/invalid telemetry out of published values."""
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        result = float(value)
+    except (ValueError, TypeError):
+        return None
+    return result if math.isfinite(result) else None
+
+
+def parse_rte_power(raw: bytes, now: datetime) -> dict:
+    document = json.loads(raw)
+    rows = document.get("results") if isinstance(document, dict) else None
+    if not isinstance(rows, list):
+        raise ValueError("RTE records missing")
+    points = []
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("date_heure"), str):
+            continue
+        try:
+            stamp = datetime.fromisoformat(row["date_heure"].replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if stamp.tzinfo is None or not now - timedelta(hours=48) <= stamp <= now:
+            continue
+        demand = measured(row.get("consommation"))
+        if demand is None or not 5000 <= demand <= 120000:
+            continue
+        point = {"at": stamp.astimezone(timezone.utc).isoformat(), "load": round(demand)}
+        for field in ("prevision_j", "prevision_j1", "nucleaire", "eolien", "solaire",
+                      "hydraulique", "gaz", "bioenergies", "charbon", "fioul",
+                      "ech_physiques", "pompage", "taux_co2"):
+            value = measured(row.get(field))
+            if value is not None and -35000 <= value <= 120000:
+                point[field] = round(value)
+        points.append(point)
+    points.sort(key=lambda row: row["at"])
+    if not points or datetime.fromisoformat(points[-1]["at"]) < now - timedelta(hours=30):
+        raise ValueError("RTE observations unavailable or too old")
+    latest = points[-1]
+    as_of = latest["at"][:10]
+    time_label = "Observation " + latest["at"] + " UTC"
+    values = [metric("power_load", "power", "Demande France", latest["load"], "MW",
+                     latest["load"] - points[-5]["load"] if len(points) >= 5 else None,
+                     "vs ~1 h", as_of, "RTE éCO2mix", RTE_REPORT_URL, time_label)]
+    if "ech_physiques" in latest:
+        values.append(metric("power_exchange", "power", "Solde des échanges physiques",
+                             latest["ech_physiques"], "MW", None,
+                             "export si négatif · import si positif", as_of,
+                             "RTE éCO2mix", RTE_REPORT_URL, time_label))
+    for field, label in (("nucleaire", "Nucléaire"), ("gaz", "Gaz électrique"),
+                         ("eolien", "Éolien"), ("solaire", "Solaire"),
+                         ("hydraulique", "Hydraulique"), ("bioenergies", "Bioénergies")):
+        if field in latest and latest[field] >= 0:
+            values.append(metric("power_" + field, "power", label, latest[field], "MW",
+                                 None, "production observée", as_of, "RTE éCO2mix",
+                                 RTE_REPORT_URL, time_label))
+    if "eolien" in latest and "solaire" in latest:
+        values.append(metric("power_residual", "power", "Demande résiduelle indicative",
+                             latest["load"] - latest["eolien"] - latest["solaire"], "MW",
+                             None, "demande − éolien − solaire", as_of,
+                             "Calcul sur RTE éCO2mix", RTE_REPORT_URL,
+                             "Calcul indicatif, sans jugement sur le prix ni l'appel au gaz. " + time_label))
+    if "taux_co2" in latest:
+        values.append(metric("power_carbon", "power", "Intensité CO₂ estimée",
+                             latest["taux_co2"], "g/kWh", None,
+                             "production française", as_of,
+                             "RTE éCO2mix", RTE_REPORT_URL, time_label))
+    # A compact, independently dated curve: keep a single day of observations.
+    return {"metrics": values, "points": points[-96:], "as_of": latest["at"],
+            "url": RTE_REPORT_URL}
+
+
+def entsoe_query(zone: str, now: datetime, token: str) -> bytes:
+    params = {"documentType": "A65", "processType": "A01", "businessType": "A04",
+              "outBiddingZone_Domain": POWER_ZONES[zone],
+              "periodStart": (now - timedelta(days=1)).strftime("%Y%m%d%H%M"),
+              "periodEnd": (now + timedelta(days=3)).strftime("%Y%m%d%H%M"),
+              "securityToken": token}
+    # Never print the request URL or its HTTPError: it contains a personal token.
+    return fetch(ENTSOE_URL + "?" + urlencode(params))
+
+
+def parse_entsoe_forecast(raw: bytes, zone: str, now: datetime) -> dict:
+    root = ET.fromstring(raw)
+    if root.tag.split("}")[-1] != "GL_MarketDocument":
+        raise ValueError("ENTSO-E forecast document unavailable")
+    if root.findtext("{*}type") != "A65" or root.findtext("{*}process.processType") != "A01":
+        raise ValueError("ENTSO-E returned a different data item")
+    points = {}
+    for series in root.findall("{*}TimeSeries"):
+        if series.findtext("{*}businessType") not in (None, "A04"):
+            continue
+        unit = series.findtext("{*}quantity_Measure_Unit.name")
+        if unit not in ("MAW", "MW"):
+            continue
+        for block in series.findall("{*}Period"):
+            stamp_text = block.findtext("{*}timeInterval/{*}start")
+            interval = {"PT15M": 15, "PT30M": 30, "PT60M": 60}.get(block.findtext("{*}resolution"))
+            if not stamp_text or not interval:
+                continue
+            start = datetime.fromisoformat(stamp_text.replace("Z", "+00:00"))
+            for item in block.findall("{*}Point"):
+                position = measured(item.findtext("{*}position"))
+                quantity = measured(item.findtext("{*}quantity"))
+                if position is None or position < 1 or position != int(position) or quantity is None or not 5000 <= quantity <= 150000:
+                    continue
+                stamp = start + timedelta(minutes=(int(position) - 1) * interval)
+                if now - timedelta(hours=2) <= stamp <= now + timedelta(days=2):
+                    points[stamp.astimezone(timezone.utc).isoformat()] = round(quantity)
+    upcoming = sorted((stamp, amount) for stamp, amount in points.items() if stamp >= now.isoformat())
+    if len(upcoming) < 4:
+        raise ValueError("ENTSO-E future forecast missing")
+    peak_at, peak = max(upcoming[:96], key=lambda point: point[1])
+    label = "France" if zone == "fr" else "Allemagne/Luxembourg"
+    m = metric("power_forecast_" + zone, "power", "Pic prévu 24 h · " + label,
+               peak, "MW", None, "prévision J-1, 24 h glissantes", peak_at[:10],
+               "ENTSO-E · prévision J-1", ENTSOE_REPORT_URL, "Pic prévu à " + peak_at + " UTC")
+    return {"metrics": [m], "as_of": peak_at, "url": ENTSOE_REPORT_URL}
 
 
 def parse_oil(raw: bytes) -> dict:
@@ -503,7 +633,8 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
     history = previous.get("history", {}).copy()
     stories = previous.get("stories", [])
     for key in ("oil", "oil_flows", "oil_history", "gas", "wasde", "news", "norway",
-                "brent", "wti", "henry", "gie", "gie_fr", "alsi", "alsi_fr"):
+                "brent", "wti", "henry", "gie", "gie_fr", "alsi", "alsi_fr",
+                "rte_power", "entsoe_fr", "entsoe_de"):
         result = results.get(key)
         if isinstance(result, Exception):
             old = sources.get(key, {})
@@ -524,6 +655,10 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
                 for id in list(values):
                     if id == prefix or id.startswith(prefix + "_"):
                         del values[id]
+            if key in ("entsoe_fr", "entsoe_de"):
+                sources[key] = {"status": "needs_key", "url": ENTSOE_REPORT_URL,
+                                "message": "Clé ENTSO-E requise pour la prévision J-1."}
+                values.pop("power_forecast_" + key[-2:], None)
             continue
         sources[key] = {"status": "ok", "as_of": result.get("as_of"),
                         "url": result.get("url", NEWS_URL), "checked_at": now.isoformat()}
@@ -533,6 +668,8 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
             values[item["id"]] = item
         if key == "oil_history":
             history["oil_crude"] = result["points"]
+        if key == "rte_power":
+            history["power_fr"] = result["points"]
         if key == "news":
             stories = result["stories"]
 
@@ -543,7 +680,7 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
                                      "Repère structurel, pas un stock LME")
     sources["metals"] = {"status": "structural", "as_of": "2025", "url":
                            "https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports"}
-    return {"schema": 2, "generated_at": now.isoformat(), "sources": sources,
+    return {"schema": 3, "generated_at": now.isoformat(), "sources": sources,
             "metrics": list(values.values()), "history": history, "stories": stories,
             "calendar": verified_calendar(now.date())}
 
@@ -561,7 +698,7 @@ def save_snapshot(snapshot: dict) -> None:
     HTML.write_text(html, encoding="utf-8")
     readme = ("# Commodity Cockpit\n\n"
               "Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.\n\n"
-              "Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées.\n\n"
+              "Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées. L'onglet **Power FR** affiche les mesures électriques RTE et, avec une clé ENTSO-E, des prévisions de demande France et DE-LU.\n\n"
               "## Sources & automatisation\n\n"
               "- EIA WPSR : stocks de brut, Cushing, Gulf Coast, essence, distillats, jet et SPR ; production, importations, exportations et brut traité par les raffineries US.\n"
               "- EIA WNGSR : stockage de gaz US et régions, variation hebdomadaire et écart à la moyenne cinq ans.\n"
@@ -570,8 +707,11 @@ def save_snapshot(snapshot: dict) -> None:
               "- Sodir (Norwegian Offshore Directorate) : chiffre mensuel provisoire d'août 2026 (pétrole, LGN et condensats), repère européen daté ; la source refuse actuellement les lectures automatisées du robot GitHub et ce chiffre n'est donc pas rafraîchi automatiquement.\n"
               "- EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication.\n"
               "- GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.\n"
+              "- RTE éCO2mix national temps réel : [dataset officiel](https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/) actualisé à la source au quart d'heure ; consommation, nucléaire, gaz, vent, solaire, hydraulique, bioénergies et échanges physiques. Export = solde négatif ; import = positif. Le cockpit collecte un instantané toutes les deux heures via GitHub Actions et indique l'heure de la mesure et de la collecte. Demande résiduelle = consommation − éolien − solaire (calcul indicatif, **pas une prévision du prix**). Aucun compte requis.\n"
+              "- ENTSO-E : prévision *day-ahead* de demande (A65/A01, Article 6.1.b, données [CC BY 4.0](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions)), France et Allemagne/Luxembourg ; affichage du pic prévu pour les prochaines 24 heures. Pour activer : créer un compte sur https://transparency.entsoe.eu/, demander l'accès API à `transparency@entsoe.eu` (objet `RESTful API access` et adresse enregistrée dans le corps), puis générer le jeton dans « My Account ». Enregistrer le jeton **uniquement** comme secret GitHub Actions `ENTSOE_API_TOKEN` via Settings → Secrets and variables → Actions → New repository secret ; relancer l'action. Ne jamais le coller dans le HTML, un fichier GitHub ou une conversation. Sans clé, RTE Power fonctionne déjà.\n"
+              "- Prix électriques France/DE : bouton vers le [marché officiel RTE](https://www.rte-france.com/en/data-publications/eco2mix/market-data) ; les prix day-ahead EPEX ne sont pas couverts par la [liste ENTSO-E de réutilisation libre](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions) et RTE interdit la copie de ses prix via éCO2mix. Le jeton ENTSO-E n'est pas un droit de redistribution de ces cotations.\n"
               "- Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.\n"
-              "- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. ENTSO-E fournit des données d'électricité, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.\n"
+              "- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. ENTSO-E fournit des prévisions électriques ouvertes, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.\n"
               "- LME : [rapports de stocks](https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports) à consulter, sans chiffre de stock automatisé tant qu'un flux stable n'est pas vérifié.\n\n"
               "Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; TWh = térawattheures ; GWh/j = gigawattheures par jour ; 10³ m³ GNL = milliers de mètres cubes de GNL liquide ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks, prix et flux ne sont jamais additionnés.\n\n"
               "Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les fichiers publics. Le fichier HTML contient un instantané et s'ouvre directement après téléchargement. Un téléchargement isolé ne reçoit pas les nouvelles données : récupérer la dernière version depuis GitHub. Les tâches GitHub planifiées peuvent être retardées ou désactivées après une longue période sans activité ; dans ce cas, l'onglet Actions permet la relance manuelle.\n\n"
@@ -593,6 +733,12 @@ def main() -> None:
     tasks["brent"] = lambda: parse_eia_spot(fetch(EIA_OIL_SPOT_URL), "brent", now.date())
     tasks["wti"] = lambda: parse_eia_spot(fetch(EIA_OIL_SPOT_URL), "wti", now.date())
     tasks["henry"] = lambda: parse_eia_spot(fetch(EIA_GAS_SPOT_URL), "henry", now.date())
+    tasks["rte_power"] = lambda: parse_rte_power(fetch(RTE_URL), now)
+    entsoe_token = os.environ.get("ENTSOE_API_TOKEN", "").strip()
+    if entsoe_token:
+        for zone in POWER_ZONES:
+            tasks["entsoe_" + zone] = (lambda code=zone: parse_entsoe_forecast(
+                entsoe_query(code, now, entsoe_token), code, now))
     gie_key = os.environ.get("GIE_API_KEY", "")
     if gie_key:
         tasks["gie"] = lambda: parse_gie(fetch(GIE_URL, {"x-key": gie_key}))

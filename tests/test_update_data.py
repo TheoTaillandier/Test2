@@ -3,7 +3,8 @@ import unittest
 from datetime import date, datetime, timezone
 
 from scripts.update_data import (build_snapshot, parse_alsi, parse_eia_spot, parse_fred, parse_norway,
-                                 parse_gie, parse_oil_flows, parse_wasde,
+                                 parse_gie, parse_oil_flows, parse_wasde, parse_rte_power,
+                                 parse_entsoe_forecast,
                                  verified_calendar)
 
 
@@ -119,6 +120,54 @@ class PublicationParsingTest(unittest.TestCase):
         self.assertFalse(any(item['id'] in ('gas_eu','lng_fr_sendout')
                              for item in result['metrics']))
         self.assertEqual(result['sources']['alsi_fr']['status'], 'needs_key')
+
+    def test_rte_power_uses_last_real_observation_and_correct_export_sign(self):
+        rows = []
+        for index in range(8):
+            rows.append({'date_heure':f'2026-09-25T{9 + index // 4:02d}:{index % 4 * 15:02d}:00+00:00',
+                         'consommation':52000 + index * 100,
+                         'gaz':2500, 'eolien':4600, 'solaire':3200,
+                         'nucleaire':38000, 'ech_physiques':-4300})
+        rows.append({'date_heure':'2026-09-25T12:45:00+00:00',
+                     'consommation':99999, 'gaz':99999})  # future measurement
+        result = parse_rte_power(json.dumps({'results':rows}).encode(),
+                                 datetime(2026, 9, 25, 12, tzinfo=timezone.utc))
+        by_id = {item['id']:item for item in result['metrics']}
+        self.assertEqual(result['points'][-1]['at'], '2026-09-25T10:45:00+00:00')
+        self.assertEqual(by_id['power_load']['value'], 52700)
+        self.assertEqual(by_id['power_residual']['value'], 44900)
+        self.assertEqual(by_id['power_exchange']['value'], -4300)
+        self.assertFalse(any('price' in item['id'] for item in result['metrics']))
+        with self.assertRaisesRegex(ValueError, 'too old'):
+            parse_rte_power(json.dumps({'results':rows[:-1]}).encode(),
+                            datetime(2026, 9, 28, tzinfo=timezone.utc))
+
+    def test_entsoe_forecast_only_publishes_actual_day_ahead_load(self):
+        example = b'''<GL_MarketDocument xmlns="urn:iec:62325.351:tc57wg16:451-6:loadpublishdocument:3:0">
+          <type>A65</type><process.processType>A01</process.processType>
+          <TimeSeries><businessType>A04</businessType><quantity_Measure_Unit.name>MAW</quantity_Measure_Unit.name>
+            <Period><timeInterval><start>2026-09-25T12:00Z</start><end>2026-09-25T13:00Z</end></timeInterval>
+              <resolution>PT15M</resolution>
+              <Point><position>1</position><quantity>51000</quantity></Point>
+              <Point><position>2</position><quantity>52000</quantity></Point>
+              <Point><position>3</position><quantity>54000</quantity></Point>
+              <Point><position>4</position><quantity>53000</quantity></Point>
+            </Period></TimeSeries></GL_MarketDocument>'''
+        result = parse_entsoe_forecast(example, 'fr',
+                                       datetime(2026, 9, 25, 11, tzinfo=timezone.utc))
+        self.assertEqual(result['metrics'][0]['value'], 54000)
+        self.assertEqual(result['as_of'], '2026-09-25T12:30:00+00:00')
+        with self.assertRaisesRegex(ValueError, 'different data item'):
+            parse_entsoe_forecast(example.replace(b'<type>A65</type>', b'<type>A44</type>'), 'fr',
+                                  datetime(2026, 9, 25, 11, tzinfo=timezone.utc))
+
+    def test_missing_entsoe_token_clears_forecast_but_keeps_rte_power(self):
+        previous = {'metrics':[{'id':'power_forecast_fr','sector':'power','value':58000},
+                               {'id':'power_load','sector':'power','value':52000}],
+                    'sources':{'entsoe_fr':{'status':'ok'}},'stories':[], 'history':{}}
+        result = build_snapshot(previous, {}, datetime(2026, 9, 25, tzinfo=timezone.utc))
+        self.assertEqual(result['sources']['entsoe_fr']['status'], 'needs_key')
+        self.assertEqual([m['id'] for m in result['metrics'] if m['sector']=='power'], ['power_load'])
 
     def test_fred_ignores_missing_observation_and_rejects_stale_prices(self):
         raw = b'DATE,DCOILBRENTEU\n2026-09-21,116.15\n2026-09-22,.\n2026-09-23,114.89\n'

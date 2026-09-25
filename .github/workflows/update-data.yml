@@ -7,8 +7,7 @@ on:
       - 'tests/**'
       - '.github/workflows/update-data.yml'
   schedule:
-    - cron: '11 18 * * 1-5'
-    - cron: '37 22 * * *'
+    - cron: '17 */2 * * *'
   workflow_dispatch:
 
 permissions:
@@ -34,6 +33,7 @@ jobs:
       - name: Collecter les publications officielles
         env:
           GIE_API_KEY: ${{ secrets.GIE_API_KEY }}
+          ENTSOE_API_TOKEN: ${{ secrets.ENTSOE_API_TOKEN }}
         run: python scripts/update_data.py
       - name: Publier la nouvelle version ouvrable hors ligne
         run: |
