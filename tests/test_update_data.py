@@ -112,6 +112,20 @@ class PublicationParsingTest(unittest.TestCase):
         self.assertEqual(gas['lng_fr_inventory']['unit'], '10³ m³ GNL')
         self.assertEqual(gas['lng_fr_sendout']['change'], 42)
 
+    def test_alsi_skips_incomplete_publication_without_undating_it(self):
+        lng = {'data': [
+            {'code': 'FR', 'gasDayStart': '2026-09-25', 'inventory': None,
+             'sendOut': '246.2', 'status': 'C'},
+            {'code': 'FR', 'gasDayStart': '2026-09-24', 'inventory': '465.2',
+             'sendOut': '245.7', 'status': 'C'},
+            {'code': 'FR', 'gasDayStart': '2026-09-23', 'inventory': '455.2',
+             'sendOut': '203.7', 'status': 'C'}]}
+        result = parse_alsi(json.dumps(lng).encode(), 'fr', date(2026, 9, 25))
+        self.assertEqual(result['as_of'], '2026-09-24')
+        self.assertEqual(result['metrics'][1]['change'], 42)
+        with self.assertRaisesRegex(ValueError, 'stale'):
+            parse_alsi(json.dumps(lng).encode(), 'fr', date(2026, 10, 3))
+
     def test_removed_gie_key_removes_previously_published_european_metrics(self):
         previous = {'metrics': [{'id':'gas_eu','value':80,'sector':'gas'},
                                 {'id':'lng_fr_sendout','value':120,'sector':'gas'}],

@@ -44,8 +44,8 @@ EIA_GAS_SPOT_URL = "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
 GIE_URL = "https://agsi.gie.eu/api?type=eu&size=3"
 GIE_REPORT_URL = "https://agsi.gie.eu/"
 GIE_FR_URL = "https://agsi.gie.eu/api?country=fr&size=3"
-ALSI_URL = "https://alsi.gie.eu/api?type=eu&size=3"
-ALSI_FR_URL = "https://alsi.gie.eu/api?country=fr&size=3"
+ALSI_URL = "https://alsi.gie.eu/api?type=eu&size=14"
+ALSI_FR_URL = "https://alsi.gie.eu/api?country=fr&size=14"
 ALSI_REPORT_URL = "https://alsi.gie.eu/"
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 RTE_REPORT_URL = "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
@@ -564,14 +564,24 @@ def parse_gie(raw: bytes, region: str = "eu") -> dict:
     return {"metrics": result, "as_of": current["gasDayStart"], "url": GIE_REPORT_URL}
 
 
-def parse_alsi(raw: bytes, region: str) -> dict:
+def parse_alsi(raw: bytes, region: str, today: date | None = None) -> dict:
     rows = gie_rows(raw, region)
-    current = rows[0]
+    # An ALSI aggregate may be published before both measurements arrive.
+    # Use the most recent complete observation and retain its actual date.
+    complete = [row for row in rows if measured(row.get("inventory")) is not None
+                and measured(row.get("sendOut")) is not None]
+    if not complete:
+        raise ValueError("ALSI " + region.upper() + " has no complete inventory/send-out observation")
+    current = complete[0]
+    observed = date.fromisoformat(current["gasDayStart"])
+    today = today or datetime.now(timezone.utc).date()
+    if not timedelta(0) <= today - observed <= timedelta(days=7):
+        raise ValueError("ALSI " + region.upper() + " latest complete observation is stale")
     suffix, location = ("eu", "UE") if region == "eu" else ("fr", "France")
     inventory, sendout = float(current["inventory"]), float(current["sendOut"])
     if not 0 <= inventory <= 50000 or not 0 <= sendout <= 30000:
         raise ValueError("ALSI inventory or send-out out of bounds")
-    previous = rows[1] if len(rows) > 1 and rows[1]["gasDayStart"] != current["gasDayStart"] else None
+    previous = next((row for row in complete[1:] if row["gasDayStart"] != current["gasDayStart"]), None)
     old_inventory = float(previous["inventory"]) if previous and previous.get("inventory") is not None else None
     old_sendout = float(previous["sendOut"]) if previous and previous.get("sendOut") is not None else None
     flag = "Estimé par les opérateurs" if current.get("status") == "E" else "Déclaré par les opérateurs"
@@ -752,8 +762,8 @@ def main() -> None:
     if gie_key:
         tasks["gie"] = lambda: parse_gie(fetch(GIE_URL, {"x-key": gie_key}))
         tasks["gie_fr"] = lambda: parse_gie(fetch(GIE_FR_URL, {"x-key": gie_key}), "fr")
-        tasks["alsi"] = lambda: parse_alsi(fetch(ALSI_URL, {"x-key": gie_key}), "eu")
-        tasks["alsi_fr"] = lambda: parse_alsi(fetch(ALSI_FR_URL, {"x-key": gie_key}), "fr")
+        tasks["alsi"] = lambda: parse_alsi(fetch(ALSI_URL, {"x-key": gie_key}), "eu", now.date())
+        tasks["alsi_fr"] = lambda: parse_alsi(fetch(ALSI_FR_URL, {"x-key": gie_key}), "fr", now.date())
     results = {}
     with ThreadPoolExecutor(max_workers=len(tasks)) as pool:
         futures = {pool.submit(task): key for key, task in tasks.items()}
