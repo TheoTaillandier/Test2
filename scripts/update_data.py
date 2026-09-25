@@ -41,9 +41,9 @@ NEWS_URL = "https://www.eia.gov/rss/todayinenergy.xml"
 SODIR_URL = "https://www.sodir.no/en/whats-new/news/production-figures/"
 EIA_OIL_SPOT_URL = "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
 EIA_GAS_SPOT_URL = "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
-GIE_URL = "https://agsi.gie.eu/api?type=eu&size=3"
+GIE_URL = "https://agsi.gie.eu/api?type=eu&size=14"
 GIE_REPORT_URL = "https://agsi.gie.eu/"
-GIE_FR_URL = "https://agsi.gie.eu/api?country=fr&size=3"
+GIE_FR_URL = "https://agsi.gie.eu/api?country=fr&size=14"
 ALSI_URL = "https://alsi.gie.eu/api?type=eu&size=14"
 ALSI_FR_URL = "https://alsi.gie.eu/api?country=fr&size=14"
 ALSI_REPORT_URL = "https://alsi.gie.eu/"
@@ -561,7 +561,11 @@ def parse_gie(raw: bytes, region: str = "eu") -> dict:
         result.append(metric("gas_" + suffix + "_net", "gas", "Soutirage net " + location,
                              flow, "GWh/j", None, "positif = soutirage ; négatif = injection",
                              current["gasDayStart"], "GIE AGSI+", GIE_REPORT_URL, flag))
-    return {"metrics": result, "as_of": current["gasDayStart"], "url": GIE_REPORT_URL}
+    points = [{"date": row["gasDayStart"], "value": float(row["full"])}
+              for row in reversed(rows) if row.get("full") is not None and
+              0 <= float(row["full"]) <= 100]
+    return {"metrics": result, "as_of": current["gasDayStart"],
+            "url": GIE_REPORT_URL, "points": points}
 
 
 def alsi_inventory(row: dict) -> float | None:
@@ -602,7 +606,11 @@ def parse_alsi(raw: bytes, region: str, today: date | None = None) -> dict:
                sendout, "GWh/j", sendout - old_sendout if old_sendout is not None else None,
                "vs veille", current["gasDayStart"], "GIE ALSI", ALSI_REPORT_URL, flag),
     ]
-    return {"metrics": result, "as_of": current["gasDayStart"], "url": ALSI_REPORT_URL}
+    points = [{"date": row["gasDayStart"], "value": float(measured(row["sendOut"]))}
+              for row in reversed(complete) if measured(row["sendOut"]) is not None and
+              0 <= float(measured(row["sendOut"])) <= 30000]
+    return {"metrics": result, "as_of": current["gasDayStart"],
+            "url": ALSI_REPORT_URL, "points": points}
 
 
 def verified_calendar(today: date) -> list[dict]:
@@ -683,6 +691,8 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
                 for id in list(values):
                     if id == prefix or id.startswith(prefix + "_"):
                         del values[id]
+                history.pop({"gie": "gas_eu", "gie_fr": "gas_fr",
+                             "alsi": "lng_eu_sendout", "alsi_fr": "lng_fr_sendout"}[key], None)
             if key in ("entsoe_fr", "entsoe_de"):
                 sources[key] = {"status": "needs_key", "url": ENTSOE_REPORT_URL,
                                 "message": "Clé ENTSO-E requise pour la prévision J-1."}
@@ -696,6 +706,9 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
             values[item["id"]] = item
         if key == "oil_history":
             history["oil_crude"] = result["points"]
+        if key in ("gie", "gie_fr", "alsi", "alsi_fr") and result.get("points"):
+            history[{"gie": "gas_eu", "gie_fr": "gas_fr",
+                     "alsi": "lng_eu_sendout", "alsi_fr": "lng_fr_sendout"}[key]] = result["points"]
         if key == "rte_power":
             history["power_fr"] = result["points"]
         if key == "news":
@@ -739,7 +752,9 @@ def save_snapshot(snapshot: dict) -> None:
               "- ENTSO-E : prévision *day-ahead* de demande (A65/A01, Article 6.1.b, données [CC BY 4.0](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions)), France et Allemagne/Luxembourg ; affichage du pic prévu pour les prochaines 24 heures. Pour activer : créer un compte sur https://transparency.entsoe.eu/, demander l'accès API à `transparency@entsoe.eu` (objet `RESTful API access` et adresse enregistrée dans le corps), puis générer le jeton dans « My Account ». Enregistrer le jeton **uniquement** comme secret GitHub Actions `ENTSOE_API_TOKEN` via Settings → Secrets and variables → Actions → New repository secret ; relancer l'action. Ne jamais le coller dans le HTML, un fichier GitHub ou une conversation. Sans clé, RTE Power fonctionne déjà.\n"
               "- Prix électriques France/DE : bouton vers le [marché officiel RTE](https://www.rte-france.com/en/data-publications/eco2mix/market-data) ; les prix day-ahead EPEX ne sont pas couverts par la [liste ENTSO-E de réutilisation libre](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions) et RTE interdit la copie de ses prix via éCO2mix. Le jeton ENTSO-E n'est pas un droit de redistribution de ces cotations.\n"
               "- Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.\n"
-              "- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. ENTSO-E fournit des prévisions électriques ouvertes, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.\n"
+              "- Marchés : graphique et tableau de cotations indicatives TradingView/OANDA (Brent, WTI, gaz US, cuivre et or). Ce sont des instruments OTC indicatifs ; ils ne remplacent ni les futures ICE/NYMEX ni le spot EIA daté. Les widgets nécessitent Internet et le fournisseur peut limiter la diffusion. Aluminium, cacao et café sont accessibles via leurs pages de marché ; leurs prix ne sont pas intégrés sans droits vérifiés.\n"
+              "- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. Aucune valeur ou spread instantané n'est inventé. ENTSO-E fournit des prévisions électriques ouvertes, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.\n"
+              "- Physique : courbes de 14 jours de remplissage AGSI France et d'émission ALSI France, 26 semaines de stocks de brut EIA ; les signaux de pression sont des scénarios conditionnels liés aux chiffres publiés, jamais un mouvement de prix constaté.\n"
               "- LME : [rapports de stocks](https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports) à consulter, sans chiffre de stock automatisé tant qu'un flux stable n'est pas vérifié.\n\n"
               "Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; TWh = térawattheures ; GWh/j = gigawattheures par jour ; 10³ m³ GNL = milliers de mètres cubes de GNL liquide ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks, prix et flux ne sont jamais additionnés.\n\n"
               "Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les fichiers publics. Le fichier HTML contient un instantané et s'ouvre directement après téléchargement. Un téléchargement isolé ne reçoit pas les nouvelles données : récupérer la dernière version depuis GitHub. Les tâches GitHub planifiées peuvent être retardées ou désactivées après une longue période sans activité ; dans ce cas, l'onglet Actions permet la relance manuelle.\n\n"

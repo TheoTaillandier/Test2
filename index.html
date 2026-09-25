@@ -39,8 +39,35 @@
     .bar small { font-size: 10px; color: var(--muted); }
     .widget, .tradingview-widget-container, .tradingview-widget-container__widget { width: 100%; height: 100%; min-height: 0; }
     .market-grid { height: min(850px, calc(100vh - 175px)); min-height: 690px; padding: 12px; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(365px, .9fr); gap: 12px; }
+    .market-grid { height: auto; min-height: 850px; grid-template-columns: minmax(0, 1.45fr) minmax(380px, 1fr); }
+    .chart { min-height: 850px; }
+    .chart .widget { min-height: 715px; }
+    .chart-picks { display:flex; flex-wrap:wrap; gap:5px; padding:8px 12px; border-bottom:1px solid var(--border); }
+    .chart-picks button { border:1px solid var(--border); color:var(--muted); background:var(--surface-2); padding:5px 9px; border-radius:6px; }
+    .chart-picks button.active { color:var(--accent); border-color:var(--accent); }
+    .quote-widget { height:260px; flex:none; overflow:hidden; border-bottom:1px solid var(--border); }
+    .price-links { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; padding:0 12px 14px; }
+    .price-link { padding:12px; background:var(--surface-2); border:1px solid var(--border); border-radius:7px; }
+    .price-link strong,.price-link small { display:block; }
+    .price-link strong { font-size:13px; margin-bottom:3px; }
+    .price-link small { font-size:10px; color:var(--muted); }
+    .price-link p { margin:6px 0 0; font-size:11px; }
+    .signal-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:0 0 14px; }
+    .signal { padding:14px; border-left:3px solid var(--accent); }
+    .signal.down { border-left-color:var(--red); }
+    .signal.flat { border-left-color:var(--warm); }
+    .signal strong { display:block; font-size:14px; margin:4px 0; }
+    .signal small,.signal p { color:var(--muted); font-size:11px; }
+    .signal p { margin:8px 0 0; }
+    .gauge { height:9px; border-radius:20px; background:#294039; overflow:hidden; margin:12px 0 4px; }
+    .gauge i { display:block; height:100%; background:var(--accent); border-radius:20px; }
+    .chart-duo { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .chart-duo .trend { margin:0; }
+    .chart-duo h3 { font-size:12px; }
     .chart, .watch, .calendar { display: flex; flex-direction: column; }
-    .right { min-height: 0; display: grid; grid-template-rows: minmax(350px, 1.05fr) minmax(300px, .95fr); gap: 12px; }
+    .right { min-height: 0; display: grid; grid-template-rows: minmax(280px, 300px) minmax(535px, 1fr); gap: 12px; }
+    .right .calendar { grid-row:1; }
+    .right .watch { grid-row:2; }
     .chart .widget, .watch .widget, .calendar .widget { flex: 1; }
     .caption { padding: 8px 12px; border-top: 1px solid var(--border); color: var(--muted); font-size: 10px; }
     .market-snapshot, .release-list { border-top: 1px solid var(--border); padding: 8px 12px; flex: none; }
@@ -134,17 +161,22 @@
       .market-grid { height: auto; grid-template-columns: 1fr; }
       .chart { height: 575px; }
       .right { grid-template-columns: 1fr 1fr; grid-template-rows: 560px; }
+      .right .calendar,.right .watch { grid-row:auto; }
+      .chart .widget { min-height:0; }
       .physical-layout { grid-template-columns: 1fr; }
       .physical-side { grid-template-columns: 1fr 1fr; }
       .power-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .power-layout { grid-template-columns:1fr; }
+      .chart { min-height:0; }
+      .chart-duo { grid-template-columns:1fr; }
     }
     @media (max-width: 680px) {
       .header { padding: 9px; flex-wrap: wrap; }
       .brand span { display: none; }
       .market-grid { display: block; padding: 8px; }
       .chart { height: 490px; margin-bottom: 9px; }
-      .right { display: block; }
+      .right { display: flex; flex-direction:column; }
+      .calendar { order:-1; }
       .watch { height: 530px; margin-bottom: 9px; }
       .calendar { height: 390px; }
       .market-context { padding: 0 8px 15px; }
@@ -155,6 +187,7 @@
       .physical-side { grid-template-columns: 1fr; }
       .power-grid, .power-bottom { grid-template-columns:1fr; }
       .power-forecast { grid-template-columns:1fr; }
+      .price-links,.signal-grid { grid-template-columns:1fr; }
     }
   </style>
 </head>
@@ -169,26 +202,20 @@
   </header>
 
   <section class="page" id="markets">
-    <div class="ticker" id="ticker" aria-label="Repères de marché vérifiés"></div>
+    <div class="ticker" id="ticker" aria-label="Derniers cours spot officiels datés"></div>
     <main class="market-grid">
       <section class="card chart">
-        <div class="bar"><h2>Brent · graphique indicatif</h2><a href="https://www.tradingview.com/symbols/UKOIL/" target="_blank" rel="noopener noreferrer">Ouvrir ↗</a></div>
-        <div class="widget">
-          <div class="tradingview-widget-container">
-            <div class="tradingview-widget-container__widget"></div>
-            <script src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
-              {"autosize":true,"symbol":"TVC:UKOIL","interval":"60","timezone":"Europe/Paris","theme":"dark","style":"1","locale":"en","allow_symbol_change":true,"hide_top_toolbar":false,"support_host":"https://www.tradingview.com"}
-            </script>
-          </div>
-        </div>
-        <div class="caption">Prix indicatif. Un contrat future exact peut avoir un prix différent et des restrictions de diffusion.</div>
+        <div class="bar"><h2 id="market-chart-title">Brent · indicatif OANDA</h2><a id="market-chart-link" href="https://www.tradingview.com/symbols/BCOUSD/?exchange=OANDA" target="_blank" rel="noopener noreferrer">Ouvrir ↗</a></div>
+        <div class="chart-picks" id="chart-picks" aria-label="Choisir le graphique"></div>
+        <div class="widget" id="market-chart"><p class="empty">Chargement de TradingView…</p></div>
+        <div class="caption">Graphique tiers en séance : cotation indicative du fournisseur indiqué, avec disponibilité selon ses droits. Ce n’est ni le Brent ICE ni un prix d’exécution. Dernier spot officiel EIA daté dans le ruban.</div>
       </section>
       <aside class="right">
         <section class="card watch">
-          <div class="bar"><h2>À surveiller · énergie et matières</h2><small>Prix datés / accès direct</small></div>
+          <div class="bar"><h2>À surveiller · cotations en séance</h2><small>TradingView · accès tiers</small></div>
+          <div class="quote-widget" id="market-quotes"><p class="empty">Chargement des cotations indicatives…</p></div>
           <div class="watch-list" id="watch-list"></div>
-          <div class="market-snapshot" id="market-snapshot"><h3>Repères physiques vérifiés · disponibles même sans cotations</h3></div>
-          <div class="caption">Spot EIA : dernière observation publiée. TTF/PEG/JKM : ouvrir la source pour le prix en séance ; contrat et délai à vérifier sur le site.</div>
+          <div class="caption">Cotations OANDA : prix indicatifs, fournisseur et horaire affichés dans TradingView. Contrats boursiers et cours officiels spot : détails ci-dessous.</div>
         </section>
         <section class="card calendar">
           <div class="bar"><h2>Prochaines publications · heure de Paris</h2><a href="https://www.eia.gov/petroleum/supply/weekly/schedule.php" target="_blank" rel="noopener noreferrer">Dates ↗</a></div>
@@ -197,7 +224,7 @@
         </section>
       </aside>
     </main>
-    <section class="market-context"><h2>Le marché physique en quatre chiffres · <a href="#physical" data-open="physical">détails ↗</a></h2><div class="mini-grid" id="mini-grid"></div></section>
+    <section class="market-context"><h2>TTF, PEG, JKM · références de gaz et GNL</h2><div class="price-links" id="gas-prices"></div><h2>Le physique en chiffres · <a href="#physical" data-open="physical">explications ↗</a></h2><div class="mini-grid" id="mini-grid"></div></section>
   </section>
 
   <section class="page" id="physical" hidden>
@@ -210,12 +237,14 @@
         <button type="button" data-sector="agri">Agriculture</button>
         <button type="button" data-sector="metals">Métaux</button>
       </div>
+      <h2 class="section-heading">À comprendre en 10 secondes · sens possible pour les prix</h2>
+      <div class="signal-grid" id="signals"></div>
       <div class="physical-layout">
-          <section><h2 class="section-heading" id="sector-heading">Pétrole · prix spot et stocks</h2><div class="metrics" id="metrics"></div><div class="card side-pad trend" id="trend" hidden><h3>Stocks commerciaux de brut US · 26 dernières semaines</h3><svg viewBox="0 0 400 110" preserveAspectRatio="none" role="img" aria-label="Évolution hebdomadaire des stocks commerciaux de brut US"><polyline id="trend-line" points=""></polyline></svg><div class="axis"><span id="trend-start"></span><span id="trend-end"></span></div></div></section>
+          <section><h2 class="section-heading" id="sector-heading">Pétrole · prix spot et stocks</h2><div class="chart-duo"><div class="card side-pad trend" id="trend" hidden><h3 id="trend-title">Stocks commerciaux de brut US · 26 semaines</h3><svg viewBox="0 0 400 110" preserveAspectRatio="none" role="img" aria-label="Évolution des stocks ou flux physiques"><polyline id="trend-line" points=""></polyline></svg><div class="axis"><span id="trend-start"></span><span id="trend-end"></span></div></div><div class="card side-pad trend" id="trend-two" hidden><h3 id="trend-two-title">Deuxième repère</h3><svg viewBox="0 0 400 110" preserveAspectRatio="none" role="img" aria-label="Historique du deuxième repère"><polyline id="trend-two-line" points=""></polyline></svg><div class="axis"><span id="trend-two-start"></span><span id="trend-two-end"></span></div></div></div><h2 class="section-heading" style="margin-top:16px">Dernières mesures officielles</h2><div class="metrics" id="metrics"></div></section>
         <aside class="physical-side">
           <section class="card side-pad" id="takeaways"><h3>Ce que disent les publications</h3><div id="takeaway-list"></div></section>
           <section class="card side-pad"><h3>Actualités qui éclairent le physique · EIA</h3><p>Production, stocks, raffinage et GNL. Les articles décrivent des faits publiés ; leur effet sur les prix reste à analyser.</p><div id="stories"></div></section>
-          <section class="card side-pad"><h3>Couverture France et Europe</h3><p>Une <a href="https://agsi.gie.eu/account" target="_blank" rel="noopener noreferrer">clé GIE gratuite ↗</a> active AGSI + ALSI : remplissage et volume gaz France/UE, GNL en cuves et émission des terminaux. Sans clé, ces valeurs restent vides. <a href="https://transparency.entsog.eu/" target="_blank" rel="noopener noreferrer">ENTSOG ↗</a> complète avec les flux gaziers. Le cuivre USGS est annuel ; les <a href="https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports" target="_blank" rel="noopener noreferrer">stocks LME ↗</a> ne sont pas chiffrés ici.</p></section>
+          <section class="card side-pad"><h3>Ce que mesurent les données</h3><p>GIE AGSI+ : stocks de gaz France et UE. GIE ALSI : GNL dans les terminaux et émission en GWh/j. <a href="https://transparency.entsog.eu/" target="_blank" rel="noopener noreferrer">ENTSOG ↗</a> donne les flux de réseau. Un stock et un débit ne se comparent pas directement. Les signaux montrent une pression possible toutes choses égales par ailleurs ; ils ne mesurent pas une variation instantanée du TTF, du PEG ou du JKM.</p></section>
         </aside>
       </div>
     </main>
@@ -239,7 +268,7 @@
     </main>
   </section>
 
-  <p class="footer">Sources : EIA (prix spot datés, WPSR et WNGSR), USDA WASDE, USGS, Sodir (repère norvégien daté), GIE AGSI/ALSI si configuré. Les prix TTF, PEG et JKM consultables par lien ne sont pas des cotations publiées ici. Une source inaccessible conserve sa dernière valeur datée et est signalée.</p>
+  <p class="footer">Sources : EIA (spot publié et stocks), GIE AGSI/ALSI, USDA, USGS, RTE, ENTSO-E. Cotations indicatives tierces : TradingView/OANDA ; droits et délais du fournisseur. TTF, PEG et JKM : accès officiel aux cotations sans prix reproduit faute de flux redistribuable. Une source inaccessible conserve sa dernière valeur datée et est signalée.</p>
 
   <!-- Replaced by scripts/update_data.py; retained inside HTML for one-file opening. -->
   <script id="snapshot-data" type="application/json">
@@ -3108,6 +3137,13 @@
       card.append(line(number(item.value, digits(item)) + ' ' + item.unit, 'div', 'number'));
       card.append(line(changeText(item), 'div', 'change'));
       card.append(line((stale(item) ? 'ARCHIVE · ' : '') + 'Période : ' + period(item.as_of), 'div', 'meta'));
+      if (['gas_fr','gas_eu'].includes(item.id)) {
+        const track = line('', 'div', 'gauge');
+        const fill = line('', 'i');
+        fill.style.width = Math.max(0, Math.min(100, item.value)) + '%';
+        track.append(fill);
+        card.append(track);
+      }
       if (item.detail) card.append(line(item.detail, 'div', 'detail'));
       const href = safeLink(item.url);
       if (href) {
@@ -3187,6 +3223,71 @@
       {label: 'JKM · future ICE', note: 'Contrat financier indexé sur le JKM Platts · $/MMBtu',
        url: 'https://www.ice.com/products/6753280/jkm-lng-platts-future'},
     ];
+    const charts = [
+      {name:'Brent', symbol:'OANDA:BCOUSD', url:'https://www.tradingview.com/symbols/BCOUSD/?exchange=OANDA'},
+      {name:'WTI', symbol:'OANDA:WTICOUSD', url:'https://www.tradingview.com/symbols/WTICOUSD/?exchange=OANDA'},
+      {name:'Gaz US', symbol:'OANDA:NATGASUSD', url:'https://www.tradingview.com/symbols/NATGASUSD/?exchange=OANDA'},
+      {name:'Cuivre', symbol:'OANDA:XCUUSD', url:'https://www.tradingview.com/symbols/XCUUSD/?exchange=OANDA'},
+      {name:'Or', symbol:'OANDA:XAUUSD', url:'https://www.tradingview.com/symbols/XAUUSD/?exchange=OANDA'}
+    ];
+    function embed(container, scriptUrl, config) {
+      container.replaceChildren();
+      const frame = line('', 'div', 'tradingview-widget-container');
+      frame.append(line('', 'div', 'tradingview-widget-container__widget'));
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = scriptUrl;
+      script.textContent = JSON.stringify(config);
+      frame.append(script);
+      container.append(frame);
+    }
+    function renderChart(index = 0) {
+      const choice = charts[index];
+      document.getElementById('market-chart-title').textContent = choice.name + ' · indicatif OANDA';
+      document.getElementById('market-chart-link').href = choice.url;
+      document.querySelectorAll('#chart-picks button').forEach((button, i) => {
+        button.classList.toggle('active', i === index);
+        button.setAttribute('aria-pressed', String(i === index));
+      });
+      embed(document.getElementById('market-chart'),
+        'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js',
+        {autosize:true,symbol:choice.symbol,interval:'60',timezone:'Europe/Paris',
+         theme:'dark',style:'1',locale:'fr',allow_symbol_change:true,
+         hide_top_toolbar:false,support_host:'https://www.tradingview.com'});
+    }
+    function renderQuotes() {
+      const picks = document.getElementById('chart-picks');
+      charts.forEach((choice, index) => {
+        const button = line(choice.name, 'button');
+        button.type = 'button';
+        button.addEventListener('click', () => renderChart(index));
+        picks.append(button);
+      });
+      renderChart();
+      embed(document.getElementById('market-quotes'),
+        'https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js',
+        {width:'100%',height:'100%',symbolsGroups:[
+          {name:'Énergie · indicatif OANDA',symbols:[
+            {name:'OANDA:BCOUSD',displayName:'Brent · indicatif'},
+            {name:'OANDA:WTICOUSD',displayName:'WTI · indicatif'},
+            {name:'OANDA:NATGASUSD',displayName:'Gaz US · indicatif'}]},
+          {name:'Métaux · indicatif OANDA',symbols:[
+            {name:'OANDA:XCUUSD',displayName:'Cuivre · USD/lb'},
+            {name:'OANDA:XAUUSD',displayName:'Or · USD/oz'}]}],
+         showSymbolLogo:false, isTransparent:true,colorTheme:'dark',locale:'fr'});
+      const gas = document.getElementById('gas-prices');
+      for (const [title,detail,href] of [
+        ['TTF','Spot EEX et future M+1 ICE · €/MWh','https://www.eex.com/en/market-data/market-data-hub/natural-gas/indices'],
+        ['PEG France','Indice spot EEX · €/MWh','https://www.eex.com/en/market-data/market-data-hub/natural-gas/indices'],
+        ['JKM','Future ICE indexé sur le JKM Platts · $/MMBtu','https://www.ice.com/products/6753280/jkm-lng-platts-future']]) {
+        const card = line('', 'article', 'price-link');
+        card.append(line(title, 'strong'), line(detail, 'small'));
+        const link = line('Consulter le cours et son horaire ↗', 'a');
+        link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer';
+        card.append(link, line('Cotation non redistribuée sur ce tableau.', 'p'));
+        gas.append(card);
+      }
+    }
     function renderTicker() {
       const box = document.getElementById('ticker');
       for (const [id, title] of [['price_brent','BRENT spot'], ['price_wti','WTI spot'],
@@ -3204,21 +3305,11 @@
           'EIA · clôture quotidienne', 'small'));
         box.append(anchor);
       }
-      for (const [title, url] of [['TTF spot ↗',marketLinks[0].url],['PEG France ↗',marketLinks[2].url],
-                                  ['JKM future ↗',marketLinks[3].url]]) {
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.target = '_blank';
-        anchor.rel = 'noopener noreferrer';
-        anchor.append(line(title, 'b'));
-        anchor.append(line('Prix à consulter sur la source', 'small'));
-        box.append(anchor);
-      }
     }
 
     function renderWatch() {
       const box = document.getElementById('watch-list');
-      box.append(line('PRIX SPOT · OBSERVATIONS EIA', 'div', 'watch-group'));
+      box.append(line('REPÈRES SPOT OFFICIELS · CLÔTURES DATÉES', 'div', 'watch-group'));
       for (const id of ['price_brent', 'price_wti', 'price_henry']) {
         const item = byId[id];
         const row = line('', 'div', 'quote-row');
@@ -3237,8 +3328,14 @@
           (stale(item) ? ' · ARCHIVE' : '') : 'Collecte officielle en cours', 'small', 'quote-note'));
         box.append(row);
       }
-      box.append(line('GAZ EUROPÉEN ET GNL · COTATIONS', 'div', 'watch-group'));
-      for (const item of marketLinks) {
+      box.append(line('CONTRATS ET AUTRES MATIÈRES · ACCÈS DIRECT', 'div', 'watch-group'));
+      const other = [
+        ...marketLinks.slice(1, 2),
+        {label:'Aluminium · LME',note:'Cours et unité sur la bourse',url:'https://www.lme.com/Metals/Non-ferrous/LME-Aluminium'},
+        {label:'Cacao · ICE',note:'Future CC1! · échéance à vérifier',url:'https://www.tradingview.com/symbols/ICEUS-CC1%21/'},
+        {label:'Café Arabica · ICE',note:'Future KC1! · échéance à vérifier',url:'https://www.tradingview.com/symbols/ICEUS-KC1%21/'}
+      ];
+      for (const item of other) {
         const row = line('', 'div', 'quote-row');
         row.append(line(item.label, 'strong'));
         const wrap = line('', 'span', 'quote-value');
@@ -3250,7 +3347,7 @@
         row.append(wrap, line(item.note, 'small', 'quote-note'));
         box.append(row);
       }
-      box.append(line('L’écart JKM–TTF exige deux échéances identiques et une conversion $/MMBtu ↔ €/MWh ; aucun spread fictif n’est affiché.', 'div', 'caption'));
+      box.append(line('JKM–TTF : mêmes échéances et même unité indispensables pour comparer un spread.', 'div', 'caption'));
     }
 
     function renderAgenda() {
@@ -3309,6 +3406,40 @@
       if (!box.children.length) box.append(line('Aucune variation vérifiée pour cette catégorie.', 'p'));
     }
 
+    const signalRules = {
+      oil: [
+        {id:'oil_crude', label:'Brut US · stocks', market:'Brent / WTI', rising:'Stocks en hausse : offre disponible plus abondante, pression possible à la baisse.', falling:'Stocks en baisse : offre plus resserrée, pression possible à la hausse.'},
+        {id:'oil_cushing', label:'Cushing · stocks WTI', market:'WTI', rising:'Cushing se remplit : facteur potentiellement baissier pour le WTI.', falling:'Cushing se vide : facteur potentiellement haussier pour le WTI.'},
+        {id:'oil_imports', label:'Importations US', market:'Brent / WTI', rising:'Entrées plus élevées : peuvent alimenter les stocks et les raffineries.', falling:'Entrées plus faibles : peuvent resserrer le brut disponible.'}],
+      gas: [
+        {id:'gas_fr', label:'Stockage France', market:'PEG / TTF', rising:'Remplissage en hausse : coussin de sécurité en progression.', falling:'Remplissage en baisse : coussin de sécurité en recul.'},
+        {id:'gas_eu', label:'Stockage Europe', market:'TTF', rising:'Stock européen en hausse : tension potentielle moindre.', falling:'Stock européen en baisse : tension potentielle accrue.'},
+        {id:'lng_fr_sendout', label:'GNL · terminaux France', market:'PEG / TTF', rising:'Émission plus forte : davantage de gaz arrive au réseau français.', falling:'Émission plus faible : apport des terminaux plus limité.'}],
+      agri: [
+        {id:'ag_world_corn', label:'Stocks mondiaux de maïs', market:'Maïs', rising:'Révision des stocks à la hausse : pression potentielle à la baisse.', falling:'Révision des stocks à la baisse : pression potentielle à la hausse.'}]
+    };
+    function renderSignals() {
+      const box = document.getElementById('signals');
+      box.replaceChildren();
+      const rules = signalRules[selectedSector] || [];
+      for (const rule of rules) {
+        const item = byId[rule.id];
+        if (!item) continue;
+        const delta = item.change;
+        const known = Number.isFinite(delta) && !stale(item);
+        const cls = !known || !delta ? 'flat' : delta < 0 ? 'down' : '';
+        const card = line('', 'article', 'card signal ' + cls);
+        card.append(line(rule.label + ' · ' + period(item.as_of), 'small'));
+        card.append(line(number(item.value, digits(item)) + ' ' + item.unit, 'strong'));
+        card.append(line(known ? changeText(item) : 'Variation récente non vérifiée', 'small'));
+        card.append(line(known && delta ? delta > 0 ? rule.rising : rule.falling :
+          'Pas de signal directionnel récent. Vérifier la prochaine publication.', 'p'));
+        card.append(line('Marché concerné : ' + rule.market + ' · scénario, pas une réaction de cours.', 'small'));
+        box.append(card);
+      }
+      if (!box.children.length) box.append(line('Pas encore de variation récente exploitable pour ce secteur. Les chiffres datés restent accessibles ci-dessous.', 'p', 'empty'));
+    }
+
     function renderStories() {
       const box = document.getElementById('stories');
       const relevant = (snapshot.stories || []).filter(item =>
@@ -3330,22 +3461,37 @@
       if (!box.children.length) box.append(line('Aucun article EIA sur le pétrole ou le gaz dans le flux actuel.', 'p'));
     }
 
-    function renderTrend() {
-      const panel = document.getElementById('trend');
-      const points = snapshot.history?.oil_crude || [];
-      panel.hidden = selectedSector !== 'oil' || points.length < 12;
+    function drawTrend(panelId, lineId, startId, endId, titleId, title, points) {
+      const panel = document.getElementById(panelId);
+      panel.hidden = !Array.isArray(points) || points.length < 2;
       if (panel.hidden) return;
       const nums = points.map(point => point.value);
-      const low = Math.min(...nums) - 3;
-      const high = Math.max(...nums) + 3;
+      const span = Math.max(0.1, Math.max(...nums) - Math.min(...nums));
+      const low = Math.min(...nums) - span * .15;
+      const high = Math.max(...nums) + span * .15;
       const coords = nums.map((value, index) => {
         const x = 4 + (index * 392 / (nums.length - 1));
         const y = 100 - ((value - low) / (high - low) * 90);
         return x.toFixed(1) + ',' + y.toFixed(1);
       });
-      document.getElementById('trend-line').setAttribute('points', coords.join(' '));
-      document.getElementById('trend-start').textContent = period(points[0].date);
-      document.getElementById('trend-end').textContent = period(points[points.length - 1].date);
+      document.getElementById(lineId).setAttribute('points', coords.join(' '));
+      document.getElementById(startId).textContent = period(points[0].date) + ' · ' + number(nums[0], 1);
+      document.getElementById(endId).textContent = period(points[points.length - 1].date) + ' · ' + number(nums[nums.length - 1], 1);
+      document.getElementById(titleId).textContent = title;
+    }
+    function renderTrend() {
+      const history = snapshot.history || {};
+      const pairs = selectedSector === 'oil' ?
+        [['Stocks brut US · millions de barils · 26 semaines',history.oil_crude],null] :
+        selectedSector === 'gas' ? [
+          ['Stockage France · % · données quotidiennes GIE',history.gas_fr],
+          ['GNL France · émission GWh/j · données GIE',history.lng_fr_sendout]] : [null,null];
+      for (const [index, pair] of pairs.entries()) {
+        const suffix = index ? '-two' : '';
+        drawTrend('trend' + suffix, 'trend' + suffix + '-line',
+          'trend' + suffix + '-start', 'trend' + suffix + '-end',
+          'trend' + suffix + '-title', pair?.[0] || '', pair?.[1] || []);
+      }
     }
 
     function renderSector() {
@@ -3363,6 +3509,7 @@
       if (!box.children.length) box.append(line('Aucune valeur vérifiée disponible pour ce secteur.', 'p', 'empty'));
       document.querySelectorAll('.filters button').forEach(button => button.classList.toggle('active', button.dataset.sector === selectedSector));
       renderTakeaways();
+      renderSignals();
       renderTrend();
     }
 
@@ -3513,10 +3660,10 @@
     }));
     renderStatus();
     renderTicker();
+    renderQuotes();
     renderWatch();
     renderAgenda();
     renderMini();
-    renderMarketSummary();
     renderReleases();
     renderStories();
     renderSector();

@@ -104,13 +104,17 @@ class PublicationParsingTest(unittest.TestCase):
         self.assertEqual(by_id['gas_fr']['change'], 0.5)
         self.assertEqual(by_id['gas_fr_twh']['unit'], 'TWh')
         self.assertEqual(by_id['gas_fr_net']['value'], -62.3)
+        self.assertEqual(result['points'], [{'date':'2026-09-23','value':82.0},
+                                            {'date':'2026-09-24','value':82.5}])
         lng = {'data':[{'code':'FR','gasDayStart':'2026-09-24','inventory':'465.2',
                          'sendOut':'245.7','status':'C'},
                        {'code':'FR','gasDayStart':'2026-09-23','inventory':'455.2',
                          'sendOut':'203.7','status':'C'}]}
-        gas = {item['id']: item for item in parse_alsi(json.dumps(lng).encode(), 'fr')['metrics']}
+        parsed_lng = parse_alsi(json.dumps(lng).encode(), 'fr')
+        gas = {item['id']: item for item in parsed_lng['metrics']}
         self.assertEqual(gas['lng_fr_inventory']['unit'], '10³ m³ GNL')
         self.assertEqual(gas['lng_fr_sendout']['change'], 42)
+        self.assertEqual([p['value'] for p in parsed_lng['points']], [203.7,245.7])
 
     def test_alsi_skips_incomplete_publication_without_undating_it(self):
         lng = {'data': [
@@ -130,11 +134,14 @@ class PublicationParsingTest(unittest.TestCase):
     def test_removed_gie_key_removes_previously_published_european_metrics(self):
         previous = {'metrics': [{'id':'gas_eu','value':80,'sector':'gas'},
                                 {'id':'lng_fr_sendout','value':120,'sector':'gas'}],
-                    'sources': {}, 'stories': [], 'history': {}}
+                    'sources': {}, 'stories': [], 'history': {'gas_eu':[{'date':'2026-09-23','value':80}],
+                                                              'lng_fr_sendout':[{'date':'2026-09-23','value':120}]}}
         result = build_snapshot(previous, {}, datetime(2026, 9, 25, tzinfo=timezone.utc))
         self.assertFalse(any(item['id'] in ('gas_eu','lng_fr_sendout')
                              for item in result['metrics']))
         self.assertEqual(result['sources']['alsi_fr']['status'], 'needs_key')
+        self.assertNotIn('gas_eu', result['history'])
+        self.assertNotIn('lng_fr_sendout', result['history'])
 
     def test_rte_power_uses_last_real_observation_and_correct_export_sign(self):
         rows = []
