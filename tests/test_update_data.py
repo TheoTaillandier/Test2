@@ -2,7 +2,7 @@ import json
 import unittest
 from datetime import date, datetime, timezone
 
-from scripts.update_data import (build_snapshot, parse_alsi, parse_fred, parse_norway,
+from scripts.update_data import (build_snapshot, parse_alsi, parse_eia_spot, parse_fred, parse_norway,
                                  parse_gie, parse_oil_flows, parse_wasde,
                                  verified_calendar)
 
@@ -140,6 +140,22 @@ class PublicationParsingTest(unittest.TestCase):
         self.assertEqual(row['value'], 2.073)
         self.assertEqual(row['change'], 0.097)
         self.assertIn('LGN + condensats', row['detail'])
+
+    def test_eia_spot_price_rows_match_each_header_date(self):
+        page = (b'<table><tr><td>Product by Area</td><td>09/15/26</td><td>09/16/26</td>'
+                b'<td>09/17/26</td><td>09/18/26</td><td>09/21/26</td><td>09/22/26</td></tr>'
+                b'<tr><td>Crude Oil</td></tr><tr><td>WTI - Cushing, Oklahoma</td>'
+                b'<td>107.02</td><td>103.620</td><td>103.21</td><td>101.44</td>'
+                b'<td>96.97</td><td>96.41</td><td>1986-2026</td></tr>'
+                b'<tr><td>Brent - Europe</td><td>130.80</td><td>127.840</td>'
+                b'<td>121.18</td><td>119.66</td><td>116.15</td><td>114.89</td></tr>'
+                b'<tr><td>Conventional Gasoline</td></tr></table>')
+        brent = parse_eia_spot(page, 'brent', date(2026, 9, 25))['metrics'][0]
+        wti = parse_eia_spot(page, 'wti', date(2026, 9, 25))['metrics'][0]
+        self.assertEqual((brent['value'], brent['as_of']), (114.89, '2026-09-22'))
+        self.assertEqual((wti['value'], wti['change']), (96.41, -0.56))
+        with self.assertRaisesRegex(ValueError, 'columns mismatch'):
+            parse_eia_spot(page.replace(b'<td>119.66</td>', b''), 'brent', date(2026, 9, 25))
 
     def test_agenda_uses_agency_holiday_exceptions_and_paris_dst(self):
         events = verified_calendar(date(2026, 9, 25))

@@ -225,7 +225,7 @@
       "url": "https://ir.eia.gov/ngs/schedule.html"
     }
   ],
-  "generated_at": "2026-09-25T10:43:51+00:00",
+  "generated_at": "2026-09-25T10:48:28+00:00",
   "history": {
     "oil_crude": [
       {
@@ -677,39 +677,39 @@
       "as_of": "2026-09-22",
       "change": -1.26,
       "comparison": "vs séance précédente",
-      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "detail": "Clôture quotidienne publiée avec retard ; pas un future",
       "id": "price_brent",
       "label": "Brent Europe · spot EIA",
       "sector": "oil",
-      "source": "EIA · via FRED",
+      "source": "EIA · prix spot",
       "unit": "$/bbl",
-      "url": "https://fred.stlouisfed.org/series/DCOILBRENTEU",
+      "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm",
       "value": 114.89
     },
     {
       "as_of": "2026-09-22",
       "change": -0.56,
       "comparison": "vs séance précédente",
-      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "detail": "Clôture quotidienne publiée avec retard ; pas un future",
       "id": "price_wti",
       "label": "WTI Cushing · spot EIA",
       "sector": "oil",
-      "source": "EIA · via FRED",
+      "source": "EIA · prix spot",
       "unit": "$/bbl",
-      "url": "https://fred.stlouisfed.org/series/DCOILWTICO",
+      "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm",
       "value": 96.41
     },
     {
       "as_of": "2026-09-22",
       "change": -0.03,
       "comparison": "vs séance précédente",
-      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "detail": "Clôture quotidienne publiée avec retard ; pas un future",
       "id": "price_henry",
       "label": "Henry Hub · spot EIA",
       "sector": "gas",
-      "source": "EIA · via FRED",
+      "source": "EIA · prix spot",
       "unit": "$/MMBtu",
-      "url": "https://fred.stlouisfed.org/series/DHHNGSP",
+      "url": "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm",
       "value": 2.9
     }
   ],
@@ -727,10 +727,9 @@
     },
     "brent": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T10:43:51+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
-      "url": "https://fred.stlouisfed.org/series/DCOILBRENTEU"
+      "checked_at": "2026-09-25T10:48:28+00:00",
+      "status": "ok",
+      "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     },
     "gas": {
       "as_of": "2026-09-18",
@@ -750,10 +749,9 @@
     },
     "henry": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T10:43:51+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
-      "url": "https://fred.stlouisfed.org/series/DHHNGSP"
+      "checked_at": "2026-09-25T10:48:28+00:00",
+      "status": "ok",
+      "url": "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
     },
     "metals": {
       "as_of": "2025",
@@ -768,10 +766,9 @@
     },
     "norway": {
       "as_of": "2026-08",
-      "checked_at": "2026-09-25T10:43:51+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
-      "url": "https://www.sodir.no/en/whats-new/news/production-figures/2026/production-figures-august-2026/"
+      "message": "Repère mensuel vérifié ; collecte automatique indisponible.",
+      "status": "manual",
+      "url": "https://www.sodir.no/en/whats-new/news/production-figures/"
     },
     "oil": {
       "as_of": "2026-09-18",
@@ -800,10 +797,9 @@
     },
     "wti": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T10:43:51+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
-      "url": "https://fred.stlouisfed.org/series/DCOILWTICO"
+      "checked_at": "2026-09-25T10:48:28+00:00",
+      "status": "ok",
+      "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     }
   },
   "stories": [

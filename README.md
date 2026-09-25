@@ -2,7 +2,7 @@
 
 Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.
 
-Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens via FRED, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées.
+Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées.
 
 ## Sources & automatisation
 
@@ -10,8 +10,8 @@ Les chiffres officiels sont collectés par [la tâche planifiée](.github/workfl
 - EIA WNGSR : stockage de gaz US et régions, variation hebdomadaire et écart à la moyenne cinq ans.
 - USDA WASDE : production, exportations prévues et stocks de maïs et soja US ; stocks mondiaux de maïs et blé, commerce mondial prévu du blé. Les révisions comparent les deux colonnes de prévision du même rapport.
 - EIA Today in Energy : titres et résumés d'analyses récentes.
-- Sodir (Norwegian Offshore Directorate) : production mensuelle provisoire norvégienne de pétrole, LGN et condensats ; contexte d'offre européen, sans prétendre mesurer seulement le brut Brent.
-- FRED (séries EIA DCOILBRENTEU, DCOILWTICO et DHHNGSP) : repères spot quotidiens Brent Europe, WTI Cushing et Henry Hub, horodatés à la date de la dernière observation.
+- Sodir (Norwegian Offshore Directorate) : chiffre mensuel provisoire d'août 2026 (pétrole, LGN et condensats), repère européen daté ; la source refuse actuellement les lectures automatisées du robot GitHub et ce chiffre n'est donc pas rafraîchi automatiquement.
+- EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication.
 - GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.
 - Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.
 - TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. ENTSO-E fournit des données d'électricité, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.
@@ -215,7 +215,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     </main>
   </section>
 
-  <p class="footer">Sources : EIA via FRED (prix spot datés), EIA WPSR/WNGSR, USDA WASDE, USGS, GIE AGSI/ALSI si configuré. Les prix TTF, PEG et JKM consultables par lien ne sont pas des cotations publiées ici. Une source inaccessible conserve sa dernière valeur datée et est signalée.</p>
+  <p class="footer">Sources : EIA (prix spot datés, WPSR et WNGSR), USDA WASDE, USGS, Sodir (repère norvégien daté), GIE AGSI/ALSI si configuré. Les prix TTF, PEG et JKM consultables par lien ne sont pas des cotations publiées ici. Une source inaccessible conserve sa dernière valeur datée et est signalée.</p>
 
   <!-- Replaced by scripts/update_data.py; retained inside HTML for one-file opening. -->
   <script id="snapshot-data" type="application/json">
@@ -446,7 +446,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "url": "https://ir.eia.gov/ngs/schedule.html"
     }
   ],
-  "generated_at": "2026-09-25T10:43:51+00:00",
+  "generated_at": "2026-09-25T10:48:28+00:00",
   "history": {
     "oil_crude": [
       {
@@ -898,39 +898,39 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "as_of": "2026-09-22",
       "change": -1.26,
       "comparison": "vs séance précédente",
-      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "detail": "Clôture quotidienne publiée avec retard ; pas un future",
       "id": "price_brent",
       "label": "Brent Europe · spot EIA",
       "sector": "oil",
-      "source": "EIA · via FRED",
+      "source": "EIA · prix spot",
       "unit": "$/bbl",
-      "url": "https://fred.stlouisfed.org/series/DCOILBRENTEU",
+      "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm",
       "value": 114.89
     },
     {
       "as_of": "2026-09-22",
       "change": -0.56,
       "comparison": "vs séance précédente",
-      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "detail": "Clôture quotidienne publiée avec retard ; pas un future",
       "id": "price_wti",
       "label": "WTI Cushing · spot EIA",
       "sector": "oil",
-      "source": "EIA · via FRED",
+      "source": "EIA · prix spot",
       "unit": "$/bbl",
-      "url": "https://fred.stlouisfed.org/series/DCOILWTICO",
+      "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm",
       "value": 96.41
     },
     {
       "as_of": "2026-09-22",
       "change": -0.03,
       "comparison": "vs séance précédente",
-      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "detail": "Clôture quotidienne publiée avec retard ; pas un future",
       "id": "price_henry",
       "label": "Henry Hub · spot EIA",
       "sector": "gas",
-      "source": "EIA · via FRED",
+      "source": "EIA · prix spot",
       "unit": "$/MMBtu",
-      "url": "https://fred.stlouisfed.org/series/DHHNGSP",
+      "url": "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm",
       "value": 2.9
     }
   ],
@@ -948,10 +948,9 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "brent": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T10:43:51+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
-      "url": "https://fred.stlouisfed.org/series/DCOILBRENTEU"
+      "checked_at": "2026-09-25T10:48:28+00:00",
+      "status": "ok",
+      "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     },
     "gas": {
       "as_of": "2026-09-18",
@@ -971,10 +970,9 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "henry": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T10:43:51+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
-      "url": "https://fred.stlouisfed.org/series/DHHNGSP"
+      "checked_at": "2026-09-25T10:48:28+00:00",
+      "status": "ok",
+      "url": "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
     },
     "metals": {
       "as_of": "2025",
@@ -989,10 +987,9 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "norway": {
       "as_of": "2026-08",
-      "checked_at": "2026-09-25T10:43:51+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
-      "url": "https://www.sodir.no/en/whats-new/news/production-figures/2026/production-figures-august-2026/"
+      "message": "Repère mensuel vérifié ; collecte automatique indisponible.",
+      "status": "manual",
+      "url": "https://www.sodir.no/en/whats-new/news/production-figures/"
     },
     "oil": {
       "as_of": "2026-09-18",
@@ -1021,10 +1018,9 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "wti": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T10:43:51+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
-      "url": "https://fred.stlouisfed.org/series/DCOILWTICO"
+      "checked_at": "2026-09-25T10:48:28+00:00",
+      "status": "ok",
+      "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     }
   },
   "stories": [
@@ -1192,6 +1188,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
           (byId[sample] && stale(byId[sample]) ? ' · archive' : '') :
           source.status === 'needs_key' ? 'clé requise' :
           source.status === 'structural' ? 'repère annuel' :
+          source.status === 'manual' ? 'repère mensuel daté' :
           hasValue ? 'dernière valeur conservée' : 'source indisponible';
         container.append(line(label + ' · ' + status, 'span',
           'badge ' + (source.status === 'ok' && (!byId[sample] || !stale(byId[sample])) ? 'good' : 'warn')));
@@ -1253,7 +1250,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         anchor.append(line(item ? number(item.value, 2) + ' ' + item.unit :
           'Dernière donnée en attente', 'b'));
         anchor.append(line(item ? period(item.as_of) + (stale(item) ? ' · archive' : '') :
-          'EIA · via FRED', 'small'));
+          'EIA · clôture quotidienne', 'small'));
         box.append(anchor);
       }
       for (const [title, url] of [['TTF spot ↗',marketLinks[0].url],['PEG France ↗',marketLinks[2].url],
@@ -1285,7 +1282,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
           price.rel = 'noopener noreferrer';
         }
         row.append(price);
-        row.append(line(item ? 'EIA via FRED · ' + period(item.as_of) +
+        row.append(line(item ? 'EIA spot · ' + period(item.as_of) +
           (stale(item) ? ' · ARCHIVE' : '') : 'Collecte officielle en cours', 'small', 'quote-note'));
         box.append(row);
       }

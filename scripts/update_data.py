@@ -37,6 +37,8 @@ GAS_URL = "https://ir.eia.gov/ngs/wngsr.json"
 GAS_REPORT_URL = "https://ir.eia.gov/ngs/ngs.html"
 NEWS_URL = "https://www.eia.gov/rss/todayinenergy.xml"
 SODIR_URL = "https://www.sodir.no/en/whats-new/news/production-figures/"
+EIA_OIL_SPOT_URL = "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
+EIA_GAS_SPOT_URL = "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
 GIE_URL = "https://agsi.gie.eu/api?type=eu&size=3"
 GIE_REPORT_URL = "https://agsi.gie.eu/"
 GIE_FR_URL = "https://agsi.gie.eu/api?country=fr&size=3"
@@ -314,6 +316,43 @@ def parse_fred(raw: bytes, series_id: str, today: date) -> dict:
             "as_of": observed.isoformat(), "url": url}
 
 
+def parse_eia_spot(raw: bytes, commodity: str, today: date) -> dict:
+    """Extract six dated closes from EIA's daily spot tables, with full row validation."""
+    specs = {
+        "brent": ("price_brent", "oil", "Brent Europe · spot EIA",
+                  "$/bbl", "Brent - Europe", "Conventional Gasoline", 1, 350, EIA_OIL_SPOT_URL),
+        "wti": ("price_wti", "oil", "WTI Cushing · spot EIA",
+                "$/bbl", "WTI - Cushing, Oklahoma", "Brent - Europe", 1, 350, EIA_OIL_SPOT_URL),
+        "henry": ("price_henry", "gas", "Henry Hub · spot EIA",
+                  "$/MMBtu", "Henry Hub", "Futures Prices", 0.01, 50, EIA_GAS_SPOT_URL),
+    }
+    id, sector, label, unit, start, end, low, high, url = specs[commodity]
+    html = raw.decode("utf-8-sig", "replace")
+    html = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", " ", html, flags=re.I | re.S)
+    plain = " ".join(unescape(re.sub(r"<[^>]+>", " ", html)).split())
+    first = plain.find(start)
+    if first < 0:
+        raise ValueError("EIA spot row missing: " + commodity)
+    second = plain.find(end, first + len(start))
+    if second < 0:
+        raise ValueError("EIA spot following row missing: " + commodity)
+    header = plain[max(0, first - 1400):first]
+    dates = re.findall(r"\b\d{1,2}/\d{1,2}/\d{2}\b", header)[-6:]
+    values = [float(v) for v in re.findall(r"(?<!\d)\d+(?:\.\d+)?(?!\d)", plain[first + len(start):second])
+              if low <= float(v) <= high]
+    if len(dates) != 6 or len(values) != len(dates):
+        raise ValueError("EIA spot dates or columns mismatch: " + commodity)
+    observations = [(datetime.strptime(d, "%m/%d/%y").date(), v)
+                    for d, v in zip(dates, values)]
+    if any(d > today for d, _ in observations) or today - observations[-1][0] > timedelta(days=30):
+        raise ValueError("EIA spot observation stale or in future: " + commodity)
+    observed, price = observations[-1]
+    return {"metrics": [metric(id, sector, label, price, unit, price - observations[-2][1],
+                               "vs séance précédente", observed.isoformat(), "EIA · prix spot", url,
+                               "Clôture quotidienne publiée avec retard ; pas un future")],
+            "as_of": observed.isoformat(), "url": url}
+
+
 def parse_norway(raw: bytes, today: date) -> dict:
     html = raw.decode("utf-8", "replace")
     plain = " ".join(unescape(re.sub(r"<[^>]+>", " ", html)).split())
@@ -472,6 +511,10 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
                             "message": "Dernière donnée conservée ; source indisponible."}
             continue
         if result is None:
+            if key == "norway" and "oil_norway_liquids" in values:
+                sources[key] = {"status": "manual", "as_of": values["oil_norway_liquids"]["as_of"],
+                                "url": SODIR_URL,
+                                "message": "Repère mensuel vérifié ; collecte automatique indisponible."}
             if key in ("gie", "gie_fr", "alsi", "alsi_fr"):
                 sources[key] = {"status": "needs_key",
                                 "url": GIE_REPORT_URL if key.startswith("gie") else ALSI_REPORT_URL,
@@ -518,14 +561,14 @@ def save_snapshot(snapshot: dict) -> None:
     HTML.write_text(html, encoding="utf-8")
     readme = ("# Commodity Cockpit\n\n"
               "Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.\n\n"
-              "Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens via FRED, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées.\n\n"
+              "Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées.\n\n"
               "## Sources & automatisation\n\n"
               "- EIA WPSR : stocks de brut, Cushing, Gulf Coast, essence, distillats, jet et SPR ; production, importations, exportations et brut traité par les raffineries US.\n"
               "- EIA WNGSR : stockage de gaz US et régions, variation hebdomadaire et écart à la moyenne cinq ans.\n"
               "- USDA WASDE : production, exportations prévues et stocks de maïs et soja US ; stocks mondiaux de maïs et blé, commerce mondial prévu du blé. Les révisions comparent les deux colonnes de prévision du même rapport.\n"
               "- EIA Today in Energy : titres et résumés d'analyses récentes.\n"
-              "- Sodir (Norwegian Offshore Directorate) : production mensuelle provisoire norvégienne de pétrole, LGN et condensats ; contexte d'offre européen, sans prétendre mesurer seulement le brut Brent.\n"
-              "- FRED (séries EIA DCOILBRENTEU, DCOILWTICO et DHHNGSP) : repères spot quotidiens Brent Europe, WTI Cushing et Henry Hub, horodatés à la date de la dernière observation.\n"
+              "- Sodir (Norwegian Offshore Directorate) : chiffre mensuel provisoire d'août 2026 (pétrole, LGN et condensats), repère européen daté ; la source refuse actuellement les lectures automatisées du robot GitHub et ce chiffre n'est donc pas rafraîchi automatiquement.\n"
+              "- EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication.\n"
               "- GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.\n"
               "- Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.\n"
               "- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. ENTSO-E fournit des données d'électricité, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.\n"
@@ -546,12 +589,10 @@ def main() -> None:
         "gas": lambda: parse_gas(fetch(GAS_URL)),
         "wasde": lambda: fetch_wasde(now.date()),
         "news": lambda: news_result(fetch(NEWS_URL)),
-        "norway": lambda: parse_norway(fetch(SODIR_URL), now.date()),
     }
-    for series, task_key in (("DCOILBRENTEU", "brent"),
-                             ("DCOILWTICO", "wti"), ("DHHNGSP", "henry")):
-        url = f"{FRED_URL}?id={series}&cosd={(now.date() - timedelta(days=25)).isoformat()}"
-        tasks[task_key] = lambda u=url, sid=series: parse_fred(fetch(u), sid, now.date())
+    tasks["brent"] = lambda: parse_eia_spot(fetch(EIA_OIL_SPOT_URL), "brent", now.date())
+    tasks["wti"] = lambda: parse_eia_spot(fetch(EIA_OIL_SPOT_URL), "wti", now.date())
+    tasks["henry"] = lambda: parse_eia_spot(fetch(EIA_GAS_SPOT_URL), "henry", now.date())
     gie_key = os.environ.get("GIE_API_KEY", "")
     if gie_key:
         tasks["gie"] = lambda: parse_gie(fetch(GIE_URL, {"x-key": gie_key}))
@@ -568,7 +609,8 @@ def main() -> None:
                 print(f"{key}: ok")
             except Exception as error:
                 results[key] = error
-                print(f"{key}: unavailable ({type(error).__name__})", file=sys.stderr)
+                extra = ": " + str(error)[:100] if isinstance(error, ValueError) else ""
+                print(f"{key}: unavailable ({type(error).__name__}{extra})", file=sys.stderr)
     snapshot = build_snapshot(previous, results, now)
     if not any(item.get("status") == "ok" for item in snapshot["sources"].values()):
         raise RuntimeError("No usable source: keeping published snapshot unchanged")
