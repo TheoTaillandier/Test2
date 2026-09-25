@@ -499,7 +499,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "url": "https://ir.eia.gov/ngs/schedule.html"
     }
   ],
-  "generated_at": "2026-09-25T14:25:17+00:00",
+  "generated_at": "2026-09-25T14:27:18+00:00",
   "history": {
     "oil_crude": [
       {
@@ -2840,25 +2840,77 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "unit": "GWh/j",
       "url": "https://agsi.gie.eu/",
       "value": -420.1
+    },
+    {
+      "as_of": "2026-09-23",
+      "change": -201.46,
+      "comparison": "vs veille",
+      "detail": "Déclaré par les opérateurs",
+      "id": "lng_eu_inventory",
+      "label": "GNL en cuves UE",
+      "sector": "gas",
+      "source": "GIE ALSI",
+      "unit": "10³ m³ GNL",
+      "url": "https://alsi.gie.eu/",
+      "value": 4431.33
+    },
+    {
+      "as_of": "2026-09-23",
+      "change": 39.7,
+      "comparison": "vs veille",
+      "detail": "Déclaré par les opérateurs",
+      "id": "lng_eu_sendout",
+      "label": "Émission terminaux GNL UE",
+      "sector": "gas",
+      "source": "GIE ALSI",
+      "unit": "GWh/j",
+      "url": "https://alsi.gie.eu/",
+      "value": 3932.2
+    },
+    {
+      "as_of": "2026-09-23",
+      "change": 53.23,
+      "comparison": "vs veille",
+      "detail": "Déclaré par les opérateurs",
+      "id": "lng_fr_inventory",
+      "label": "GNL en cuves France",
+      "sector": "gas",
+      "source": "GIE ALSI",
+      "unit": "10³ m³ GNL",
+      "url": "https://alsi.gie.eu/",
+      "value": 769.54
+    },
+    {
+      "as_of": "2026-09-23",
+      "change": 81.4,
+      "comparison": "vs veille",
+      "detail": "Déclaré par les opérateurs",
+      "id": "lng_fr_sendout",
+      "label": "Émission terminaux GNL France",
+      "sector": "gas",
+      "source": "GIE ALSI",
+      "unit": "GWh/j",
+      "url": "https://alsi.gie.eu/",
+      "value": 881.8
     }
   ],
   "schema": 3,
   "sources": {
     "alsi": {
-      "checked_at": "2026-09-25T14:25:17+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
+      "as_of": "2026-09-23",
+      "checked_at": "2026-09-25T14:27:18+00:00",
+      "status": "ok",
       "url": "https://alsi.gie.eu/"
     },
     "alsi_fr": {
-      "checked_at": "2026-09-25T14:25:17+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
+      "as_of": "2026-09-23",
+      "checked_at": "2026-09-25T14:27:18+00:00",
+      "status": "ok",
       "url": "https://alsi.gie.eu/"
     },
     "brent": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     },
@@ -2874,25 +2926,25 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "gas": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "status": "ok",
       "url": "https://ir.eia.gov/ngs/ngs.html"
     },
     "gie": {
       "as_of": "2026-09-23",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "status": "ok",
       "url": "https://agsi.gie.eu/"
     },
     "gie_fr": {
       "as_of": "2026-09-23",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "status": "ok",
       "url": "https://agsi.gie.eu/"
     },
     "henry": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
     },
@@ -2903,7 +2955,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "news": {
       "as_of": "2026-09-25",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/rss/todayinenergy.xml"
     },
@@ -2915,39 +2967,38 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "oil": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_flows": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_history": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "published": "2026-09-23",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "rte_power": {
       "as_of": "2026-09-25T14:00:00+00:00",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "status": "ok",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
     },
     "wasde": {
       "as_of": "2026-09",
-      "checked_at": "2026-09-25T14:25:17+00:00",
-      "message": "Dernière donnée conservée ; source indisponible.",
-      "status": "error",
+      "checked_at": "2026-09-25T14:27:18+00:00",
+      "status": "ok",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt"
     },
     "wti": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T14:25:17+00:00",
+      "checked_at": "2026-09-25T14:27:18+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     }
