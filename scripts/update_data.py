@@ -122,6 +122,11 @@ def parse_rte_power(raw: bytes, now: datetime) -> dict:
     values = [metric("power_load", "power", "Demande France", latest["load"], "MW",
                      latest["load"] - points[-5]["load"] if len(points) >= 5 else None,
                      "vs ~1 h", as_of, "RTE éCO2mix", RTE_REPORT_URL, time_label)]
+    if "prevision_j" in latest and 5000 <= latest["prevision_j"] <= 120000:
+        values.append(metric("power_load_gap", "power", "Écart à prévision de demande J",
+                             latest["load"] - latest["prevision_j"], "MW", None,
+                             "réalisé − prévision réactualisée le jour même", as_of,
+                             "Calcul sur RTE éCO2mix", RTE_REPORT_URL, time_label))
     if "ech_physiques" in latest:
         values.append(metric("power_exchange", "power", "Solde des échanges physiques",
                              latest["ech_physiques"], "MW", None,
@@ -188,10 +193,11 @@ def parse_entsoe_forecast(raw: bytes, zone: str, now: datetime) -> dict:
                 stamp = start + timedelta(minutes=(int(position) - 1) * interval)
                 if now - timedelta(hours=2) <= stamp <= now + timedelta(days=2):
                     points[stamp.astimezone(timezone.utc).isoformat()] = round(quantity)
-    upcoming = sorted((stamp, amount) for stamp, amount in points.items() if stamp >= now.isoformat())
+    upcoming = sorted((stamp, amount) for stamp, amount in points.items()
+                      if now <= datetime.fromisoformat(stamp) < now + timedelta(hours=24))
     if len(upcoming) < 4:
         raise ValueError("ENTSO-E future forecast missing")
-    peak_at, peak = max(upcoming[:96], key=lambda point: point[1])
+    peak_at, peak = max(upcoming, key=lambda point: point[1])
     label = "France" if zone == "fr" else "Allemagne/Luxembourg"
     m = metric("power_forecast_" + zone, "power", "Pic prévu 24 h · " + label,
                peak, "MW", None, "prévision J-1, 24 h glissantes", peak_at[:10],

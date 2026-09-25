@@ -126,6 +126,7 @@ class PublicationParsingTest(unittest.TestCase):
         for index in range(8):
             rows.append({'date_heure':f'2026-09-25T{9 + index // 4:02d}:{index % 4 * 15:02d}:00+00:00',
                          'consommation':52000 + index * 100,
+                         'prevision_j':52000,
                          'gaz':2500, 'eolien':4600, 'solaire':3200,
                          'nucleaire':38000, 'ech_physiques':-4300})
         rows.append({'date_heure':'2026-09-25T12:45:00+00:00',
@@ -136,6 +137,7 @@ class PublicationParsingTest(unittest.TestCase):
         self.assertEqual(result['points'][-1]['at'], '2026-09-25T10:45:00+00:00')
         self.assertEqual(by_id['power_load']['value'], 52700)
         self.assertEqual(by_id['power_residual']['value'], 44900)
+        self.assertEqual(by_id['power_load_gap']['value'], 700)
         self.assertEqual(by_id['power_exchange']['value'], -4300)
         self.assertFalse(any('price' in item['id'] for item in result['metrics']))
         with self.assertRaisesRegex(ValueError, 'too old'):
@@ -153,6 +155,10 @@ class PublicationParsingTest(unittest.TestCase):
               <Point><position>3</position><quantity>54000</quantity></Point>
               <Point><position>4</position><quantity>53000</quantity></Point>
             </Period></TimeSeries></GL_MarketDocument>'''
+        example = example.replace(b'</TimeSeries>',
+            b'<Period><timeInterval><start>2026-09-26T13:00Z</start><end>2026-09-26T14:00Z</end>'
+            b'</timeInterval><resolution>PT60M</resolution><Point><position>1</position>'
+            b'<quantity>99999</quantity></Point></Period></TimeSeries>')
         result = parse_entsoe_forecast(example, 'fr',
                                        datetime(2026, 9, 25, 11, tzinfo=timezone.utc))
         self.assertEqual(result['metrics'][0]['value'], 54000)

@@ -3318,6 +3318,10 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       const solar = byId.power_solaire?.value;
       const facts = [];
       if (gas !== undefined) facts.push('Gaz mobilisé : ' + number(gas, 0) + ' MW.');
+      const loadGap = byId.power_load_gap?.value;
+      if (loadGap !== undefined) facts.push('Demande réalisée ' +
+        number(Math.abs(loadGap), 0) + ' MW ' + (loadGap < 0 ? 'sous' : loadGap > 0 ? 'au-dessus de' : 'égale à') +
+        ' la prévision RTE du jour.');
       if (wind !== undefined && solar !== undefined) facts.push('Éolien + solaire : ' + number(wind + solar, 0) + ' MW.');
       if (exchange !== undefined) facts.push('Solde physique : ' + number(Math.abs(exchange), 0) +
         ' MW d’' + (exchange < 0 ? 'exportations nettes' : exchange > 0 ? 'importations nettes' : 'équilibre net') + '.');
