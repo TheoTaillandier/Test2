@@ -564,30 +564,35 @@ def parse_gie(raw: bytes, region: str = "eu") -> dict:
     return {"metrics": result, "as_of": current["gasDayStart"], "url": GIE_REPORT_URL}
 
 
+def alsi_inventory(row: dict) -> float | None:
+    inventory = row.get("inventory")
+    # Current ALSI records provide both liquid volume (lng) and energy (gwh).
+    # The dashboard's LNG tank inventory uses the liquid volume in 10³ m³.
+    if isinstance(inventory, dict):
+        inventory = inventory.get("lng")
+    return measured(inventory)
+
+
 def parse_alsi(raw: bytes, region: str, today: date | None = None) -> dict:
     rows = gie_rows(raw, region)
     # An ALSI aggregate may be published before both measurements arrive.
     # Use the most recent complete observation and retain its actual date.
-    complete = [row for row in rows if measured(row.get("inventory")) is not None
+    complete = [row for row in rows if alsi_inventory(row) is not None
                 and measured(row.get("sendOut")) is not None]
     if not complete:
-        sample = rows[0]
-        inv = sample.get("inventory")
-        raise ValueError(f"ALSI {region.upper()} inv={type(inv).__name__} "
-                         f"keys={list(inv) if isinstance(inv, dict) else []} "
-                         f"out={type(sample.get('sendOut')).__name__}")
+        raise ValueError("ALSI " + region.upper() + " has no complete inventory/send-out observation")
     current = complete[0]
     observed = date.fromisoformat(current["gasDayStart"])
     today = today or datetime.now(timezone.utc).date()
     if not timedelta(0) <= today - observed <= timedelta(days=7):
         raise ValueError("ALSI " + region.upper() + " latest complete observation is stale")
     suffix, location = ("eu", "UE") if region == "eu" else ("fr", "France")
-    inventory, sendout = float(current["inventory"]), float(current["sendOut"])
+    inventory, sendout = alsi_inventory(current), measured(current.get("sendOut"))
     if not 0 <= inventory <= 50000 or not 0 <= sendout <= 30000:
         raise ValueError("ALSI inventory or send-out out of bounds")
     previous = next((row for row in complete[1:] if row["gasDayStart"] != current["gasDayStart"]), None)
-    old_inventory = float(previous["inventory"]) if previous and previous.get("inventory") is not None else None
-    old_sendout = float(previous["sendOut"]) if previous and previous.get("sendOut") is not None else None
+    old_inventory = alsi_inventory(previous) if previous else None
+    old_sendout = measured(previous.get("sendOut")) if previous else None
     flag = "Estimé par les opérateurs" if current.get("status") == "E" else "Déclaré par les opérateurs"
     result = [
         metric("lng_" + suffix + "_inventory", "gas", "GNL en cuves " + location,

@@ -114,14 +114,15 @@ class PublicationParsingTest(unittest.TestCase):
 
     def test_alsi_skips_incomplete_publication_without_undating_it(self):
         lng = {'data': [
-            {'code': 'FR', 'gasDayStart': '2026-09-25', 'inventory': None,
+            {'code': 'FR', 'gasDayStart': '2026-09-25', 'inventory': {'lng': None, 'gwh': None},
              'sendOut': '246.2', 'status': 'C'},
-            {'code': 'FR', 'gasDayStart': '2026-09-24', 'inventory': '465.2',
+            {'code': 'FR', 'gasDayStart': '2026-09-24', 'inventory': {'lng': '465.2', 'gwh': '2800'},
              'sendOut': '245.7', 'status': 'C'},
-            {'code': 'FR', 'gasDayStart': '2026-09-23', 'inventory': '455.2',
+            {'code': 'FR', 'gasDayStart': '2026-09-23', 'inventory': {'lng': '455.2', 'gwh': '2600'},
              'sendOut': '203.7', 'status': 'C'}]}
         result = parse_alsi(json.dumps(lng).encode(), 'fr', date(2026, 9, 25))
         self.assertEqual(result['as_of'], '2026-09-24')
+        self.assertEqual(result['metrics'][0]['value'], 465.2)
         self.assertEqual(result['metrics'][1]['change'], 42)
         with self.assertRaisesRegex(ValueError, 'stale'):
             parse_alsi(json.dumps(lng).encode(), 'fr', date(2026, 10, 3))
