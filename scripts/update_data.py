@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import csv
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 from io import StringIO
@@ -22,6 +22,7 @@ import sys
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "data" / "snapshot.json"
@@ -35,8 +36,14 @@ OIL_REPORT_URL = "https://www.eia.gov/petroleum/supply/weekly/"
 GAS_URL = "https://ir.eia.gov/ngs/wngsr.json"
 GAS_REPORT_URL = "https://ir.eia.gov/ngs/ngs.html"
 NEWS_URL = "https://www.eia.gov/rss/todayinenergy.xml"
-GIE_URL = "https://agsi.gie.eu/api?country=EU&size=2"
+SODIR_URL = "https://www.sodir.no/en/whats-new/news/production-figures/"
+GIE_URL = "https://agsi.gie.eu/api?type=eu&size=3"
 GIE_REPORT_URL = "https://agsi.gie.eu/"
+GIE_FR_URL = "https://agsi.gie.eu/api?country=fr&size=3"
+ALSI_URL = "https://alsi.gie.eu/api?type=eu&size=3"
+ALSI_FR_URL = "https://alsi.gie.eu/api?country=fr&size=3"
+ALSI_REPORT_URL = "https://alsi.gie.eu/"
+FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 
 
 def fetch(url: str, headers: dict[str, str] | None = None) -> bytes:
@@ -271,30 +278,178 @@ def news_result(raw: bytes) -> dict:
     return {"stories": stories, "as_of": max(item["date"] for item in stories), "url": NEWS_URL}
 
 
-def parse_gie(raw: bytes) -> dict:
+def parse_fred(raw: bytes, series_id: str, today: date) -> dict:
+    specs = {
+        "DCOILBRENTEU": ("price_brent", "oil", "Brent Europe · spot EIA",
+                         "$/bbl", 1, 350, "https://fred.stlouisfed.org/series/DCOILBRENTEU"),
+        "DCOILWTICO": ("price_wti", "oil", "WTI Cushing · spot EIA",
+                       "$/bbl", 1, 350, "https://fred.stlouisfed.org/series/DCOILWTICO"),
+        "DHHNGSP": ("price_henry", "gas", "Henry Hub · spot EIA",
+                   "$/MMBtu", 0.01, 50, "https://fred.stlouisfed.org/series/DHHNGSP"),
+    }
+    id, sector, label, unit, low, high, url = specs[series_id]
+    reader = csv.DictReader(StringIO(raw.decode("utf-8-sig", "replace")))
+    if not reader.fieldnames or series_id not in reader.fieldnames:
+        raise ValueError("FRED series column missing: " + series_id)
+    points = []
+    for row in reader:
+        value = (row.get(series_id) or "").strip()
+        if value in ("", "."):
+            continue
+        observed = date.fromisoformat((row.get("DATE") or row.get("observation_date") or "").strip())
+        price = float(value)
+        if not low <= price <= high or observed > today:
+            raise ValueError("FRED price or date out of bounds: " + series_id)
+        points.append((observed, price))
+    points.sort()
+    if not points or today - points[-1][0] > timedelta(days=30):
+        raise ValueError("FRED price data missing or more than 30 days old: " + series_id)
+    observed, price = points[-1]
+    previous = points[-2][1] if len(points) > 1 else None
+    return {"metrics": [metric(id, sector, label, price, unit,
+                               price - previous if previous is not None else None,
+                               "vs séance précédente" if previous is not None else "prix observé",
+                               observed.isoformat(), "EIA · via FRED", url,
+                               "Prix spot quotidien ; publication différée, pas un future")],
+            "as_of": observed.isoformat(), "url": url}
+
+
+def parse_norway(raw: bytes, today: date) -> dict:
+    html = raw.decode("utf-8", "replace")
+    plain = " ".join(unescape(re.sub(r"<[^>]+>", " ", html)).split())
+    pattern = (r"Production figures\s+([A-Za-z]+)\s+(20\d\d).{0,500}?"
+               r"Preliminary production figures for\s+\1\s+\2\s+show an average daily production of"
+               r"\s+([\d,\s]+?)\s+barrels of oil, NGL and condensate")
+    found = []
+    for match in re.finditer(pattern, plain, re.I):
+        observed = datetime.strptime(match.group(1).title() + " " + match.group(2), "%B %Y").date()
+        value = float(match.group(3).replace(" ", "").replace(",", "")) / 1_000_000
+        if observed <= today and 0.5 <= value <= 5:
+            found.append((observed, value))
+    found = sorted(set(found), reverse=True)
+    if not found or today - found[0][0] > timedelta(days=110):
+        raise ValueError("Sodir production report missing or too old")
+    observed, value = found[0]
+    previous = found[1][1] if len(found) > 1 else None
+    return {"metrics": [metric("oil_norway_liquids", "oil",
+                               "Production Norvège · pétrole et liquides", value, "M bbl/j",
+                               value - previous if previous is not None else None,
+                               "vs mois précédent" if previous is not None else "provisoire",
+                               observed.strftime("%Y-%m"), "Sodir · provisoire",
+                               SODIR_URL, "Pétrole + LGN + condensats ; pas uniquement le Brent")],
+            "as_of": observed.strftime("%Y-%m"), "url": SODIR_URL}
+
+
+def gie_rows(raw: bytes, region: str) -> list[dict]:
     report = json.loads(raw.decode("utf-8-sig"))
     rows = report.get("data", [])
     if not isinstance(rows, list):
         raise ValueError("GIE returned unexpected data")
-    rows = [row for row in rows if isinstance(row, dict) and row.get("gasDayStart") and
-            row.get("full") is not None and row.get("status") != "N" and
-            (str(row.get("code", "")).upper() in ("EU", "EU27") or
-             str(row.get("name", "")).lower() in ("europe", "european union"))]
+    valid_codes = ("EU", "EU27") if region == "eu" else ("FR",)
+    rows = [row for row in rows if isinstance(row, dict) and
+            str(row.get("code", "")).upper() in valid_codes and
+            row.get("status", "C") in ("C", "E") and row.get("gasDayStart")]
     rows.sort(key=lambda item: item["gasDayStart"], reverse=True)
     if not rows:
-        raise ValueError("GIE EU storage data missing")
+        raise ValueError("GIE " + region.upper() + " aggregate missing")
+    for row in rows[:2]:
+        date.fromisoformat(row["gasDayStart"])
+    return rows
+
+
+def parse_gie(raw: bytes, region: str = "eu") -> dict:
+    rows = gie_rows(raw, region)
     current = rows[0]
-    value = float(current["full"])
-    if not 0 <= value <= 100:
-        raise ValueError("GIE fill percentage out of bounds")
-    change = value - float(rows[1]["full"]) if len(rows) > 1 else None
-    detail = f"{float(current['gasInStorage']):.1f} TWh stockés" if current.get("gasInStorage") is not None else ""
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", current["gasDayStart"]):
-        raise ValueError("GIE gas day invalid")
-    value_metric = metric("gas_eu", "gas", "Stockage gaz UE", value, "%", change,
-                          "points vs veille", current["gasDayStart"], "GIE AGSI+",
-                          GIE_REPORT_URL, detail)
-    return {"metrics": [value_metric], "as_of": current["gasDayStart"], "url": GIE_REPORT_URL}
+    suffix, location = ("eu", "UE") if region == "eu" else ("fr", "France")
+    percent, stock = float(current["full"]), float(current["gasInStorage"])
+    if not 0 <= percent <= 100 or not 0 <= stock <= 1600:
+        raise ValueError("GIE storage unit or percent invalid")
+    previous = rows[1] if len(rows) > 1 and rows[1]["gasDayStart"] != current["gasDayStart"] else None
+    percent_change = percent - float(previous["full"]) if previous and previous.get("full") is not None else None
+    stock_change = stock - float(previous["gasInStorage"]) if previous and previous.get("gasInStorage") is not None else None
+    flag = "Estimé par les opérateurs" if current.get("status") == "E" else "Déclaré par les opérateurs"
+    result = [
+        metric("gas_" + suffix, "gas", "Stockage gaz " + location + " · remplissage",
+               percent, "%", percent_change, "points vs veille", current["gasDayStart"],
+               "GIE AGSI+", GIE_REPORT_URL, flag),
+        metric("gas_" + suffix + "_twh", "gas", "Gaz stocké " + location,
+               stock, "TWh", stock_change, "vs veille", current["gasDayStart"],
+               "GIE AGSI+", GIE_REPORT_URL, flag),
+    ]
+    if current.get("netWithdrawal") is not None:
+        flow = float(current["netWithdrawal"])
+        if not -15000 <= flow <= 15000:
+            raise ValueError("GIE net withdrawal unit invalid")
+        result.append(metric("gas_" + suffix + "_net", "gas", "Soutirage net " + location,
+                             flow, "GWh/j", None, "positif = soutirage ; négatif = injection",
+                             current["gasDayStart"], "GIE AGSI+", GIE_REPORT_URL, flag))
+    return {"metrics": result, "as_of": current["gasDayStart"], "url": GIE_REPORT_URL}
+
+
+def parse_alsi(raw: bytes, region: str) -> dict:
+    rows = gie_rows(raw, region)
+    current = rows[0]
+    suffix, location = ("eu", "UE") if region == "eu" else ("fr", "France")
+    inventory, sendout = float(current["inventory"]), float(current["sendOut"])
+    if not 0 <= inventory <= 50000 or not 0 <= sendout <= 30000:
+        raise ValueError("ALSI inventory or send-out out of bounds")
+    previous = rows[1] if len(rows) > 1 and rows[1]["gasDayStart"] != current["gasDayStart"] else None
+    old_inventory = float(previous["inventory"]) if previous and previous.get("inventory") is not None else None
+    old_sendout = float(previous["sendOut"]) if previous and previous.get("sendOut") is not None else None
+    flag = "Estimé par les opérateurs" if current.get("status") == "E" else "Déclaré par les opérateurs"
+    result = [
+        metric("lng_" + suffix + "_inventory", "gas", "GNL en cuves " + location,
+               inventory, "10³ m³ GNL", inventory - old_inventory if old_inventory is not None else None,
+               "vs veille", current["gasDayStart"], "GIE ALSI", ALSI_REPORT_URL, flag),
+        metric("lng_" + suffix + "_sendout", "gas", "Émission terminaux GNL " + location,
+               sendout, "GWh/j", sendout - old_sendout if old_sendout is not None else None,
+               "vs veille", current["gasDayStart"], "GIE ALSI", ALSI_REPORT_URL, flag),
+    ]
+    return {"metrics": result, "as_of": current["gasDayStart"], "url": ALSI_REPORT_URL}
+
+
+def verified_calendar(today: date) -> list[dict]:
+    """2026 US agency schedule, including the published holiday exceptions."""
+    eastern = ZoneInfo("America/New_York")
+    rows = []
+    def add(day: date, hour: int, minute: int, label: str, context: str, url: str,
+            day_only: bool = False) -> None:
+        when = datetime.combine(day, time(hour, minute), eastern).astimezone(timezone.utc)
+        rows.append({"at": when.isoformat(), "title": label, "context": context,
+                     "url": url, "day_only": day_only})
+
+    first = max(date(2026, 9, 25), today)
+    last = date(2026, 12, 31)
+    if first > last:
+        return []
+    oil_exceptions = {date(2026, 10, 14): (date(2026, 10, 15), 12),
+                      date(2026, 11, 11): (date(2026, 11, 12), 12)}
+    gas_exceptions = {date(2026, 11, 12): (date(2026, 11, 13), 10),
+                      date(2026, 11, 26): (date(2026, 11, 25), 12)}
+    day = first
+    while day <= last:
+        if day.weekday() == 2:  # Wednesday
+            release, hour = oil_exceptions.get(day, (day, 10))
+            if release >= today:
+                add(release, hour, 30 if hour == 10 else 0, "EIA · stocks pétroliers WPSR",
+                    "Brut, essence, distillats et raffineries US", "https://www.eia.gov/petroleum/supply/weekly/schedule.php")
+        if day.weekday() == 3:  # Thursday
+            release, hour = gas_exceptions.get(day, (day, 10))
+            if release >= today:
+                add(release, hour, 30 if hour == 10 else 0, "EIA · stockage gaz US",
+                    "Variation et écart à la moyenne cinq ans", "https://ir.eia.gov/ngs/schedule.html")
+        day += timedelta(days=1)
+    for month, day_number in ((10, 9), (11, 10), (12, 10)):
+        publication = date(2026, month, day_number)
+        if publication >= today:
+            add(publication, 12, 0, "USDA · WASDE",
+                "Bilans mondiaux céréales et oléagineux",
+                "https://www.usda.gov/about-usda/general-information/staff-offices/office-chief-economist/commodity-markets/wasde-report")
+    if today <= date(2026, 10, 6):
+        add(date(2026, 10, 6), 0, 0, "EIA · perspectives énergétiques STEO",
+            "Date vérifiée ; horaire officiel non précisé",
+            "https://www.eia.gov/outlooks/steo/release_schedule.php", day_only=True)
+    return sorted(rows, key=lambda row: row["at"])
 
 
 def get_previous() -> dict:
@@ -308,7 +463,8 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
     sources = previous.get("sources", {}).copy()
     history = previous.get("history", {}).copy()
     stories = previous.get("stories", [])
-    for key in ("oil", "oil_flows", "oil_history", "gas", "wasde", "news", "gie"):
+    for key in ("oil", "oil_flows", "oil_history", "gas", "wasde", "news", "norway",
+                "brent", "wti", "henry", "gie", "gie_fr", "alsi", "alsi_fr"):
         result = results.get(key)
         if isinstance(result, Exception):
             old = sources.get(key, {})
@@ -316,9 +472,15 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
                             "message": "Dernière donnée conservée ; source indisponible."}
             continue
         if result is None:
-            if key == "gie":
-                sources[key] = {"status": "needs_key", "url": GIE_REPORT_URL,
+            if key in ("gie", "gie_fr", "alsi", "alsi_fr"):
+                sources[key] = {"status": "needs_key",
+                                "url": GIE_REPORT_URL if key.startswith("gie") else ALSI_REPORT_URL,
                                 "message": "Clé personnelle GIE requise."}
+                prefix = {"gie": "gas_eu", "gie_fr": "gas_fr",
+                          "alsi": "lng_eu", "alsi_fr": "lng_fr"}[key]
+                for id in list(values):
+                    if id == prefix or id.startswith(prefix + "_"):
+                        del values[id]
             continue
         sources[key] = {"status": "ok", "as_of": result.get("as_of"),
                         "url": result.get("url", NEWS_URL), "checked_at": now.isoformat()}
@@ -338,8 +500,9 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
                                      "Repère structurel, pas un stock LME")
     sources["metals"] = {"status": "structural", "as_of": "2025", "url":
                            "https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports"}
-    return {"schema": 1, "generated_at": now.isoformat(), "sources": sources,
-            "metrics": list(values.values()), "history": history, "stories": stories}
+    return {"schema": 2, "generated_at": now.isoformat(), "sources": sources,
+            "metrics": list(values.values()), "history": history, "stories": stories,
+            "calendar": verified_calendar(now.date())}
 
 
 def save_snapshot(snapshot: dict) -> None:
@@ -355,15 +518,19 @@ def save_snapshot(snapshot: dict) -> None:
     HTML.write_text(html, encoding="utf-8")
     readme = ("# Commodity Cockpit\n\n"
               "Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.\n\n"
-              "Les chiffres physiques EIA et USDA sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Les prix TradingView sont des références spot ou CFD indicatives ; certains futures sont bloqués hors de TradingView. Le cuivre USGS est un repère annuel.\n\n"
+              "Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens via FRED, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées.\n\n"
               "## Sources & automatisation\n\n"
               "- EIA WPSR : stocks de brut, Cushing, Gulf Coast, essence, distillats, jet et SPR ; production, importations, exportations et brut traité par les raffineries US.\n"
               "- EIA WNGSR : stockage de gaz US et régions, variation hebdomadaire et écart à la moyenne cinq ans.\n"
               "- USDA WASDE : production, exportations prévues et stocks de maïs et soja US ; stocks mondiaux de maïs et blé, commerce mondial prévu du blé. Les révisions comparent les deux colonnes de prévision du même rapport.\n"
               "- EIA Today in Energy : titres et résumés d'analyses récentes.\n"
-              "- GIE AGSI+ : facultatif, ajouter une clé API personnelle `GIE_API_KEY` aux secrets du dépôt GitHub Actions. L'agrégat UE doit être reconnu dans la réponse avant tout affichage ; sans clé, aucun chiffre européen n'est montré.\n"
+              "- Sodir (Norwegian Offshore Directorate) : production mensuelle provisoire norvégienne de pétrole, LGN et condensats ; contexte d'offre européen, sans prétendre mesurer seulement le brut Brent.\n"
+              "- FRED (séries EIA DCOILBRENTEU, DCOILWTICO et DHHNGSP) : repères spot quotidiens Brent Europe, WTI Cushing et Henry Hub, horodatés à la date de la dernière observation.\n"
+              "- GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.\n"
+              "- Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.\n"
+              "- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. ENTSO-E fournit des données d'électricité, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.\n"
               "- LME : [rapports de stocks](https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports) à consulter, sans chiffre de stock automatisé tant qu'un flux stable n'est pas vérifié.\n\n"
-              "Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks et flux quotidiens ne sont jamais additionnés.\n\n"
+              "Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; TWh = térawattheures ; GWh/j = gigawattheures par jour ; 10³ m³ GNL = milliers de mètres cubes de GNL liquide ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks, prix et flux ne sont jamais additionnés.\n\n"
               "Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les fichiers publics. Le fichier HTML contient un instantané et s'ouvre directement après téléchargement. Un téléchargement isolé ne reçoit pas les nouvelles données : récupérer la dernière version depuis GitHub. Les tâches GitHub planifiées peuvent être retardées ou désactivées après une longue période sans activité ; dans ce cas, l'onglet Actions permet la relance manuelle.\n\n"
               "## Code complet\n\n```html\n" + html + "\n```\n")
     README.write_text(readme, encoding="utf-8")
@@ -379,10 +546,18 @@ def main() -> None:
         "gas": lambda: parse_gas(fetch(GAS_URL)),
         "wasde": lambda: fetch_wasde(now.date()),
         "news": lambda: news_result(fetch(NEWS_URL)),
+        "norway": lambda: parse_norway(fetch(SODIR_URL), now.date()),
     }
+    for series, task_key in (("DCOILBRENTEU", "brent"),
+                             ("DCOILWTICO", "wti"), ("DHHNGSP", "henry")):
+        url = f"{FRED_URL}?id={series}&cosd={(now.date() - timedelta(days=25)).isoformat()}"
+        tasks[task_key] = lambda u=url, sid=series: parse_fred(fetch(u), sid, now.date())
     gie_key = os.environ.get("GIE_API_KEY", "")
     if gie_key:
         tasks["gie"] = lambda: parse_gie(fetch(GIE_URL, {"x-key": gie_key}))
+        tasks["gie_fr"] = lambda: parse_gie(fetch(GIE_FR_URL, {"x-key": gie_key}), "fr")
+        tasks["alsi"] = lambda: parse_alsi(fetch(ALSI_URL, {"x-key": gie_key}), "eu")
+        tasks["alsi_fr"] = lambda: parse_alsi(fetch(ALSI_FR_URL, {"x-key": gie_key}), "fr")
     results = {}
     with ThreadPoolExecutor(max_workers=len(tasks)) as pool:
         futures = {pool.submit(task): key for key, task in tasks.items()}

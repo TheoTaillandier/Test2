@@ -1,5 +1,231 @@
 {
-  "generated_at": "2026-09-24T23:13:36+00:00",
+  "calendar": [
+    {
+      "at": "2026-09-30T14:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-10-01T14:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-10-06T04:00:00+00:00",
+      "context": "Date vérifiée ; horaire officiel non précisé",
+      "day_only": true,
+      "title": "EIA · perspectives énergétiques STEO",
+      "url": "https://www.eia.gov/outlooks/steo/release_schedule.php"
+    },
+    {
+      "at": "2026-10-07T14:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-10-08T14:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-10-09T16:00:00+00:00",
+      "context": "Bilans mondiaux céréales et oléagineux",
+      "day_only": false,
+      "title": "USDA · WASDE",
+      "url": "https://www.usda.gov/about-usda/general-information/staff-offices/office-chief-economist/commodity-markets/wasde-report"
+    },
+    {
+      "at": "2026-10-15T14:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-10-15T16:00:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-10-21T14:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-10-22T14:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-10-28T14:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-10-29T14:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-11-04T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-11-05T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-11-10T17:00:00+00:00",
+      "context": "Bilans mondiaux céréales et oléagineux",
+      "day_only": false,
+      "title": "USDA · WASDE",
+      "url": "https://www.usda.gov/about-usda/general-information/staff-offices/office-chief-economist/commodity-markets/wasde-report"
+    },
+    {
+      "at": "2026-11-12T17:00:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-11-13T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-11-18T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-11-19T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-11-25T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-11-25T17:00:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-12-02T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-12-03T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-12-09T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-12-10T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-12-10T17:00:00+00:00",
+      "context": "Bilans mondiaux céréales et oléagineux",
+      "day_only": false,
+      "title": "USDA · WASDE",
+      "url": "https://www.usda.gov/about-usda/general-information/staff-offices/office-chief-economist/commodity-markets/wasde-report"
+    },
+    {
+      "at": "2026-12-16T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-12-17T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-12-23T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-12-24T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-12-30T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-12-31T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    }
+  ],
+  "generated_at": "2026-09-25T10:39:34+00:00",
   "history": {
     "oil_crude": [
       {
@@ -433,10 +659,78 @@
       "unit": "Mt",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
       "value": 211.77
+    },
+    {
+      "as_of": "2026-08",
+      "change": 0.097,
+      "comparison": "vs mois précédent",
+      "detail": "Pétrole + LGN + condensats ; pas uniquement le Brent",
+      "id": "oil_norway_liquids",
+      "label": "Production Norvège · pétrole et liquides",
+      "sector": "oil",
+      "source": "Sodir · provisoire",
+      "unit": "M bbl/j",
+      "url": "https://www.sodir.no/en/whats-new/news/production-figures/2026/production-figures-august-2026/",
+      "value": 2.073
+    },
+    {
+      "as_of": "2026-09-22",
+      "change": -1.26,
+      "comparison": "vs séance précédente",
+      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "id": "price_brent",
+      "label": "Brent Europe · spot EIA",
+      "sector": "oil",
+      "source": "EIA · via FRED",
+      "unit": "$/bbl",
+      "url": "https://fred.stlouisfed.org/series/DCOILBRENTEU",
+      "value": 114.89
+    },
+    {
+      "as_of": "2026-09-22",
+      "change": -0.56,
+      "comparison": "vs séance précédente",
+      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "id": "price_wti",
+      "label": "WTI Cushing · spot EIA",
+      "sector": "oil",
+      "source": "EIA · via FRED",
+      "unit": "$/bbl",
+      "url": "https://fred.stlouisfed.org/series/DCOILWTICO",
+      "value": 96.41
+    },
+    {
+      "as_of": "2026-09-22",
+      "change": -0.03,
+      "comparison": "vs séance précédente",
+      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "id": "price_henry",
+      "label": "Henry Hub · spot EIA",
+      "sector": "gas",
+      "source": "EIA · via FRED",
+      "unit": "$/MMBtu",
+      "url": "https://fred.stlouisfed.org/series/DHHNGSP",
+      "value": 2.9
     }
   ],
-  "schema": 1,
+  "schema": 2,
   "sources": {
+    "alsi": {
+      "message": "Clé personnelle GIE requise.",
+      "status": "needs_key",
+      "url": "https://alsi.gie.eu/"
+    },
+    "alsi_fr": {
+      "message": "Clé personnelle GIE requise.",
+      "status": "needs_key",
+      "url": "https://alsi.gie.eu/"
+    },
+    "brent": {
+      "as_of": "2026-09-22",
+      "checked_at": "2026-09-25T10:39:34+00:00",
+      "status": "ok",
+      "url": "https://fred.stlouisfed.org/series/DCOILBRENTEU"
+    },
     "gas": {
       "as_of": "2026-09-18",
       "checked_at": "2026-09-24T23:13:36+00:00",
@@ -448,6 +742,17 @@
       "status": "needs_key",
       "url": "https://agsi.gie.eu/"
     },
+    "gie_fr": {
+      "message": "Clé personnelle GIE requise.",
+      "status": "needs_key",
+      "url": "https://agsi.gie.eu/"
+    },
+    "henry": {
+      "as_of": "2026-09-22",
+      "checked_at": "2026-09-25T10:39:34+00:00",
+      "status": "ok",
+      "url": "https://fred.stlouisfed.org/series/DHHNGSP"
+    },
     "metals": {
       "as_of": "2025",
       "status": "structural",
@@ -458,6 +763,12 @@
       "checked_at": "2026-09-24T23:13:36+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/rss/todayinenergy.xml"
+    },
+    "norway": {
+      "as_of": "2026-08",
+      "checked_at": "2026-09-25T10:39:34+00:00",
+      "status": "ok",
+      "url": "https://www.sodir.no/en/whats-new/news/production-figures/2026/production-figures-august-2026/"
     },
     "oil": {
       "as_of": "2026-09-18",
@@ -483,6 +794,12 @@
       "checked_at": "2026-09-24T23:13:36+00:00",
       "status": "ok",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt"
+    },
+    "wti": {
+      "as_of": "2026-09-22",
+      "checked_at": "2026-09-25T10:39:34+00:00",
+      "status": "ok",
+      "url": "https://fred.stlouisfed.org/series/DCOILWTICO"
     }
   },
   "stories": [

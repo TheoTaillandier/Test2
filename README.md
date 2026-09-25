@@ -2,7 +2,7 @@
 
 Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.
 
-Les chiffres physiques EIA et USDA sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Les prix TradingView sont des références spot ou CFD indicatives ; certains futures sont bloqués hors de TradingView. Le cuivre USGS est un repère annuel.
+Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens via FRED, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées.
 
 ## Sources & automatisation
 
@@ -10,10 +10,14 @@ Les chiffres physiques EIA et USDA sont collectés par [la tâche planifiée](.g
 - EIA WNGSR : stockage de gaz US et régions, variation hebdomadaire et écart à la moyenne cinq ans.
 - USDA WASDE : production, exportations prévues et stocks de maïs et soja US ; stocks mondiaux de maïs et blé, commerce mondial prévu du blé. Les révisions comparent les deux colonnes de prévision du même rapport.
 - EIA Today in Energy : titres et résumés d'analyses récentes.
-- GIE AGSI+ : facultatif, ajouter une clé API personnelle `GIE_API_KEY` aux secrets du dépôt GitHub Actions. L'agrégat UE doit être reconnu dans la réponse avant tout affichage ; sans clé, aucun chiffre européen n'est montré.
+- Sodir (Norwegian Offshore Directorate) : production mensuelle provisoire norvégienne de pétrole, LGN et condensats ; contexte d'offre européen, sans prétendre mesurer seulement le brut Brent.
+- FRED (séries EIA DCOILBRENTEU, DCOILWTICO et DHHNGSP) : repères spot quotidiens Brent Europe, WTI Cushing et Henry Hub, horodatés à la date de la dernière observation.
+- GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.
+- Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.
+- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. ENTSO-E fournit des données d'électricité, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.
 - LME : [rapports de stocks](https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports) à consulter, sans chiffre de stock automatisé tant qu'un flux stable n'est pas vérifié.
 
-Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks et flux quotidiens ne sont jamais additionnés.
+Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; TWh = térawattheures ; GWh/j = gigawattheures par jour ; 10³ m³ GNL = milliers de mètres cubes de GNL liquide ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks, prix et flux ne sont jamais additionnés.
 
 Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les fichiers publics. Le fichier HTML contient un instantané et s'ouvre directement après téléchargement. Un téléchargement isolé ne reçoit pas les nouvelles données : récupérer la dernière version depuis GitHub. Les tâches GitHub planifiées peuvent être retardées ou désactivées après une longue période sans activité ; dans ce cas, l'onglet Actions permet la relance manuelle.
 
@@ -51,25 +55,40 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     .nav button, .filters button { border: 1px solid transparent; background: transparent; color: var(--muted); border-radius: 6px; padding: 8px 14px; }
     .nav button[aria-selected="true"], .filters button.active { background: #1b3629; border-color: var(--border); color: var(--text); }
     .page[hidden] { display: none !important; }
-    .ticker { height: 60px; overflow: hidden; border-bottom: 1px solid var(--border); }
-    .ticker .tradingview-widget-container { height: 60px; }
+    .ticker { display: flex; gap: 8px; align-items: center; min-height: 65px; overflow-x: auto; padding: 8px 14px; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+    .ticker a { flex: 0 0 auto; border: 1px solid var(--border); border-radius: 7px; min-width: 145px; padding: 5px 10px; color: var(--text); }
+    .ticker b { display: block; font-size: 13px; }
+    .ticker small { color: var(--muted); font-size: 10px; }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; min-height: 0; }
     .bar { min-height: 46px; padding: 8px 13px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
     .bar h2 { margin: 0; font-size: 13px; }
     .bar small { font-size: 10px; color: var(--muted); }
     .widget, .tradingview-widget-container, .tradingview-widget-container__widget { width: 100%; height: 100%; min-height: 0; }
-    .market-grid { height: min(750px, calc(100vh - 215px)); min-height: 615px; padding: 12px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(365px, 1fr); gap: 12px; }
+    .market-grid { height: min(850px, calc(100vh - 175px)); min-height: 690px; padding: 12px; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(365px, .9fr); gap: 12px; }
     .chart, .watch, .calendar { display: flex; flex-direction: column; }
-    .right { min-height: 0; display: grid; grid-template-rows: minmax(380px, 1fr) 255px; gap: 12px; }
+    .right { min-height: 0; display: grid; grid-template-rows: minmax(350px, 1.05fr) minmax(300px, .95fr); gap: 12px; }
     .chart .widget, .watch .widget, .calendar .widget { flex: 1; }
     .caption { padding: 8px 12px; border-top: 1px solid var(--border); color: var(--muted); font-size: 10px; }
     .market-snapshot, .release-list { border-top: 1px solid var(--border); padding: 8px 12px; flex: none; }
-    .market-snapshot { min-height: 105px; }
+    .market-snapshot { min-height: 80px; }
     .market-snapshot h3, .release-list h3 { font-size: 10px; color: var(--muted); margin: 0 0 5px; font-weight: 600; }
     .market-snapshot .row, .release-list .row { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; font-size: 10px; }
     .market-snapshot .row b, .release-list .row b { font-weight: 600; color: var(--text); white-space: nowrap; }
     .market-snapshot .row small { color: var(--muted); }
     .release-list .row a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .watch-list, .agenda { min-height: 0; overflow-y: auto; }
+    .watch-group { padding: 7px 12px 3px; color: var(--muted); font-size: 10px; letter-spacing: .07em; }
+    .quote-row { padding: 7px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; align-items: center; border-top: 1px solid var(--border); }
+    .quote-row strong { display: block; font-size: 11px; }
+    .quote-row small { color: var(--muted); font-size: 10px; }
+    .quote-value { text-align: right; font-weight: 700; white-space: nowrap; }
+    .quote-value a { font-weight: 500; font-size: 10px; }
+    .quote-row .quote-note { grid-column: 1 / -1; color: var(--muted); font-size: 10px; }
+    .agenda-row { padding: 9px 12px; display: grid; grid-template-columns: 67px minmax(0, 1fr); gap: 9px; border-top: 1px solid var(--border); }
+    .agenda-when { color: var(--warm); font-size: 11px; font-weight: 700; }
+    .agenda-when small { display: block; color: var(--muted); font-weight: 400; }
+    .agenda-row a { display: block; color: var(--text); font-size: 11px; font-weight: 600; }
+    .agenda-row p { margin: 2px 0 0; color: var(--muted); font-size: 10px; }
     .market-context { padding: 0 12px 18px; }
     .market-context h2 { font-size: 13px; margin: 4px 0 9px; }
     .mini-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
@@ -113,7 +132,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     @media (max-width: 1050px) {
       .market-grid { height: auto; grid-template-columns: 1fr; }
       .chart { height: 575px; }
-      .right { grid-template-columns: 1fr 1fr; grid-template-rows: 490px; }
+      .right { grid-template-columns: 1fr 1fr; grid-template-rows: 560px; }
       .physical-layout { grid-template-columns: 1fr; }
       .physical-side { grid-template-columns: 1fr 1fr; }
     }
@@ -123,8 +142,8 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       .market-grid { display: block; padding: 8px; }
       .chart { height: 490px; margin-bottom: 9px; }
       .right { display: block; }
-      .watch { height: 470px; margin-bottom: 9px; }
-      .calendar { height: 310px; }
+      .watch { height: 530px; margin-bottom: 9px; }
+      .calendar { height: 390px; }
       .market-context { padding: 0 8px 15px; }
       .mini-grid, .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .workspace { padding: 12px 9px; }
@@ -144,22 +163,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
   </header>
 
   <section class="page" id="markets">
-    <div class="ticker" aria-label="Prix indicatifs">
-      <div class="tradingview-widget-container">
-        <div class="tradingview-widget-container__widget"></div>
-        <script src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-          {"symbols":[
-            {"proName":"TVC:UKOIL","title":"Brent indicatif"},
-            {"proName":"TVC:USOIL","title":"WTI indicatif"},
-            {"proName":"PEPPERSTONE:NATGAS","title":"Gaz US spot"},
-            {"proName":"OANDA:XAUUSD","title":"Or spot"},
-            {"proName":"FXCM:COPPER","title":"Cuivre CFD"},
-            {"proName":"FOREXCOM:WHEAT","title":"Blé CFD"},
-            {"proName":"FX:EURUSD","title":"EUR/USD"}
-          ],"showSymbolLogo":false,"isTransparent":true,"displayMode":"regular","colorTheme":"dark","locale":"en"}
-        </script>
-      </div>
-    </div>
+    <div class="ticker" id="ticker" aria-label="Repères de marché vérifiés"></div>
     <main class="market-grid">
       <section class="card chart">
         <div class="bar"><h2>Brent · graphique indicatif</h2><a href="https://www.tradingview.com/symbols/UKOIL/" target="_blank" rel="noopener noreferrer">Ouvrir ↗</a></div>
@@ -175,33 +179,14 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       </section>
       <aside class="right">
         <section class="card watch">
-          <div class="bar"><h2>À surveiller · cours / variation</h2><small>Spot et CFD indicatifs</small></div>
-          <div class="widget">
-            <div class="tradingview-widget-container">
-              <div class="tradingview-widget-container__widget"></div>
-              <script src="https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js" async>
-                {"width":"100%","height":"100%","symbolsGroups":[
-                  {"name":"ÉNERGIE","symbols":[{"name":"TVC:UKOIL","displayName":"Brent indicatif"},{"name":"TVC:USOIL","displayName":"WTI indicatif"},{"name":"PEPPERSTONE:NATGAS","displayName":"Gaz US spot"}]},
-                  {"name":"MÉTAUX","symbols":[{"name":"OANDA:XAUUSD","displayName":"Or spot"},{"name":"OANDA:XAGUSD","displayName":"Argent spot"},{"name":"FXCM:COPPER","displayName":"Cuivre CFD"}]},
-                  {"name":"AGRI & SOFTS","symbols":[{"name":"FOREXCOM:WHEAT","displayName":"Blé CFD"},{"name":"SKILLING:CORN","displayName":"Maïs CFD"},{"name":"PEPPERSTONE:COFFEE","displayName":"Café CFD"},{"name":"PEPPERSTONE:COCOA","displayName":"Cacao CFD"}]},
-                  {"name":"MACRO","symbols":[{"name":"FX:EURUSD","displayName":"EUR/USD"},{"name":"TVC:DXY","displayName":"Dollar index"}]}
-                ],"showSymbolLogo":false,"isTransparent":true,"colorTheme":"dark","locale":"en"}
-              </script>
-            </div>
-          </div>
+          <div class="bar"><h2>À surveiller · énergie et matières</h2><small>Prix datés / accès direct</small></div>
+          <div class="watch-list" id="watch-list"></div>
           <div class="market-snapshot" id="market-snapshot"><h3>Repères physiques vérifiés · disponibles même sans cotations</h3></div>
-          <div class="caption">Plusieurs futures ICE/CME sont réservés à TradingView. <a href="https://www.tradingview.com/symbols/ICEEUR-BRN1%21/" target="_blank" rel="noopener noreferrer">Brent ICE ↗</a> · <a href="https://www.tradingview.com/symbols/ICEEUR-TTF1%21/" target="_blank" rel="noopener noreferrer">TTF ICE ↗</a></div>
+          <div class="caption">Spot EIA : dernière observation publiée. TTF/PEG/JKM : ouvrir la source pour le prix en séance ; contrat et délai à vérifier sur le site.</div>
         </section>
         <section class="card calendar">
-          <div class="bar"><h2>Calendrier économique</h2><a href="https://www.tradingview.com/economic-calendar/" target="_blank" rel="noopener noreferrer">Ouvrir ↗</a></div>
-          <div class="widget">
-            <div class="tradingview-widget-container">
-              <div class="tradingview-widget-container__widget"></div>
-              <script src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
-                {"colorTheme":"dark","isTransparent":true,"locale":"en","width":"100%","height":"100%"}
-              </script>
-            </div>
-          </div>
+          <div class="bar"><h2>Prochaines publications · heure de Paris</h2><a href="https://www.eia.gov/petroleum/supply/weekly/schedule.php" target="_blank" rel="noopener noreferrer">Dates ↗</a></div>
+          <div class="agenda" id="agenda"></div>
           <div class="release-list" id="release-list"><h3>Dernières publications vérifiées</h3></div>
         </section>
       </aside>
@@ -220,22 +205,248 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         <button type="button" data-sector="metals">Métaux</button>
       </div>
       <div class="physical-layout">
-        <section><h2 class="section-heading" id="sector-heading">Pétrole · stocks physiques US</h2><div class="metrics" id="metrics"></div><div class="card side-pad trend" id="trend" hidden><h3>Stocks commerciaux de brut US · 26 dernières semaines</h3><svg viewBox="0 0 400 110" preserveAspectRatio="none" role="img" aria-label="Évolution hebdomadaire des stocks commerciaux de brut US"><polyline id="trend-line" points=""></polyline></svg><div class="axis"><span id="trend-start"></span><span id="trend-end"></span></div></div></section>
+          <section><h2 class="section-heading" id="sector-heading">Pétrole · prix spot et stocks</h2><div class="metrics" id="metrics"></div><div class="card side-pad trend" id="trend" hidden><h3>Stocks commerciaux de brut US · 26 dernières semaines</h3><svg viewBox="0 0 400 110" preserveAspectRatio="none" role="img" aria-label="Évolution hebdomadaire des stocks commerciaux de brut US"><polyline id="trend-line" points=""></polyline></svg><div class="axis"><span id="trend-start"></span><span id="trend-end"></span></div></div></section>
         <aside class="physical-side">
           <section class="card side-pad" id="takeaways"><h3>Ce que disent les publications</h3><div id="takeaway-list"></div></section>
-          <section class="card side-pad"><h3>Analyses récentes · EIA</h3><p>Articles officiels sur l'énergie. Les titres ne sont pas des alertes de marché.</p><div id="stories"></div></section>
-          <section class="card side-pad"><h3>Couverture des données</h3><p>Le gaz européen peut s'ajouter via la clé personnelle GIE AGSI+ dans GitHub Actions. Pour le cuivre, le chiffre USGS est annuel ; les <a href="https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports" target="_blank" rel="noopener noreferrer">stocks LME ↗</a> ne sont pas repris sans flux vérifié.</p></section>
+          <section class="card side-pad"><h3>Actualités qui éclairent le physique · EIA</h3><p>Production, stocks, raffinage et GNL. Les articles décrivent des faits publiés ; leur effet sur les prix reste à analyser.</p><div id="stories"></div></section>
+          <section class="card side-pad"><h3>Couverture France et Europe</h3><p>Une <a href="https://agsi.gie.eu/account" target="_blank" rel="noopener noreferrer">clé GIE gratuite ↗</a> active AGSI + ALSI : remplissage et volume gaz France/UE, GNL en cuves et émission des terminaux. Sans clé, ces valeurs restent vides. <a href="https://transparency.entsog.eu/" target="_blank" rel="noopener noreferrer">ENTSOG ↗</a> complète avec les flux gaziers. Le cuivre USGS est annuel ; les <a href="https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports" target="_blank" rel="noopener noreferrer">stocks LME ↗</a> ne sont pas chiffrés ici.</p></section>
         </aside>
       </div>
     </main>
   </section>
 
-  <p class="footer">Sources : EIA WPSR et WNGSR, USDA WASDE, USGS, et GIE si configuré. Prix TradingView indicatifs, possiblement différés. Une source inaccessible conserve sa dernière valeur et est signalée.</p>
+  <p class="footer">Sources : EIA via FRED (prix spot datés), EIA WPSR/WNGSR, USDA WASDE, USGS, GIE AGSI/ALSI si configuré. Les prix TTF, PEG et JKM consultables par lien ne sont pas des cotations publiées ici. Une source inaccessible conserve sa dernière valeur datée et est signalée.</p>
 
   <!-- Replaced by scripts/update_data.py; retained inside HTML for one-file opening. -->
   <script id="snapshot-data" type="application/json">
 {
-  "generated_at": "2026-09-24T23:13:36+00:00",
+  "calendar": [
+    {
+      "at": "2026-09-30T14:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-10-01T14:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-10-06T04:00:00+00:00",
+      "context": "Date vérifiée ; horaire officiel non précisé",
+      "day_only": true,
+      "title": "EIA · perspectives énergétiques STEO",
+      "url": "https://www.eia.gov/outlooks/steo/release_schedule.php"
+    },
+    {
+      "at": "2026-10-07T14:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-10-08T14:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-10-09T16:00:00+00:00",
+      "context": "Bilans mondiaux céréales et oléagineux",
+      "day_only": false,
+      "title": "USDA · WASDE",
+      "url": "https://www.usda.gov/about-usda/general-information/staff-offices/office-chief-economist/commodity-markets/wasde-report"
+    },
+    {
+      "at": "2026-10-15T14:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-10-15T16:00:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-10-21T14:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-10-22T14:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-10-28T14:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-10-29T14:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-11-04T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-11-05T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-11-10T17:00:00+00:00",
+      "context": "Bilans mondiaux céréales et oléagineux",
+      "day_only": false,
+      "title": "USDA · WASDE",
+      "url": "https://www.usda.gov/about-usda/general-information/staff-offices/office-chief-economist/commodity-markets/wasde-report"
+    },
+    {
+      "at": "2026-11-12T17:00:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-11-13T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-11-18T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-11-19T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-11-25T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-11-25T17:00:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-12-02T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-12-03T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-12-09T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-12-10T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-12-10T17:00:00+00:00",
+      "context": "Bilans mondiaux céréales et oléagineux",
+      "day_only": false,
+      "title": "USDA · WASDE",
+      "url": "https://www.usda.gov/about-usda/general-information/staff-offices/office-chief-economist/commodity-markets/wasde-report"
+    },
+    {
+      "at": "2026-12-16T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-12-17T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-12-23T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-12-24T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    },
+    {
+      "at": "2026-12-30T15:30:00+00:00",
+      "context": "Brut, essence, distillats et raffineries US",
+      "day_only": false,
+      "title": "EIA · stocks pétroliers WPSR",
+      "url": "https://www.eia.gov/petroleum/supply/weekly/schedule.php"
+    },
+    {
+      "at": "2026-12-31T15:30:00+00:00",
+      "context": "Variation et écart à la moyenne cinq ans",
+      "day_only": false,
+      "title": "EIA · stockage gaz US",
+      "url": "https://ir.eia.gov/ngs/schedule.html"
+    }
+  ],
+  "generated_at": "2026-09-25T10:39:34+00:00",
   "history": {
     "oil_crude": [
       {
@@ -669,10 +880,78 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "unit": "Mt",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt",
       "value": 211.77
+    },
+    {
+      "as_of": "2026-08",
+      "change": 0.097,
+      "comparison": "vs mois précédent",
+      "detail": "Pétrole + LGN + condensats ; pas uniquement le Brent",
+      "id": "oil_norway_liquids",
+      "label": "Production Norvège · pétrole et liquides",
+      "sector": "oil",
+      "source": "Sodir · provisoire",
+      "unit": "M bbl/j",
+      "url": "https://www.sodir.no/en/whats-new/news/production-figures/2026/production-figures-august-2026/",
+      "value": 2.073
+    },
+    {
+      "as_of": "2026-09-22",
+      "change": -1.26,
+      "comparison": "vs séance précédente",
+      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "id": "price_brent",
+      "label": "Brent Europe · spot EIA",
+      "sector": "oil",
+      "source": "EIA · via FRED",
+      "unit": "$/bbl",
+      "url": "https://fred.stlouisfed.org/series/DCOILBRENTEU",
+      "value": 114.89
+    },
+    {
+      "as_of": "2026-09-22",
+      "change": -0.56,
+      "comparison": "vs séance précédente",
+      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "id": "price_wti",
+      "label": "WTI Cushing · spot EIA",
+      "sector": "oil",
+      "source": "EIA · via FRED",
+      "unit": "$/bbl",
+      "url": "https://fred.stlouisfed.org/series/DCOILWTICO",
+      "value": 96.41
+    },
+    {
+      "as_of": "2026-09-22",
+      "change": -0.03,
+      "comparison": "vs séance précédente",
+      "detail": "Prix spot quotidien ; publication différée, pas un future",
+      "id": "price_henry",
+      "label": "Henry Hub · spot EIA",
+      "sector": "gas",
+      "source": "EIA · via FRED",
+      "unit": "$/MMBtu",
+      "url": "https://fred.stlouisfed.org/series/DHHNGSP",
+      "value": 2.9
     }
   ],
-  "schema": 1,
+  "schema": 2,
   "sources": {
+    "alsi": {
+      "message": "Clé personnelle GIE requise.",
+      "status": "needs_key",
+      "url": "https://alsi.gie.eu/"
+    },
+    "alsi_fr": {
+      "message": "Clé personnelle GIE requise.",
+      "status": "needs_key",
+      "url": "https://alsi.gie.eu/"
+    },
+    "brent": {
+      "as_of": "2026-09-22",
+      "checked_at": "2026-09-25T10:39:34+00:00",
+      "status": "ok",
+      "url": "https://fred.stlouisfed.org/series/DCOILBRENTEU"
+    },
     "gas": {
       "as_of": "2026-09-18",
       "checked_at": "2026-09-24T23:13:36+00:00",
@@ -684,6 +963,17 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "status": "needs_key",
       "url": "https://agsi.gie.eu/"
     },
+    "gie_fr": {
+      "message": "Clé personnelle GIE requise.",
+      "status": "needs_key",
+      "url": "https://agsi.gie.eu/"
+    },
+    "henry": {
+      "as_of": "2026-09-22",
+      "checked_at": "2026-09-25T10:39:34+00:00",
+      "status": "ok",
+      "url": "https://fred.stlouisfed.org/series/DHHNGSP"
+    },
     "metals": {
       "as_of": "2025",
       "status": "structural",
@@ -694,6 +984,12 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "checked_at": "2026-09-24T23:13:36+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/rss/todayinenergy.xml"
+    },
+    "norway": {
+      "as_of": "2026-08",
+      "checked_at": "2026-09-25T10:39:34+00:00",
+      "status": "ok",
+      "url": "https://www.sodir.no/en/whats-new/news/production-figures/2026/production-figures-august-2026/"
     },
     "oil": {
       "as_of": "2026-09-18",
@@ -719,6 +1015,12 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "checked_at": "2026-09-24T23:13:36+00:00",
       "status": "ok",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt"
+    },
+    "wti": {
+      "as_of": "2026-09-22",
+      "checked_at": "2026-09-25T10:39:34+00:00",
+      "status": "ok",
+      "url": "https://fred.stlouisfed.org/series/DCOILWTICO"
     }
   },
   "stories": [
@@ -785,7 +1087,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     const snapshot = JSON.parse(document.getElementById('snapshot-data').textContent);
     const metrics = Array.isArray(snapshot.metrics) ? snapshot.metrics : [];
     const byId = Object.fromEntries(metrics.map(item => [item.id, item]));
-    const sectors = {oil: 'Pétrole · stocks physiques US', gas: 'Gaz · stockages',
+    const sectors = {oil: 'Pétrole · Brent spot, flux et stocks', gas: 'Gaz · France, Europe, GNL et États-Unis',
       agri: 'Agriculture · prévisions USDA', metals: 'Métaux · repères structurels'};
     let selectedSector = 'oil';
 
@@ -807,12 +1109,16 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       return (Date.now() - Date.parse(sourceDate + 'T12:00:00Z')) / 86400000;
     }
     function stale(item) {
-      return age(item) > ({oil: 13, gas: 13, agri: 49, metals: 800}[item.sector] || 14);
+      const limit = item.id === 'oil_norway_liquids' ? 80 : item.id.startsWith('price_') ? 8 :
+        item.source?.startsWith('GIE') ? 4 : ({oil: 13, gas: 13, agri: 49, metals: 800}[item.sector] || 14);
+      return age(item) > limit;
     }
     function safeLink(url) {
       try {
         const parsed = new URL(url);
-        const hosts = ['www.eia.gov', 'ir.eia.gov', 'www.usda.gov', 'pubs.usgs.gov', 'agsi.gie.eu'];
+        const hosts = ['www.eia.gov', 'ir.eia.gov', 'www.usda.gov', 'pubs.usgs.gov',
+          'agsi.gie.eu', 'alsi.gie.eu', 'fred.stlouisfed.org', 'www.sodir.no', 'www.eex.com',
+          'www.ice.com', 'www.tradingview.com', 'transparency.entsog.eu'];
         return parsed.protocol === 'https:' && hosts.includes(parsed.hostname) ? parsed.href : null;
       } catch { return null; }
     }
@@ -825,7 +1131,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     function changeText(item) {
       if (item.change === null || item.change === undefined) return item.comparison;
       const symbol = item.change > 0 ? '+' : item.change < 0 ? '−' : '';
-      if (item.id === 'gas_eu') return symbol + number(Math.abs(item.change), 2) + ' point(s) vs veille';
+      if (item.id === 'gas_eu' || item.id === 'gas_fr') return symbol + number(Math.abs(item.change), 2) + ' point(s) vs veille';
       return symbol + number(Math.abs(item.change), digits(item)) + ' ' + item.unit + ' ' + item.comparison;
     }
     function digits(item) {
@@ -865,19 +1171,26 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
 
     function renderStatus() {
       const container = document.getElementById('source-status');
-      const labels = {oil: 'EIA stocks pétrole', oil_flows: 'EIA flux pétrole', gas: 'EIA gaz US', wasde: 'USDA WASDE',
-        news: 'Analyses EIA', gie: 'GIE gaz UE', metals: 'USGS métaux'};
+      const labels = {brent: 'Brent spot', wti: 'WTI spot', henry: 'Henry Hub spot',
+        norway: 'Production Norvège',
+        oil: 'EIA stocks pétrole', oil_flows: 'EIA flux pétrole', gas: 'EIA gaz US', wasde: 'USDA WASDE',
+        news: 'Analyses EIA', gie: 'GIE stockage UE', gie_fr: 'GIE stockage France',
+        alsi: 'GIE GNL UE', alsi_fr: 'GIE GNL France', metals: 'USGS métaux'};
       for (const [id, label] of Object.entries(labels)) {
         const source = snapshot.sources?.[id] || {};
-        const sample = {oil:'oil_crude',oil_flows:'oil_imports',gas:'gas_us',wasde:'ag_corn_stocks',
-          gie:'gas_eu',metals:'metal_copper'}[id];
+        const sample = {brent:'price_brent',wti:'price_wti',henry:'price_henry',
+          norway:'oil_norway_liquids',
+          oil:'oil_crude',oil_flows:'oil_imports',gas:'gas_us',wasde:'ag_corn_stocks',
+          gie:'gas_eu',gie_fr:'gas_fr',alsi:'lng_eu_inventory',
+          alsi_fr:'lng_fr_inventory',metals:'metal_copper'}[id];
         const hasValue = Boolean(sample && byId[sample]) || (id === 'news' && (snapshot.stories || []).length > 0);
-        const status = source.status === 'ok' ? period(source.as_of || '') :
+        const status = source.status === 'ok' ? period(source.as_of || '') +
+          (byId[sample] && stale(byId[sample]) ? ' · archive' : '') :
           source.status === 'needs_key' ? 'clé requise' :
           source.status === 'structural' ? 'repère annuel' :
           hasValue ? 'dernière valeur conservée' : 'source indisponible';
         container.append(line(label + ' · ' + status, 'span',
-          'badge ' + (source.status === 'ok' ? 'good' : 'warn')));
+          'badge ' + (source.status === 'ok' && (!byId[sample] || !stale(byId[sample])) ? 'good' : 'warn')));
       }
       document.getElementById('updated').textContent = snapshot.generated_at ?
         'Collecte : ' + new Intl.DateTimeFormat('fr-FR', {dateStyle:'medium', timeStyle:'short', timeZone:'Europe/Paris'}).format(new Date(snapshot.generated_at)) + ' · Paris' :
@@ -886,12 +1199,12 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
 
     function renderMini() {
       const grid = document.getElementById('mini-grid');
-      for (const id of ['oil_crude', 'oil_cushing', 'gas_us', 'ag_world_corn']) {
+      for (const id of ['price_brent', 'oil_crude', 'gas_fr', 'lng_fr_sendout', 'gas_us', 'ag_world_corn']) {
         const item = byId[id];
         if (!item) continue;
         const card = line('', 'div', 'mini');
         card.append(line(item.label, 'small'));
-        card.append(line(number(item.value, item.unit === 'Bcf' || item.unit === 'M bu' ? 0 : 1) + ' ' + item.unit, 'strong'));
+        card.append(line(number(item.value, digits(item)) + ' ' + item.unit, 'strong'));
         card.append(line(changeText(item) + (stale(item) ? ' · archive' : ''), 'span'));
         grid.append(card);
       }
@@ -900,7 +1213,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
 
     function renderMarketSummary() {
       const box = document.getElementById('market-snapshot');
-      for (const id of ['oil_crude', 'oil_imports', 'gas_us']) {
+      for (const id of ['gas_fr', 'lng_fr_sendout', 'oil_norway_liquids', 'oil_crude', 'gas_us']) {
         const item = byId[id];
         if (!item) continue;
         const row = line('', 'div', 'row');
@@ -912,9 +1225,112 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       if (box.children.length === 1) box.append(line('Collecte des chiffres en attente.', 'small'));
     }
 
+    const marketLinks = [
+      {label: 'TTF · indice spot EEX', note: 'Prix en séance sur la source · pas le future M+1',
+       url: 'https://www.eex.com/en/market-data/market-data-hub/natural-gas/indices'},
+      {label: 'TTF · future ICE', note: 'Échéance et délai de cotation sur TradingView',
+       url: 'https://www.tradingview.com/symbols/ICEEUR-TFN1%21/'},
+      {label: 'PEG France · indice spot EEX', note: 'Référence PEG · prix en séance sur la source',
+       url: 'https://www.eex.com/en/market-data/market-data-hub/natural-gas/indices'},
+      {label: 'JKM · future ICE', note: 'Contrat financier indexé sur le JKM Platts · $/MMBtu',
+       url: 'https://www.ice.com/products/6753280/jkm-lng-platts-future'},
+    ];
+    function renderTicker() {
+      const box = document.getElementById('ticker');
+      for (const [id, title] of [['price_brent','BRENT spot'], ['price_wti','WTI spot'],
+                                 ['price_henry','HENRY HUB spot']]) {
+        const item = byId[id];
+        const anchor = document.createElement('a');
+        anchor.href = safeLink(item?.url) || (id === 'price_henry' ?
+          'https://www.eia.gov/naturalgas/' : 'https://www.eia.gov/dnav/pet/PET_PRI_SPT_S1_D.htm');
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        anchor.append(line(title, 'small'));
+        anchor.append(line(item ? number(item.value, 2) + ' ' + item.unit :
+          'Dernière donnée en attente', 'b'));
+        anchor.append(line(item ? period(item.as_of) + (stale(item) ? ' · archive' : '') :
+          'EIA · via FRED', 'small'));
+        box.append(anchor);
+      }
+      for (const [title, url] of [['TTF spot ↗',marketLinks[0].url],['PEG France ↗',marketLinks[2].url],
+                                  ['JKM future ↗',marketLinks[3].url]]) {
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        anchor.append(line(title, 'b'));
+        anchor.append(line('Prix à consulter sur la source', 'small'));
+        box.append(anchor);
+      }
+    }
+
+    function renderWatch() {
+      const box = document.getElementById('watch-list');
+      box.append(line('PRIX SPOT · OBSERVATIONS EIA', 'div', 'watch-group'));
+      for (const id of ['price_brent', 'price_wti', 'price_henry']) {
+        const item = byId[id];
+        const row = line('', 'div', 'quote-row');
+        const label = {price_brent:'Brent Europe · spot',price_wti:'WTI Cushing · spot',
+          price_henry:'Henry Hub · spot'}[id];
+        row.append(line(label, 'strong'));
+        const price = line(item ? number(item.value, 2) + ' ' + item.unit + ' ↗' :
+          'En attente', item ? 'a' : 'span', 'quote-value');
+        if (item) {
+          price.href = safeLink(item.url);
+          price.target = '_blank';
+          price.rel = 'noopener noreferrer';
+        }
+        row.append(price);
+        row.append(line(item ? 'EIA via FRED · ' + period(item.as_of) +
+          (stale(item) ? ' · ARCHIVE' : '') : 'Collecte officielle en cours', 'small', 'quote-note'));
+        box.append(row);
+      }
+      box.append(line('GAZ EUROPÉEN ET GNL · COTATIONS', 'div', 'watch-group'));
+      for (const item of marketLinks) {
+        const row = line('', 'div', 'quote-row');
+        row.append(line(item.label, 'strong'));
+        const wrap = line('', 'span', 'quote-value');
+        const link = line('Voir cours ↗', 'a');
+        link.href = item.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        wrap.append(link);
+        row.append(wrap, line(item.note, 'small', 'quote-note'));
+        box.append(row);
+      }
+      box.append(line('L’écart JKM–TTF exige deux échéances identiques et une conversion $/MMBtu ↔ €/MWh ; aucun spread fictif n’est affiché.', 'div', 'caption'));
+    }
+
+    function renderAgenda() {
+      const box = document.getElementById('agenda');
+      const upcoming = (snapshot.calendar || []).filter(event =>
+        event.day_only ? Date.parse(event.at) + 86400000 > Date.now() :
+          Date.parse(event.at) > Date.now()).slice(0, 4);
+      for (const event of upcoming) {
+        const row = line('', 'div', 'agenda-row');
+        const when = line('', 'span', 'agenda-when');
+        const moment = new Date(event.at);
+        when.append(line(new Intl.DateTimeFormat('fr-FR', {day:'2-digit', month:'short',
+          timeZone:'Europe/Paris'}).format(moment), 'span'));
+        when.append(line(event.day_only ? 'heure à confirmer' :
+          new Intl.DateTimeFormat('fr-FR', {hour:'2-digit', minute:'2-digit',
+          timeZone:'Europe/Paris'}).format(moment), 'small'));
+        const detail = line('', 'div');
+        const link = line(event.title + ' ↗', 'a');
+        link.href = safeLink(event.url) || 'https://www.eia.gov/';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        detail.append(link, line(event.context, 'p'));
+        row.append(when, detail);
+        box.append(row);
+      }
+      if (!upcoming.length) box.append(line('Dates à vérifier sur les calendriers officiels avant de nouvelles prévisions.', 'p', 'empty'));
+    }
+
     function renderReleases() {
       const box = document.getElementById('release-list');
-      for (const [id, label] of [['oil_crude','EIA pétrole'], ['gas_us','EIA gaz'], ['ag_corn_stocks','USDA WASDE']]) {
+      for (const [id, label] of [['oil_crude','EIA pétrole'], ['gas_fr','GIE stockage France'],
+                                 ['gas_us','EIA gaz US'], ['ag_corn_stocks','USDA WASDE']]) {
         const item = byId[id];
         if (!item) continue;
         const row = line('', 'div', 'row');
@@ -943,7 +1359,9 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
 
     function renderStories() {
       const box = document.getElementById('stories');
-      for (const item of (snapshot.stories || []).slice(0, 5)) {
+      const relevant = (snapshot.stories || []).filter(item =>
+        /crude|oil|natural gas|\blng\b|diesel|refin|petroleum|gasoline|fuel|storage/i.test(item.title + ' ' + item.summary));
+      for (const item of relevant.slice(0, 5)) {
         const href = safeLink(item.url);
         if (!href) continue;
         const story = line('', 'article', 'story');
@@ -953,10 +1371,11 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         title.rel = 'noopener noreferrer';
         story.append(title);
         if (item.summary) story.append(line(item.summary, 'p'));
-        story.append(line(item.source + ' · ' + period(item.date), 'small'));
+        story.append(line(item.source + ' · ' + period(item.date) +
+          ((Date.now() - Date.parse(item.date + 'T12:00:00Z')) / 86400000 > 30 ? ' · ARCHIVE' : ''), 'small'));
         box.append(story);
       }
-      if (!box.children.length) box.append(line('Flux d’analyses actuellement indisponible.', 'p'));
+      if (!box.children.length) box.append(line('Aucun article EIA sur le pétrole ou le gaz dans le flux actuel.', 'p'));
     }
 
     function renderTrend() {
@@ -981,7 +1400,14 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       document.getElementById('sector-heading').textContent = sectors[selectedSector];
       const box = document.getElementById('metrics');
       box.replaceChildren();
-      for (const item of metrics.filter(metric => metric.sector === selectedSector)) box.append(renderMetric(item));
+      const preferred = selectedSector === 'oil' ? ['price_brent','oil_norway_liquids',
+        'price_wti','oil_crude','oil_cushing'] :
+        selectedSector === 'gas' ? ['gas_fr','gas_fr_twh','gas_fr_net','lng_fr_sendout',
+          'lng_fr_inventory','gas_eu','gas_eu_twh','lng_eu_sendout','price_henry','gas_us'] : [];
+      const order = new Map(preferred.map((id, index) => [id, index]));
+      const sorted = metrics.filter(metric => metric.sector === selectedSector)
+        .sort((a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999));
+      for (const item of sorted) box.append(renderMetric(item));
       if (!box.children.length) box.append(line('Aucune valeur vérifiée disponible pour ce secteur.', 'p', 'empty'));
       document.querySelectorAll('.filters button').forEach(button => button.classList.toggle('active', button.dataset.sector === selectedSector));
       renderTakeaways();
@@ -993,6 +1419,9 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       renderSector();
     }));
     renderStatus();
+    renderTicker();
+    renderWatch();
+    renderAgenda();
     renderMini();
     renderMarketSummary();
     renderReleases();

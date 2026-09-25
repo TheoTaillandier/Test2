@@ -1,8 +1,10 @@
 import json
 import unittest
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from scripts.update_data import build_snapshot, parse_gie, parse_oil_flows, parse_wasde
+from scripts.update_data import (build_snapshot, parse_alsi, parse_fred, parse_norway,
+                                 parse_gie, parse_oil_flows, parse_wasde,
+                                 verified_calendar)
 
 
 FLOW_SAMPLE = b'''"STUB_1","STUB_2","9/18/26","9/11/26","Difference","9/19/25"
@@ -87,8 +89,69 @@ class PublicationParsingTest(unittest.TestCase):
     def test_gie_does_not_confuse_country_with_european_aggregate(self):
         rows = [{'code': 'DE', 'name': 'Germany', 'gasDayStart': '2026-09-18',
                  'full': '90.1', 'gasInStorage': '200', 'status': 'C'}]
-        with self.assertRaisesRegex(ValueError, 'EU storage'):
+        with self.assertRaisesRegex(ValueError, 'EU aggregate'):
             parse_gie(json.dumps({'data': rows}).encode())
+
+    def test_gie_country_aggregate_and_lng_units(self):
+        storage = {'data': [
+            {'code':'FR', 'gasDayStart':'2026-09-24', 'full':'82.5',
+             'gasInStorage':'118.4', 'netWithdrawal':'-62.3', 'status':'C'},
+            {'code':'FR', 'gasDayStart':'2026-09-23', 'full':'82.0',
+             'gasInStorage':'117.8', 'status':'C'}]}
+        result = parse_gie(json.dumps(storage).encode(), 'fr')
+        by_id = {item['id']: item for item in result['metrics']}
+        self.assertEqual(by_id['gas_fr']['change'], 0.5)
+        self.assertEqual(by_id['gas_fr_twh']['unit'], 'TWh')
+        self.assertEqual(by_id['gas_fr_net']['value'], -62.3)
+        lng = {'data':[{'code':'FR','gasDayStart':'2026-09-24','inventory':'465.2',
+                         'sendOut':'245.7','status':'C'},
+                       {'code':'FR','gasDayStart':'2026-09-23','inventory':'455.2',
+                         'sendOut':'203.7','status':'C'}]}
+        gas = {item['id']: item for item in parse_alsi(json.dumps(lng).encode(), 'fr')['metrics']}
+        self.assertEqual(gas['lng_fr_inventory']['unit'], '10³ m³ GNL')
+        self.assertEqual(gas['lng_fr_sendout']['change'], 42)
+
+    def test_removed_gie_key_removes_previously_published_european_metrics(self):
+        previous = {'metrics': [{'id':'gas_eu','value':80,'sector':'gas'},
+                                {'id':'lng_fr_sendout','value':120,'sector':'gas'}],
+                    'sources': {}, 'stories': [], 'history': {}}
+        result = build_snapshot(previous, {}, datetime(2026, 9, 25, tzinfo=timezone.utc))
+        self.assertFalse(any(item['id'] in ('gas_eu','lng_fr_sendout')
+                             for item in result['metrics']))
+        self.assertEqual(result['sources']['alsi_fr']['status'], 'needs_key')
+
+    def test_fred_ignores_missing_observation_and_rejects_stale_prices(self):
+        raw = b'DATE,DCOILBRENTEU\n2026-09-21,116.15\n2026-09-22,.\n2026-09-23,114.89\n'
+        result = parse_fred(raw, 'DCOILBRENTEU', date(2026, 9, 25))
+        item = result['metrics'][0]
+        self.assertEqual(item['value'], 114.89)
+        self.assertEqual(item['change'], -1.26)
+        self.assertEqual(item['as_of'], '2026-09-23')
+        with self.assertRaisesRegex(ValueError, 'more than 30 days'):
+            parse_fred(raw, 'DCOILBRENTEU', date(2026, 11, 1))
+
+    def test_norwegian_production_includes_ngl_and_condensate(self):
+        page = (b'<p>Production figures August 2026</p><p>9/22/2026 Preliminary production figures for '
+                b'August 2026 show an average daily production of 2 073 000 barrels of oil, '
+                b'NGL and condensate.</p><p>Production figures July 2026</p><p>8/20/2026 '
+                b'Preliminary production figures for July 2026 show an average daily production '
+                b'of 1 976 000 barrels of oil, NGL and condensate.</p>')
+        row = parse_norway(page, date(2026, 9, 25))['metrics'][0]
+        self.assertEqual(row['value'], 2.073)
+        self.assertEqual(row['change'], 0.097)
+        self.assertIn('LGN + condensats', row['detail'])
+
+    def test_agenda_uses_agency_holiday_exceptions_and_paris_dst(self):
+        events = verified_calendar(date(2026, 9, 25))
+        oil_sep = next(e for e in events if e['title'].startswith('EIA · stocks')
+                       and e['at'].startswith('2026-09-30'))
+        self.assertEqual(oil_sep['at'], '2026-09-30T14:30:00+00:00')
+        oil_oct = [e for e in events if e['title'].startswith('EIA · stocks')
+                   and e['at'].startswith('2026-10-15')]
+        self.assertEqual(oil_oct[0]['at'], '2026-10-15T16:00:00+00:00')
+        self.assertFalse(any(e['at'].startswith('2026-10-14') for e in events))
+        self.assertTrue(any(e['title'].startswith('USDA') and
+                            e['at'] == '2026-10-09T16:00:00+00:00' for e in events))
 
 
 if __name__ == '__main__':
