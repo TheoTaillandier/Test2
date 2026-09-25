@@ -571,7 +571,11 @@ def parse_alsi(raw: bytes, region: str, today: date | None = None) -> dict:
     complete = [row for row in rows if measured(row.get("inventory")) is not None
                 and measured(row.get("sendOut")) is not None]
     if not complete:
-        raise ValueError("ALSI " + region.upper() + " has no complete inventory/send-out observation")
+        sample = rows[0]
+        inv = sample.get("inventory")
+        raise ValueError(f"ALSI {region.upper()} inv={type(inv).__name__} "
+                         f"keys={list(inv) if isinstance(inv, dict) else []} "
+                         f"out={type(sample.get('sendOut')).__name__}")
     current = complete[0]
     observed = date.fromisoformat(current["gasDayStart"])
     today = today or datetime.now(timezone.utc).date()
