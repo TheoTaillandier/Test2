@@ -50,7 +50,8 @@ ALSI_REPORT_URL = "https://alsi.gie.eu/"
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 RTE_REPORT_URL = "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
 RTE_URL = ("https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/"
-           "eco2mix-national-tr/records?limit=100&order_by=date_heure%20desc")
+           "eco2mix-national-tr/records?limit=100&where=date_heure%20%3C%3D%20now%28%29"
+           "&order_by=date_heure%20desc")
 ENTSOE_URL = "https://web-api.tp.entsoe.eu/api"
 ENTSOE_REPORT_URL = "https://transparency.entsoe.eu/"
 POWER_ZONES = {"fr": "10YFR-RTE------C", "de": "10Y1001A1001A82H"}
@@ -113,7 +114,8 @@ def parse_rte_power(raw: bytes, now: datetime) -> dict:
         points.append(point)
     points.sort(key=lambda row: row["at"])
     if not points or datetime.fromisoformat(points[-1]["at"]) < now - timedelta(hours=30):
-        raise ValueError("RTE observations unavailable or too old")
+        sample = [row.get("date_heure") for row in (rows[:1] + rows[-1:]) if isinstance(row, dict)]
+        raise ValueError("RTE observations unavailable or too old; sample times " + repr(sample))
     latest = points[-1]
     as_of = latest["at"][:10]
     time_label = "Observation " + latest["at"] + " UTC"
@@ -149,10 +151,11 @@ def parse_rte_power(raw: bytes, now: datetime) -> dict:
 
 
 def entsoe_query(zone: str, now: datetime, token: str) -> bytes:
+    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
     params = {"documentType": "A65", "processType": "A01", "businessType": "A04",
               "outBiddingZone_Domain": POWER_ZONES[zone],
-              "periodStart": (now - timedelta(days=1)).strftime("%Y%m%d%H%M"),
-              "periodEnd": (now + timedelta(days=3)).strftime("%Y%m%d%H%M"),
+              "periodStart": (midnight - timedelta(days=1)).strftime("%Y%m%d%H%M"),
+              "periodEnd": (midnight + timedelta(days=3)).strftime("%Y%m%d%H%M"),
               "securityToken": token}
     # Never print the request URL or its HTTPError: it contains a personal token.
     return fetch(ENTSOE_URL + "?" + urlencode(params))
