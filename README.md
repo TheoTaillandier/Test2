@@ -499,7 +499,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "url": "https://ir.eia.gov/ngs/schedule.html"
     }
   ],
-  "generated_at": "2026-09-25T14:23:38+00:00",
+  "generated_at": "2026-09-25T14:25:17+00:00",
   "history": {
     "oil_crude": [
       {
@@ -2845,20 +2845,20 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
   "schema": 3,
   "sources": {
     "alsi": {
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "message": "Dernière donnée conservée ; source indisponible.",
       "status": "error",
       "url": "https://alsi.gie.eu/"
     },
     "alsi_fr": {
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "message": "Dernière donnée conservée ; source indisponible.",
       "status": "error",
       "url": "https://alsi.gie.eu/"
     },
     "brent": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     },
@@ -2874,25 +2874,25 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "gas": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "status": "ok",
       "url": "https://ir.eia.gov/ngs/ngs.html"
     },
     "gie": {
       "as_of": "2026-09-23",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "status": "ok",
       "url": "https://agsi.gie.eu/"
     },
     "gie_fr": {
       "as_of": "2026-09-23",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "status": "ok",
       "url": "https://agsi.gie.eu/"
     },
     "henry": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
     },
@@ -2903,7 +2903,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "news": {
       "as_of": "2026-09-25",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/rss/todayinenergy.xml"
     },
@@ -2915,38 +2915,39 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "oil": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_flows": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_history": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "published": "2026-09-23",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "rte_power": {
       "as_of": "2026-09-25T14:00:00+00:00",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "status": "ok",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
     },
     "wasde": {
       "as_of": "2026-09",
-      "checked_at": "2026-09-25T14:23:38+00:00",
-      "status": "ok",
+      "checked_at": "2026-09-25T14:25:17+00:00",
+      "message": "Dernière donnée conservée ; source indisponible.",
+      "status": "error",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt"
     },
     "wti": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T14:23:38+00:00",
+      "checked_at": "2026-09-25T14:25:17+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     }
