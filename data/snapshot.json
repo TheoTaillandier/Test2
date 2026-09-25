@@ -225,7 +225,7 @@
       "url": "https://ir.eia.gov/ngs/schedule.html"
     }
   ],
-  "generated_at": "2026-09-25T10:39:34+00:00",
+  "generated_at": "2026-09-25T10:43:51+00:00",
   "history": {
     "oil_crude": [
       {
@@ -727,13 +727,14 @@
     },
     "brent": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T10:39:34+00:00",
-      "status": "ok",
+      "checked_at": "2026-09-25T10:43:51+00:00",
+      "message": "Dernière donnée conservée ; source indisponible.",
+      "status": "error",
       "url": "https://fred.stlouisfed.org/series/DCOILBRENTEU"
     },
     "gas": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-24T23:13:36+00:00",
+      "checked_at": "2026-09-25T10:43:51+00:00",
       "status": "ok",
       "url": "https://ir.eia.gov/ngs/ngs.html"
     },
@@ -749,8 +750,9 @@
     },
     "henry": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T10:39:34+00:00",
-      "status": "ok",
+      "checked_at": "2026-09-25T10:43:51+00:00",
+      "message": "Dernière donnée conservée ; source indisponible.",
+      "status": "error",
       "url": "https://fred.stlouisfed.org/series/DHHNGSP"
     },
     "metals": {
@@ -760,45 +762,47 @@
     },
     "news": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-24T23:13:36+00:00",
+      "checked_at": "2026-09-25T10:43:51+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/rss/todayinenergy.xml"
     },
     "norway": {
       "as_of": "2026-08",
-      "checked_at": "2026-09-25T10:39:34+00:00",
-      "status": "ok",
+      "checked_at": "2026-09-25T10:43:51+00:00",
+      "message": "Dernière donnée conservée ; source indisponible.",
+      "status": "error",
       "url": "https://www.sodir.no/en/whats-new/news/production-figures/2026/production-figures-august-2026/"
     },
     "oil": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-24T23:13:36+00:00",
+      "checked_at": "2026-09-25T10:43:51+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_flows": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-24T23:13:36+00:00",
+      "checked_at": "2026-09-25T10:43:51+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_history": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-24T23:13:36+00:00",
+      "checked_at": "2026-09-25T10:43:51+00:00",
       "published": "2026-09-23",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "wasde": {
       "as_of": "2026-09",
-      "checked_at": "2026-09-24T23:13:36+00:00",
+      "checked_at": "2026-09-25T10:43:51+00:00",
       "status": "ok",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt"
     },
     "wti": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-25T10:39:34+00:00",
-      "status": "ok",
+      "checked_at": "2026-09-25T10:43:51+00:00",
+      "message": "Dernière donnée conservée ; source indisponible.",
+      "status": "error",
       "url": "https://fred.stlouisfed.org/series/DCOILWTICO"
     }
   },
