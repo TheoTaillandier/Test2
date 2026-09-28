@@ -318,7 +318,8 @@
         <div class="power-price-chart" id="power-price-chart"><span class="empty">Collecte des prix en attente.</span></div>
         <div class="power-meta" id="power-price-meta"></div>
         <p id="power-price-reading"></p>
-        <p><a href="https://www.energy-charts.info/charts/price_spot_market/chart.htm?c=FR" target="_blank" rel="noopener noreferrer">Fraunhofer ISE Energy-Charts ↗</a> · Licence CC BY 4.0 déclarée par l'API, vérifiée par le collecteur ; périodes et données transformées en graphique et indicateurs.</p>
+        <p id="power-price-context"></p>
+        <p><a href="https://www.energy-charts.info/charts/price_spot_market/chart.htm?c=FR" target="_blank" rel="noopener noreferrer">Fraunhofer ISE Energy-Charts ↗</a> · <span id="power-price-license">Licence vérifiée dans la réponse source.</span> Graphiques et indicateurs recalculés ici.</p>
       </section>
       <div class="power-bottom">
         <section class="card"><h2>Pour surveiller le gaz et les échanges</h2><p id="power-readout">Le gaz électrique, l'éolien, le solaire et le solde d'import/export seront affichés après la première collecte RTE.</p><p>Un solde RTE négatif signifie une exportation nette ; positif, une importation nette. Les données sont des télémesures complétées d'estimations.</p><a href="https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/" target="_blank" rel="noopener noreferrer">Source RTE éCO2mix ↗</a></section>
@@ -10900,7 +10901,10 @@
       const chart = document.getElementById('power-price-chart');
       const meta = document.getElementById('power-price-meta');
       const reading = document.getElementById('power-price-reading');
+      const context = document.getElementById('power-price-context');
+      const licence = document.getElementById('power-price-license');
       cards.replaceChildren(); control.replaceChildren(); chart.replaceChildren();
+      context.textContent = '';
       const series = powerPrices?.series || {};
       const fr = Array.isArray(series.fr) ? series.fr.filter(point => Number.isFinite(point.value) &&
         Number.isFinite(Date.parse(point.at))) : [];
@@ -10912,6 +10916,10 @@
           'Source indisponible lors de la dernière collecte ; aucun prix inventé.' : 'Collecte des prix en attente.';
         reading.textContent = ''; return;
       }
+      const attribution = powerPrices.licence?.fr;
+      licence.textContent = attribution && attribution === powerPrices.licence?.de ?
+        'Licence et attribution déclarées pour France et DE-LU : ' + attribution + '. ' :
+        'Licence et attribution déclarées par la source : ' + (attribution || 'à vérifier') + '. ';
       for (const [days,label] of [[2,'48 h'],[7,'7 j'],[30,'30 j'],[365,'1 an']]) {
         const button = line(label,'button'); button.type='button';
         button.setAttribute('aria-pressed',String(powerPriceSpan===days));
@@ -10927,6 +10935,9 @@
       const now = Date.now(), current = latestFor(fr,now);
       const counterpart = current && de.find(p => p.at===current.at);
       const delivery = fr.filter(p => localDay(p.at)===tomorrow);
+      const todayDelivery = fr.filter(p => localDay(p.at)===today);
+      const todayAverage = todayDelivery.length >= 80 ?
+        todayDelivery.reduce((sum,p)=>sum+p.value,0)/todayDelivery.length : null;
       const average = delivery.length ? delivery.reduce((sum,p)=>sum+p.value,0)/delivery.length : null;
       const peak = delivery.length ? delivery.reduce((a,b)=>a.value>b.value?a:b) : null;
       const countNegative = delivery.filter(p=>p.value<0).length;
@@ -10950,7 +10961,8 @@
       const f = fr.filter(p=>Date.parse(p.at)>=start), d = de.filter(p=>Date.parse(p.at)>=start);
       const values=[...f,...d].map(p=>p.value);
       if (f.length<2) {chart.append(line('Historique insuffisant pour cette période.','span','empty'));return;}
-      let low=Math.min(...values),high=Math.max(...values);
+      let low=Infinity,high=-Infinity;
+      for (const value of values) {if(value<low)low=value;if(value>high)high=value;}
       const pad=Math.max(10,(high-low)*.12);low-=pad;high+=pad;
       const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
       svg.setAttribute('viewBox','0 0 720 225');svg.setAttribute('preserveAspectRatio','none');
@@ -10993,10 +11005,35 @@
         Date.parse(p.at)>=Date.parse(observed.at)-3600000);
       reading.textContent=(peak ? 'Demain : pic day-ahead '+number(peak.value,2)+' €/MWh vers '+parisTime(peak.at)+
         '; '+countNegative+' périodes à prix négatif. ' : '')+
+        (average!==null&&todayAverage!==null ? 'Moyenne demain '+
+        (average>=todayAverage?'+':'')+number(average-todayAverage,2)+
+        ' €/MWh face aux '+todayDelivery.length+' périodes d’aujourd’hui. ' : '')+
         (paired&&observed.eolien!==undefined&&observed.solaire!==undefined ?
         'Dernier créneau observé : prix fixé la veille '+number(paired.value,2)+' €/MWh ; demande résiduelle RTE '+
         number(observed.load-observed.eolien-observed.solaire,0)+' MW. Ces deux mesures ne prouvent pas un effet causal.' :
         'Prix et télémesures ont des dates et des définitions différentes : vérifier les créneaux avant comparaison.');
+      const byTime = new Map(fr.map(p=>[Date.parse(p.at),p.value]));
+      const historicRte = Array.isArray(powerHistory?.points) && powerHistory.points.length ?
+        powerHistory.points : rte;
+      const matched = historicRte.filter(p=>Date.parse(p.at)<=now&&Date.parse(p.at)>=now-7*86400000 &&
+        Number.isFinite(p.load)&&Number.isFinite(p.eolien)&&Number.isFinite(p.solaire))
+        .map(p=>({residual:p.load-p.eolien-p.solaire,price:byTime.get(Date.parse(p.at))}))
+        .filter(p=>Number.isFinite(p.price));
+      if(matched.length>=48){
+        const ordered=matched.map(p=>p.residual).sort((a,b)=>a-b);
+        const pivot=ordered[Math.floor(ordered.length/2)];
+        const lower=matched.filter(p=>p.residual<pivot),upper=matched.filter(p=>p.residual>=pivot);
+        const mean=items=>items.reduce((sum,p)=>sum+p.price,0)/items.length;
+        context.textContent=lower.length&&upper.length ?
+          'Sur '+matched.length+' créneaux appariés des 7 derniers jours : prix day-ahead moyen '+
+          number(mean(upper),2)+' €/MWh quand la demande résiduelle observée est ≥ '+number(pivot,0)+
+          ' MW (n='+upper.length+'), contre '+number(mean(lower),2)+' €/MWh en dessous (n='+lower.length+
+          '). Lecture descriptive : prix fixé la veille, demande mesurée ensuite, autres facteurs non isolés.' :
+          'Comparaison prix et demande résiduelle en cours de constitution.';
+      } else {
+        context.textContent='Comparaison prix et demande résiduelle : '+matched.length+
+          ' créneaux exactement appariés sur 7 jours ; 48 requis pour afficher un repère.';
+      }
     }
 
     function renderPower() {
