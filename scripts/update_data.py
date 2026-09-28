@@ -29,6 +29,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "data" / "snapshot.json"
 POWER_HISTORY = ROOT / "data" / "power_fr.json"
+POWER_PRICES = ROOT / "data" / "power_prices.json"
 HTML = ROOT / "index.html"
 README = ROOT / "README.md"
 
@@ -60,6 +61,7 @@ RTE_BACKFILL_PAGES = 8  # About eight days at the source's 15-minute resolution.
 ENTSOE_URL = "https://web-api.tp.entsoe.eu/api"
 ENTSOE_REPORT_URL = "https://transparency.entsoe.eu/"
 POWER_ZONES = {"fr": "10YFR-RTE------C", "de": "10Y1001A1001A82H"}
+POWER_PRICE_SOURCE = "https://api.energy-charts.info/price"
 
 
 def fetch(url: str, headers: dict[str, str] | None = None) -> bytes:
@@ -212,6 +214,73 @@ def save_power_history(previous: dict, result: dict, now: datetime) -> None:
     POWER_HISTORY.parent.mkdir(parents=True, exist_ok=True)
     POWER_HISTORY.write_text(json.dumps(history, ensure_ascii=False, separators=(",", ":")) + "\n",
                              encoding="utf-8")
+
+
+def fetch_power_price(zone: str, now: datetime) -> bytes:
+    """The provider declares the licence per response; parsing enforces it."""
+    params = {"bzn": "FR" if zone == "fr" else "DE-LU",
+              "start": (now.date() - timedelta(days=9)).isoformat(),
+              "end": (now.date() + timedelta(days=2)).isoformat()}
+    return fetch(POWER_PRICE_SOURCE + "?" + urlencode(params))
+
+
+def parse_power_price(raw: bytes, zone: str, now: datetime) -> dict:
+    if zone not in ("fr", "de"):
+        raise ValueError("Unknown bidding zone")
+    data = json.loads(raw)
+    licence = data.get("license_info", "")
+    if "CC BY 4.0" not in licence or "EUR" not in data.get("unit", "").upper():
+        raise ValueError("Power price licence or currency not suitable for publication")
+    stamps, prices = data.get("unix_seconds"), data.get("price")
+    if not isinstance(stamps, list) or not isinstance(prices, list) or len(stamps) != len(prices):
+        raise ValueError("Power price arrays invalid")
+    points = []
+    for stamp, value in zip(stamps, prices):
+        price = measured(value)
+        if not isinstance(stamp, int) or price is None or not -5000 <= price <= 5000:
+            continue
+        observed = datetime.fromtimestamp(stamp, timezone.utc)
+        if now - timedelta(days=12) <= observed <= now + timedelta(days=3):
+            points.append({"at": observed.isoformat(), "value": round(price, 2)})
+    points = sorted({point["at"]: point for point in points}.values(), key=lambda point: point["at"])
+    if len(points) < 20 or datetime.fromisoformat(points[-1]["at"]) < now - timedelta(days=3):
+        raise ValueError("Power price publication incomplete or stale")
+    return {"points": points, "as_of": points[-1]["at"],
+            "url": "https://www.energy-charts.info/charts/price_spot_market/chart.htm?c=" +
+                   ("FR" if zone == "fr" else "DE"),
+            "licence": licence, "provenance": "Fraunhofer ISE Energy-Charts · day-ahead"}
+
+
+def merge_power_prices(previous: dict, results: dict, now: datetime) -> dict:
+    cutoff = now - timedelta(days=365)
+    series = {}
+    for zone in ("fr", "de"):
+        old = previous.get("series", {}).get(zone, [])
+        incoming = results.get("power_price_" + zone)
+        added = incoming.get("points", []) if isinstance(incoming, dict) else []
+        by_time = {}
+        for point in [*old, *added]:
+            try:
+                stamp = datetime.fromisoformat(point["at"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            value = measured(point.get("value"))
+            if stamp.tzinfo and cutoff <= stamp <= now + timedelta(days=3) and value is not None and -5000 <= value <= 5000:
+                by_time[point["at"]] = {"at": point["at"], "value": round(value, 2)}
+        series[zone] = sorted(by_time.values(), key=lambda point: point["at"])
+    return {"schema": 1, "source": "Fraunhofer ISE Energy-Charts",
+            "market": "day-ahead auction · France and DE-LU",
+            "unit": "EUR/MWh", "generated_at": now.isoformat(), "series": series,
+            "licence": {zone: results["power_price_" + zone]["licence"]
+                        for zone in ("fr", "de") if isinstance(results.get("power_price_" + zone), dict)}}
+
+
+def save_power_prices(previous: dict, results: dict, now: datetime) -> None:
+    prices = merge_power_prices(previous, results, now)
+    if not prices["series"]["fr"] and not prices["series"]["de"]:
+        raise ValueError("No licensed power prices to publish")
+    POWER_PRICES.write_text(json.dumps(prices, ensure_ascii=False, separators=(",", ":")) + "\n",
+                            encoding="utf-8")
 
 
 def entsoe_query(zone: str, now: datetime, token: str) -> bytes:
@@ -859,7 +928,7 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
     stories = previous.get("stories", [])
     for key in ("oil", "oil_flows", "oil_history", "oil_price_history", "gas", "wasde", "crop_progress", "news", "norway",
                 "brent", "wti", "henry", "gie", "gie_fr", "alsi", "alsi_fr",
-                "rte_power", "entsoe_fr", "entsoe_de"):
+                "rte_power", "entsoe_fr", "entsoe_de", "power_price_fr", "power_price_de"):
         result = results.get(key)
         if isinstance(result, Exception):
             old = sources.get(key, {})
@@ -893,6 +962,8 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
             sources[key]["published"] = result["published"]
         if result.get("provenance"):
             sources[key]["provenance"] = result["provenance"]
+        if result.get("licence"):
+            sources[key]["licence"] = result["licence"]
         for item in result.get("metrics", []):
             values[item["id"]] = item
         if key == "oil_history":
@@ -939,6 +1010,12 @@ def save_snapshot(snapshot: dict) -> None:
         html, count = power_tag.subn(lambda match: match.group(1) + "\n" + power_data + match.group(3), html)
         if count != 1:
             raise ValueError("power history tag missing from index.html")
+    if POWER_PRICES.exists():
+        price_data = POWER_PRICES.read_text(encoding="utf-8").replace("<", "\\u003c")
+        price_tag = re.compile(r'(<script id="power-price-data" type="application/json">)(.*?)(</script>)', re.S)
+        html, count = price_tag.subn(lambda match: match.group(1) + "\n" + price_data + match.group(3), html)
+        if count != 1:
+            raise ValueError("power price tag missing from index.html")
     HTML.write_text(html, encoding="utf-8")
     readme = ("# Commodity Cockpit\n\n"
               "Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.\n\n"
@@ -954,7 +1031,8 @@ def save_snapshot(snapshot: dict) -> None:
               "- GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.\n"
               "- RTE éCO2mix national temps réel : [dataset officiel](https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/) actualisé à la source au quart d'heure ; consommation, nucléaire, gaz, vent, solaire, hydraulique, bioénergies et échanges physiques. Export = solde négatif ; import = positif. Le cockpit collecte les dernières pages toutes les deux heures et conserve le dernier relevé de chaque heure dans `data/power_fr.json` sur 365 jours glissants. L'historique s'accumule depuis la première collecte, il n'invente pas une année déjà acquise. Il est aussi embarqué dans le HTML téléchargé. Demande résiduelle = consommation − éolien − solaire (calcul indicatif, **pas une prévision du prix**). Aucun compte requis.\n"
               "- ENTSO-E : prévision *day-ahead* de demande (A65/A01, Article 6.1.b, données [CC BY 4.0](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions)), France et Allemagne/Luxembourg ; affichage du pic prévu pour les prochaines 24 heures. Pour activer : créer un compte sur https://transparency.entsoe.eu/, demander l'accès API à `transparency@entsoe.eu` (objet `RESTful API access` et adresse enregistrée dans le corps), puis générer le jeton dans « My Account ». Enregistrer le jeton **uniquement** comme secret GitHub Actions `ENTSOE_API_TOKEN` via Settings → Secrets and variables → Actions → New repository secret ; relancer l'action. Ne jamais le coller dans le HTML, un fichier GitHub ou une conversation. Sans clé, RTE Power fonctionne déjà.\n"
-              "- Prix électriques France/DE : bouton vers le [marché officiel RTE](https://www.rte-france.com/en/data-publications/eco2mix/market-data) ; les prix day-ahead EPEX ne sont pas couverts par la [liste ENTSO-E de réutilisation libre](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions) et RTE interdit la copie de ses prix via éCO2mix. Le jeton ENTSO-E n'est pas un droit de redistribution de ces cotations.\n"
+              "- Prix day-ahead France et DE-LU : API Fraunhofer ISE Energy-Charts. Le collecteur exige explicitement la mention de licence CC BY 4.0 dans chaque réponse et une unité EUR/MWh ; sinon il refuse la publication. `data/power_prices.json` conserve un historique glissant d'un an à partir des points réellement collectés. Le prix porte sur la **livraison** de chaque quart d'heure ou heure, il a été fixé la veille ; ce n'est pas un cours intraday en direct. Source et transformation sont affichées.\n"
+              "- Intraday continu France : [page de marché EPEX](https://www.epexspot.com/en/market-results) et [RTE](https://www.rte-france.com/en/data-publications/eco2mix/market-data) en accès direct. ENTSO-E 12.1.d rend obligatoire le day-ahead et l'intraday facultatif. RTE interdit la récupération des prix affichés dans éCO2mix et EPEX vend son flux de données ; le site ne fabrique donc pas un spread day-ahead/intraday. Les données de prix Fraunhofer sont attribuées conformément à la licence déclarée dans l'API.\n"
               "- Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.\n"
               "- Marchés : cinq tuiles de cotations en séance TradingView/OANDA (Brent, WTI, gaz US, cuivre, or), plus un graphique et un tableau. Instruments OTC indicatifs ; ils ne remplacent ni les futures ICE/NYMEX ni le spot EIA daté. Le gaz US OANDA n'est pas une cotation Henry Hub physique. Les widgets nécessitent Internet et le fournisseur peut limiter la diffusion. Aluminium, cacao et café sont accessibles via leurs pages de marché ; leurs prix ne sont pas intégrés sans droits vérifiés.\n"
               "- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. Aucune valeur ou spread instantané n'est inventé. ENTSO-E fournit des prévisions électriques ouvertes, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.\n"
@@ -983,6 +1061,8 @@ def main() -> None:
     tasks["wti"] = lambda: parse_eia_spot(fetch(EIA_OIL_SPOT_URL), "wti", now.date())
     tasks["henry"] = lambda: parse_eia_spot(fetch(EIA_GAS_SPOT_URL), "henry", now.date())
     tasks["rte_power"] = lambda: parse_rte_power(fetch_rte_history(), now)
+    for zone in ("fr", "de"):
+        tasks["power_price_" + zone] = lambda code=zone: parse_power_price(fetch_power_price(code, now), code, now)
     entsoe_token = os.environ.get("ENTSOE_API_TOKEN", "").strip()
     if entsoe_token:
         for zone in POWER_ZONES:
@@ -1016,6 +1096,11 @@ def main() -> None:
             save_power_history(previous_power, rte_result, now)
         except (OSError, ValueError) as error:
             print("RTE accumulated history unavailable: " + str(error)[:100], file=sys.stderr)
+    try:
+        previous_prices = json.loads(POWER_PRICES.read_text(encoding="utf-8")) if POWER_PRICES.exists() else {}
+        save_power_prices(previous_prices, results, now)
+    except (OSError, ValueError) as error:
+        print("Power prices unavailable: " + str(error)[:100], file=sys.stderr)
     save_snapshot(snapshot)
     print("Metrics:", len(snapshot["metrics"]), "| official headlines:", len(snapshot["stories"]))
 

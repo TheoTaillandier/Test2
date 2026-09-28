@@ -28,6 +28,10 @@ Le graphique 24 h de la page Power utilise les relevés au quart d'heure de l'in
 
 Prévisions : ENTSO-E A65/A01 pour la France et DE-LU, avec le jeton du dépôt. Le pic affiché est la demande prévue, pas une consommation déjà réalisée. Les prix day-ahead ne sont pas déduits de ces prévisions.
 
+Prix day-ahead : l'API Fraunhofer ISE Energy-Charts fournit les périodes de livraison France et DE-LU en EUR/MWh. L'ETL valide la mention `CC BY 4.0` dans la réponse avant de publier ; il cite la source et indique que les graphiques et indicateurs sont des transformations. `data/power_prices.json` accumule les seules périodes effectivement reçues sur 365 jours glissants. La moyenne de demain est arithmétique sur les périodes disponibles, et l'écart France − DE-LU apparie exclusivement des timestamps identiques. Un prix négatif est compté par période, pas par heure. Les graphiques utilisent le même axe monétaire pour les deux zones.
+
+Le day-ahead est fixé la veille pour une période future. Le prix d'une période en cours n'est donc pas une cotation en direct. Le flux intraday continu EPEX n'a pas été collecté : ENTSO-E 12.1.d ne rend sa publication que facultative, et l'accès public à un résultat sur un site n'autorise pas automatiquement sa récupération ni sa redistribution. Le prix d'équilibrage / de règlement des écarts est un autre marché et n'est pas substitué à l'intraday. Les comparaisons avec la demande résiduelle RTE sont descriptives et portent sur la même période de livraison, sans prétendre démontrer une causalité.
+
 ## Autres séries et mise à jour
 
 - Pétrole : prix spot quotidiens EIA datés ; courbe Brent/WTI sur 12 mois par FRED ou miroir public des séries EIA, avec provenance et date. Les widgets OANDA ont une autre définition de produit.

@@ -38,7 +38,7 @@ jobs:
         run: python scripts/update_data.py
       - name: Publier la nouvelle version ouvrable hors ligne
         run: |
-          git add index.html README.md data/snapshot.json data/power_fr.json
+          git add index.html README.md data/snapshot.json data/power_fr.json data/power_prices.json
           if ! git diff --cached --quiet; then
             git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Actualiser les données officielles du cockpit'
             git push

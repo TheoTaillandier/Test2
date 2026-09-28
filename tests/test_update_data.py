@@ -6,7 +6,8 @@ from datetime import date, datetime, timezone
 from scripts.update_data import (build_snapshot, parse_alsi, parse_eia_spot, parse_fred, parse_norway,
                                  parse_gie, parse_oil_flows, parse_wasde, parse_rte_power,
                                  parse_entsoe_forecast, parse_oil_price_history, fetch_gie_history,
-                                 parse_oil_price_mirror, merge_power_history,
+                                 parse_oil_price_mirror, merge_power_history, parse_power_price,
+                                 merge_power_prices,
                                  parse_crop_progress, crop_progress_link,
                                  verified_calendar)
 
@@ -57,6 +58,23 @@ WASDE - 675 - 24
 
 
 class PublicationParsingTest(unittest.TestCase):
+    def test_power_day_ahead_requires_explicit_licence_and_paired_delivery_times(self):
+        from datetime import timedelta
+        now = datetime(2026, 9, 28, 15, tzinfo=timezone.utc)
+        stamps = [int((now-timedelta(hours=12)+timedelta(minutes=15*i)).timestamp())
+                  for i in range(100)]
+        raw = {'license_info':'CC BY 4.0 (creativecommons.org/licenses/by/4.0) attribution: energy-charts.info',
+               'unit':'EUR / MWh','unix_seconds':stamps,'price':[80.0]*100}
+        result = parse_power_price(json.dumps(raw).encode(), 'fr', now)
+        self.assertEqual(len(result['points']), 100)
+        combined = merge_power_prices({}, {'power_price_fr':result,'power_price_de':
+            {**result,'points':[{'at':p['at'],'value':70.0} for p in result['points']]}}, now)
+        self.assertEqual(combined['series']['fr'][0]['at'],combined['series']['de'][0]['at'])
+        self.assertEqual(combined['series']['fr'][0]['value']-combined['series']['de'][0]['value'],10)
+        raw['license_info']='Proprietary'
+        with self.assertRaisesRegex(ValueError,'licence'):
+            parse_power_price(json.dumps(raw).encode(), 'fr', now)
+
     def test_oil_mirror_keeps_dated_spot_history_separate_from_live_prices(self):
         from datetime import timedelta
         base = date(2026, 9, 25)
