@@ -28,6 +28,7 @@ from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "data" / "snapshot.json"
+POWER_HISTORY = ROOT / "data" / "power_fr.json"
 HTML = ROOT / "index.html"
 README = ROOT / "README.md"
 
@@ -55,6 +56,7 @@ RTE_REPORT_URL = "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-n
 RTE_URL = ("https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/"
            "eco2mix-national-tr/records?limit=100&where=date_heure%20%3C%3D%20now%28%29"
            "&order_by=date_heure%20desc")
+RTE_BACKFILL_PAGES = 8  # About eight days at the source's 15-minute resolution.
 ENTSOE_URL = "https://web-api.tp.entsoe.eu/api"
 ENTSOE_REPORT_URL = "https://transparency.entsoe.eu/"
 POWER_ZONES = {"fr": "10YFR-RTE------C", "de": "10Y1001A1001A82H"}
@@ -89,6 +91,25 @@ def measured(value: object) -> float | None:
     return result if math.isfinite(result) else None
 
 
+def fetch_rte_history() -> bytes:
+    """Page official RTE records; latest page is mandatory, older pages best effort."""
+    first = json.loads(fetch(RTE_URL))
+    if not isinstance(first.get("results"), list):
+        raise ValueError("RTE latest page missing")
+    rows = list(first["results"])
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [pool.submit(fetch, RTE_URL + "&offset=" + str(page * 100))
+                   for page in range(1, RTE_BACKFILL_PAGES)]
+        for future in futures:
+            try:
+                page = json.loads(future.result()).get("results", [])
+                if isinstance(page, list):
+                    rows.extend(page)
+            except Exception as error:
+                print("RTE history page unavailable: " + type(error).__name__, file=sys.stderr)
+    return json.dumps({"results": rows}).encode("utf-8")
+
+
 def parse_rte_power(raw: bytes, now: datetime) -> dict:
     document = json.loads(raw)
     rows = document.get("results") if isinstance(document, dict) else None
@@ -102,7 +123,7 @@ def parse_rte_power(raw: bytes, now: datetime) -> dict:
             stamp = datetime.fromisoformat(row["date_heure"].replace("Z", "+00:00"))
         except ValueError:
             continue
-        if stamp.tzinfo is None or not now - timedelta(hours=48) <= stamp <= now:
+        if stamp.tzinfo is None or not now - timedelta(days=9) <= stamp <= now:
             continue
         demand = measured(row.get("consommation"))
         if demand is None or not 5000 <= demand <= 120000:
@@ -116,6 +137,7 @@ def parse_rte_power(raw: bytes, now: datetime) -> dict:
                 point[field] = round(value)
         points.append(point)
     points.sort(key=lambda row: row["at"])
+    points = list({point["at"]: point for point in points}.values())
     if not points or datetime.fromisoformat(points[-1]["at"]) < now - timedelta(hours=30):
         sample = [row.get("date_heure") for row in (rows[:1] + rows[-1:]) if isinstance(row, dict)]
         raise ValueError("RTE observations unavailable or too old; sample times " + repr(sample))
@@ -153,9 +175,43 @@ def parse_rte_power(raw: bytes, now: datetime) -> dict:
                              latest["taux_co2"], "g/kWh", None,
                              "production française", as_of,
                              "RTE éCO2mix", RTE_REPORT_URL, time_label))
-    # A compact, independently dated curve: keep a single day of observations.
-    return {"metrics": values, "points": points[-96:], "as_of": latest["at"],
+    return {"metrics": values, "points": points[-96:], "historic_points": points,
+            "as_of": latest["at"],
             "url": RTE_REPORT_URL}
+
+
+def merge_power_history(previous: dict, points: list[dict], now: datetime) -> dict:
+    """Append hourly observations; retain up to 365 days without filling gaps."""
+    cutoff = now - timedelta(days=365)
+    combined = {}
+    for point in [*previous.get("points", []), *points]:
+        try:
+            stamp = datetime.fromisoformat(point["at"].replace("Z", "+00:00"))
+        except (KeyError, TypeError, ValueError):
+            continue
+        if stamp.tzinfo is None or not cutoff <= stamp <= now or not 5000 <= (measured(point.get("load")) or 0) <= 120000:
+            continue
+        # Last measured quarter within the UTC hour; no synthetic hourly averages.
+        hour = stamp.astimezone(timezone.utc).strftime("%Y-%m-%dT%H")
+        old = combined.get(hour)
+        if old is None or point["at"] > old["at"]:
+            combined[hour] = {key: point[key] for key in
+                ("at", "load", "nucleaire", "gaz", "eolien", "solaire", "hydraulique",
+                 "bioenergies", "charbon", "fioul", "ech_physiques") if key in point}
+    ordered = sorted(combined.values(), key=lambda row: row["at"])
+    return {"schema": 1, "source": "RTE éCO2mix national temps réel",
+            "url": RTE_REPORT_URL, "quality": "observé provisoire · un relevé par heure UTC",
+            "generated_at": now.isoformat(), "first_at": ordered[0]["at"] if ordered else None,
+            "last_at": ordered[-1]["at"] if ordered else None, "points": ordered}
+
+
+def save_power_history(previous: dict, result: dict, now: datetime) -> None:
+    history = merge_power_history(previous, result.get("historic_points", []), now)
+    if not history["points"]:
+        raise ValueError("RTE power history empty")
+    POWER_HISTORY.parent.mkdir(parents=True, exist_ok=True)
+    POWER_HISTORY.write_text(json.dumps(history, ensure_ascii=False, separators=(",", ":")) + "\n",
+                             encoding="utf-8")
 
 
 def entsoe_query(zone: str, now: datetime, token: str) -> bytes:
@@ -877,10 +933,16 @@ def save_snapshot(snapshot: dict) -> None:
     html, count = tag.subn(lambda match: match.group(1) + "\n" + embed + match.group(3), html)
     if count != 1:
         raise ValueError("snapshot tag missing from index.html")
+    if POWER_HISTORY.exists():
+        power_data = POWER_HISTORY.read_text(encoding="utf-8").replace("<", "\\u003c")
+        power_tag = re.compile(r'(<script id="power-history-data" type="application/json">)(.*?)(</script>)', re.S)
+        html, count = power_tag.subn(lambda match: match.group(1) + "\n" + power_data + match.group(3), html)
+        if count != 1:
+            raise ValueError("power history tag missing from index.html")
     HTML.write_text(html, encoding="utf-8")
     readme = ("# Commodity Cockpit\n\n"
               "Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.\n\n"
-              "Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA : elles demandent Internet et sont indicatives, distinctes du contrat ICE et de Henry Hub physique. Le spot officiel EIA est montré séparément avec sa date. Les autres chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml). Le bouton **Actualiser les données** récupère la dernière publication GitHub même depuis un HTML téléchargé ; hors connexion, le fichier garde son instantané daté. L'onglet **Power FR** affiche RTE et, avec une clé ENTSO-E, les prévisions de demande France et DE-LU.\n\n"
+              "Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA : elles demandent Internet et sont indicatives, distinctes du contrat ICE et de Henry Hub physique. Le spot officiel EIA est montré séparément avec sa date. Les autres chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml). Le bouton **Actualiser les données** récupère la dernière publication GitHub même depuis un HTML téléchargé ; hors connexion, le fichier garde son instantané daté. L'onglet **Power FR** affiche RTE et, avec une clé ENTSO-E, les prévisions de demande France et DE-LU. [Méthodologie, unités et limites](methodology.md).\n\n"
               "## Sources & automatisation\n\n"
               "- EIA WPSR : stocks de brut, Cushing, Gulf Coast, essence, distillats, jet et SPR ; production, importations, exportations et brut traité par les raffineries US.\n"
               "- EIA WNGSR : stockage de gaz US et régions, variation hebdomadaire et écart à la moyenne cinq ans.\n"
@@ -890,7 +952,7 @@ def save_snapshot(snapshot: dict) -> None:
               "- Sodir (Norwegian Offshore Directorate) : chiffre mensuel provisoire d'août 2026 (pétrole, LGN et condensats), repère européen daté ; la source refuse actuellement les lectures automatisées du robot GitHub et ce chiffre n'est donc pas rafraîchi automatiquement.\n"
               "- EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication. Une série de 12 mois compare les clôtures spot Brent et WTI : FRED, puis miroir public EIA `datasets/oil-prices` si FRED est indisponible, avec date et provenance explicites ; elle ne se substitue pas à la cotation en séance.\n"
               "- GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.\n"
-              "- RTE éCO2mix national temps réel : [dataset officiel](https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/) actualisé à la source au quart d'heure ; consommation, nucléaire, gaz, vent, solaire, hydraulique, bioénergies et échanges physiques. Export = solde négatif ; import = positif. Le cockpit collecte un instantané toutes les deux heures via GitHub Actions et indique l'heure de la mesure et de la collecte. Demande résiduelle = consommation − éolien − solaire (calcul indicatif, **pas une prévision du prix**). Aucun compte requis.\n"
+              "- RTE éCO2mix national temps réel : [dataset officiel](https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/) actualisé à la source au quart d'heure ; consommation, nucléaire, gaz, vent, solaire, hydraulique, bioénergies et échanges physiques. Export = solde négatif ; import = positif. Le cockpit collecte les dernières pages toutes les deux heures et conserve le dernier relevé de chaque heure dans `data/power_fr.json` sur 365 jours glissants. L'historique s'accumule depuis la première collecte, il n'invente pas une année déjà acquise. Il est aussi embarqué dans le HTML téléchargé. Demande résiduelle = consommation − éolien − solaire (calcul indicatif, **pas une prévision du prix**). Aucun compte requis.\n"
               "- ENTSO-E : prévision *day-ahead* de demande (A65/A01, Article 6.1.b, données [CC BY 4.0](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions)), France et Allemagne/Luxembourg ; affichage du pic prévu pour les prochaines 24 heures. Pour activer : créer un compte sur https://transparency.entsoe.eu/, demander l'accès API à `transparency@entsoe.eu` (objet `RESTful API access` et adresse enregistrée dans le corps), puis générer le jeton dans « My Account ». Enregistrer le jeton **uniquement** comme secret GitHub Actions `ENTSOE_API_TOKEN` via Settings → Secrets and variables → Actions → New repository secret ; relancer l'action. Ne jamais le coller dans le HTML, un fichier GitHub ou une conversation. Sans clé, RTE Power fonctionne déjà.\n"
               "- Prix électriques France/DE : bouton vers le [marché officiel RTE](https://www.rte-france.com/en/data-publications/eco2mix/market-data) ; les prix day-ahead EPEX ne sont pas couverts par la [liste ENTSO-E de réutilisation libre](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions) et RTE interdit la copie de ses prix via éCO2mix. Le jeton ENTSO-E n'est pas un droit de redistribution de ces cotations.\n"
               "- Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.\n"
@@ -920,7 +982,7 @@ def main() -> None:
     tasks["brent"] = lambda: parse_eia_spot(fetch(EIA_OIL_SPOT_URL), "brent", now.date())
     tasks["wti"] = lambda: parse_eia_spot(fetch(EIA_OIL_SPOT_URL), "wti", now.date())
     tasks["henry"] = lambda: parse_eia_spot(fetch(EIA_GAS_SPOT_URL), "henry", now.date())
-    tasks["rte_power"] = lambda: parse_rte_power(fetch(RTE_URL), now)
+    tasks["rte_power"] = lambda: parse_rte_power(fetch_rte_history(), now)
     entsoe_token = os.environ.get("ENTSOE_API_TOKEN", "").strip()
     if entsoe_token:
         for zone in POWER_ZONES:
@@ -947,6 +1009,13 @@ def main() -> None:
     snapshot = build_snapshot(previous, results, now)
     if not any(item.get("status") == "ok" for item in snapshot["sources"].values()):
         raise RuntimeError("No usable source: keeping published snapshot unchanged")
+    rte_result = results.get("rte_power")
+    if isinstance(rte_result, dict):
+        try:
+            previous_power = json.loads(POWER_HISTORY.read_text(encoding="utf-8")) if POWER_HISTORY.exists() else {}
+            save_power_history(previous_power, rte_result, now)
+        except (OSError, ValueError) as error:
+            print("RTE accumulated history unavailable: " + str(error)[:100], file=sys.stderr)
     save_snapshot(snapshot)
     print("Metrics:", len(snapshot["metrics"]), "| official headlines:", len(snapshot["stories"]))
 

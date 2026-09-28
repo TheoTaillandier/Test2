@@ -6,7 +6,7 @@ from datetime import date, datetime, timezone
 from scripts.update_data import (build_snapshot, parse_alsi, parse_eia_spot, parse_fred, parse_norway,
                                  parse_gie, parse_oil_flows, parse_wasde, parse_rte_power,
                                  parse_entsoe_forecast, parse_oil_price_history, fetch_gie_history,
-                                 parse_oil_price_mirror,
+                                 parse_oil_price_mirror, merge_power_history,
                                  parse_crop_progress, crop_progress_link,
                                  verified_calendar)
 
@@ -227,6 +227,21 @@ Cotton Bolls Opening - Selected States'''
         with self.assertRaisesRegex(ValueError, 'too old'):
             parse_rte_power(json.dumps({'results':rows[:-1]}).encode(),
                             datetime(2026, 9, 28, tzinfo=timezone.utc))
+
+    def test_rte_hourly_history_accumulates_without_inventing_missing_hours(self):
+        now = datetime(2026, 9, 28, 12, tzinfo=timezone.utc)
+        previous = {'points':[
+            {'at':'2026-09-27T10:45:00+00:00','load':50000,'gaz':2000},
+            {'at':'2026-09-28T10:00:00+00:00','load':51000,'gaz':2100}]}
+        incoming = [
+            {'at':'2026-09-28T10:45:00+00:00','load':52000,'gaz':2200},
+            {'at':'2026-09-28T11:15:00+00:00','load':53000,'ech_physiques':-4000}]
+        result = merge_power_history(previous, incoming, now)
+        self.assertEqual(len(result['points']), 3)
+        self.assertEqual(result['points'][1]['load'], 52000)
+        self.assertEqual(result['points'][-1]['ech_physiques'], -4000)
+        self.assertEqual(result['first_at'], '2026-09-27T10:45:00+00:00')
+        self.assertEqual(result['quality'], 'observé provisoire · un relevé par heure UTC')
 
     def test_entsoe_forecast_only_publishes_actual_day_ahead_load(self):
         example = b'''<GL_MarketDocument xmlns="urn:iec:62325.351:tc57wg16:451-6:loadpublishdocument:3:0">
