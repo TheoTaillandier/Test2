@@ -22,7 +22,7 @@ import re
 import sys
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urljoin
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
 
@@ -38,17 +38,18 @@ OIL_REPORT_URL = "https://www.eia.gov/petroleum/supply/weekly/"
 GAS_URL = "https://ir.eia.gov/ngs/wngsr.json"
 GAS_REPORT_URL = "https://ir.eia.gov/ngs/ngs.html"
 NEWS_URL = "https://www.eia.gov/rss/todayinenergy.xml"
+CROP_PROGRESS_URL = "https://esmis.nal.usda.gov/publication/crop-progress"
 SODIR_URL = "https://www.sodir.no/en/whats-new/news/production-figures/"
 EIA_OIL_SPOT_URL = "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
 EIA_GAS_SPOT_URL = "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
-GIE_URL = "https://agsi.gie.eu/api?type=eu&size=400"
+GIE_URL = "https://agsi.gie.eu/api?type=eu&size=300"
 GIE_REPORT_URL = "https://agsi.gie.eu/"
-GIE_FR_URL = "https://agsi.gie.eu/api?country=fr&size=400"
+GIE_FR_URL = "https://agsi.gie.eu/api?country=fr&size=300"
 ALSI_URL = "https://alsi.gie.eu/api?type=eu&size=14"
 ALSI_FR_URL = "https://alsi.gie.eu/api?country=fr&size=14"
 ALSI_REPORT_URL = "https://alsi.gie.eu/"
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
-OIL_PRICE_HISTORY_URL = FRED_URL + "?id=DCOILBRENTEU,DCOILWTICO"
+OIL_PRICE_HISTORY_URL = FRED_URL + "?id=DCOILBRENTEU,DCOILWTICO&cosd=2025-09-01"
 RTE_REPORT_URL = "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
 RTE_URL = ("https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/"
            "eco2mix-national-tr/records?limit=100&where=date_heure%20%3C%3D%20now%28%29"
@@ -278,13 +279,15 @@ def parse_oil_history(raw: bytes) -> dict:
 def parse_oil_price_history(raw: bytes, today: date) -> dict:
     """Official daily spot history for context only; never a live quote."""
     rows = csv.DictReader(StringIO(raw.decode("utf-8-sig", "replace")))
-    if not rows.fieldnames or not {"DATE", "DCOILBRENTEU", "DCOILWTICO"} <= set(rows.fieldnames):
+    fields = set(rows.fieldnames or [])
+    day_field = "observation_date" if "observation_date" in fields else "DATE"
+    if not {day_field, "DCOILBRENTEU", "DCOILWTICO"} <= fields:
         raise ValueError("FRED oil price columns missing")
     cutoff = today - timedelta(days=370)
     series = {"brent": [], "wti": []}
     for row in rows:
         try:
-            day = date.fromisoformat(row["DATE"])
+            day = date.fromisoformat(row[day_field])
         except (ValueError, TypeError):
             continue
         if not cutoff <= day <= today:
@@ -298,6 +301,62 @@ def parse_oil_price_history(raw: bytes, today: date) -> dict:
         raise ValueError("FRED one-year oil history missing or stale")
     return {"series": series, "as_of": max(series["brent"][-1]["date"], series["wti"][-1]["date"]),
             "url": "https://fred.stlouisfed.org/"}
+
+
+def crop_progress_link(raw: bytes) -> str:
+    html = raw.decode("utf-8", "replace")
+    links = re.findall(r'href=["\']([^"\']+\.txt)["\']', html, re.I)
+    match = next((link for link in links if "/sites/default/release-files/" in link), None)
+    if not match:
+        raise ValueError("USDA latest crop report link missing")
+    url = urljoin(CROP_PROGRESS_URL, unescape(match))
+    if not url.startswith("https://esmis.nal.usda.gov/sites/default/release-files/"):
+        raise ValueError("USDA crop report URL unexpected")
+    return url
+
+
+def parse_crop_progress(raw: bytes, url: str, today: date) -> dict:
+    text = raw.decode("utf-8-sig", "replace")
+    release = re.search(r"Released ([A-Za-z]+ \d{1,2}, 20\d{2})", text)
+    if not release:
+        raise ValueError("USDA crop progress date missing")
+    observed = datetime.strptime(release.group(1), "%B %d, %Y").date()
+    if not timedelta(0) <= today - observed <= timedelta(days=20):
+        raise ValueError("USDA crop progress report stale")
+    result = []
+    for crop, label, prefix in (("Corn", "Maïs US", "corn"), ("Soybean", "Soja US", "soy")):
+        condition = re.search(rf"{crop} Condition - Selected States:.*?(?=\n\s*{crop}s? [A-Z]|\n\s*Cotton )", text, re.S)
+        if condition:
+            section = condition.group()
+            current = re.search(r"18 States\s*\.{2,}:\s*([\d\s-]+)", section)
+            year = re.search(r"Previous year\s*\.{2,}:\s*([\d\s-]+)", section)
+            if current and year:
+                current_parts = [int(x) for x in re.findall(r"\d+", current.group(1))]
+                year_parts = [int(x) for x in re.findall(r"\d+", year.group(1))]
+                if len(current_parts) == len(year_parts) == 5 and sum(current_parts) == sum(year_parts) == 100:
+                    value, comparison = sum(current_parts[-2:]), sum(year_parts[-2:])
+                    result.append(metric("ag_"+prefix+"_condition", "agri", label+" · bon/excellent",
+                                         value, "%", value-comparison, "vs même date N−1",
+                                         observed.isoformat(), "USDA NASS Crop Progress", url,
+                                         "Part des cultures jugées bonnes ou excellentes · 18 États majeurs"))
+        harvest = re.search(rf"{crop}s? Harvested - Selected States(.*?)(?=\n\s*{crop} Condition|\n\s*Corn Condition|\n\s*Soybean Condition)", text, re.S)
+        if harvest:
+            row = re.search(r"18 States\s*\.{2,}:\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", harvest.group(1))
+            if row:
+                old, previous, current, average = map(int, row.groups())
+                if all(0 <= x <= 100 for x in (old, previous, current, average)):
+                    result.append(metric("ag_"+prefix+"_harvest", "agri", label+" · récolté",
+                                         current, "%", current-average, "vs moyenne 5 ans",
+                                         observed.isoformat(), "USDA NASS Crop Progress", url,
+                                         f"{old} % à la même date N−1 · {previous} % semaine précédente"))
+    if len(result) < 2:
+        raise ValueError("USDA crop report national tables missing")
+    return {"metrics": result, "as_of": observed.isoformat(), "url": url}
+
+
+def fetch_crop_progress(today: date) -> dict:
+    url = crop_progress_link(fetch(CROP_PROGRESS_URL))
+    return parse_crop_progress(fetch(url), url, today)
 
 
 def parse_gas(raw: bytes) -> dict:
@@ -594,6 +653,19 @@ def parse_gie(raw: bytes, region: str = "eu") -> dict:
             "url": GIE_REPORT_URL, "points": points}
 
 
+def fetch_gie_history(url: str, key: str) -> bytes:
+    """Fetch two documented 300-row pages, sufficient for seasonal comparison."""
+    first = json.loads(fetch(url + "&page=1", {"x-key": key}))
+    if not isinstance(first.get("data"), list):
+        raise ValueError("GIE first page missing")
+    if int(first.get("last_page", 1)) > 1:
+        second = json.loads(fetch(url + "&page=2", {"x-key": key}))
+        if not isinstance(second.get("data"), list):
+            raise ValueError("GIE second page missing")
+        first["data"].extend(second["data"])
+    return json.dumps(first).encode("utf-8")
+
+
 def alsi_inventory(row: dict) -> float | None:
     inventory = row.get("inventory")
     # Current ALSI records provide both liquid volume (lng) and energy (gwh).
@@ -694,7 +766,7 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
     sources = previous.get("sources", {}).copy()
     history = previous.get("history", {}).copy()
     stories = previous.get("stories", [])
-    for key in ("oil", "oil_flows", "oil_history", "oil_price_history", "gas", "wasde", "news", "norway",
+    for key in ("oil", "oil_flows", "oil_history", "oil_price_history", "gas", "wasde", "crop_progress", "news", "norway",
                 "brent", "wti", "henry", "gie", "gie_fr", "alsi", "alsi_fr",
                 "rte_power", "entsoe_fr", "entsoe_de"):
         result = results.get(key)
@@ -747,6 +819,10 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
                                      "USGS MCS 2026",
                                      "https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-copper.pdf",
                                      "Repère structurel, pas un stock LME")
+    values["metal_aluminum"] = metric("metal_aluminum", "metals", "Aluminium primaire · monde",
+                                      74, "Mt", 1.2, "vs 2024", "2025", "USGS MCS 2026",
+                                      "https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-aluminum.pdf",
+                                      "Production annuelle estimée ; 2024 : 72,8 Mt. Pas un stock LME")
     sources["metals"] = {"status": "structural", "as_of": "2025", "url":
                            "https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports"}
     return {"schema": 3, "generated_at": now.isoformat(), "sources": sources,
@@ -772,6 +848,7 @@ def save_snapshot(snapshot: dict) -> None:
               "- EIA WPSR : stocks de brut, Cushing, Gulf Coast, essence, distillats, jet et SPR ; production, importations, exportations et brut traité par les raffineries US.\n"
               "- EIA WNGSR : stockage de gaz US et régions, variation hebdomadaire et écart à la moyenne cinq ans.\n"
               "- USDA WASDE : production, exportations prévues et stocks de maïs et soja US ; stocks mondiaux de maïs et blé, commerce mondial prévu du blé. Les révisions comparent les deux colonnes de prévision du même rapport.\n"
+              "- USDA NASS Crop Progress : état bon/excellent du maïs et du soja US comparé à la même semaine N−1, avancement de récolte comparé à la moyenne cinq ans ; rapport hebdomadaire en saison, daté et validé avant publication. Les liens FranceAgriMer et météo restent des sources à consulter, pas des observations inventées.\n"
               "- EIA Today in Energy : titres et résumés d'analyses récentes.\n"
               "- Sodir (Norwegian Offshore Directorate) : chiffre mensuel provisoire d'août 2026 (pétrole, LGN et condensats), repère européen daté ; la source refuse actuellement les lectures automatisées du robot GitHub et ce chiffre n'est donc pas rafraîchi automatiquement.\n"
               "- EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication. Une série FRED de 12 mois compare les clôtures spot Brent et WTI, sans se substituer à la cotation en séance.\n"
@@ -782,8 +859,8 @@ def save_snapshot(snapshot: dict) -> None:
               "- Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.\n"
               "- Marchés : cinq tuiles de cotations en séance TradingView/OANDA (Brent, WTI, gaz US, cuivre, or), plus un graphique et un tableau. Instruments OTC indicatifs ; ils ne remplacent ni les futures ICE/NYMEX ni le spot EIA daté. Le gaz US OANDA n'est pas une cotation Henry Hub physique. Les widgets nécessitent Internet et le fournisseur peut limiter la diffusion. Aluminium, cacao et café sont accessibles via leurs pages de marché ; leurs prix ne sont pas intégrés sans droits vérifiés.\n"
               "- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. Aucune valeur ou spread instantané n'est inventé. ENTSO-E fournit des prévisions électriques ouvertes, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.\n"
-              "- Physique : stockage AGSI France sur 400 observations et comparaison de 90 jours à l'année précédente, émission ALSI France sur 14 jours, stocks de brut EIA sur 26 semaines et comparaison Brent/WTI spot sur un an. Graphiques avec axes et unités. Les signaux de pression sont des scénarios conditionnels liés aux chiffres publiés, jamais un mouvement de prix constaté. FranceAgriMer Céré’Obs, USDA Crop Progress, Météo-France et NOAA sont liés dans Agriculture ; aucun état de culture n'est inventé si la source n'est pas collectée.\n"
-              "- LME : [rapports de stocks](https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports) à consulter, sans chiffre de stock automatisé tant qu'un flux stable n'est pas vérifié.\n\n"
+              "- Physique : stockage AGSI France sur deux pages de 300 observations et comparaison de 90 jours à l'année précédente, émission ALSI France sur 14 jours, stocks de brut EIA sur 26 semaines et comparaison Brent/WTI spot sur un an lorsque FRED répond. Graphiques avec axes et unités. Les signaux de pression sont des scénarios conditionnels liés aux chiffres publiés, jamais un mouvement de prix constaté. FranceAgriMer Céré’Obs, USDA Crop Progress, Météo-France et NOAA sont liés dans Agriculture ; aucun état de culture n'est inventé si la source n'est pas collectée.\n"
+              "- USGS MCS 2026 : production mondiale de cuivre minier et d'aluminium primaire en 2025 (74 Mt contre 72,8 Mt en 2024 pour l'aluminium). Ce sont des repères annuels, sans signal de séance. LME : [rapports de stocks](https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports) à consulter, sans chiffre de stock automatisé tant qu'un flux stable n'est pas vérifié.\n\n"
               "Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; TWh = térawattheures ; GWh/j = gigawattheures par jour ; 10³ m³ GNL = milliers de mètres cubes de GNL liquide ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks, prix et flux ne sont jamais additionnés.\n\n"
               "Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les fichiers publics. Le fichier HTML contient un instantané et s'ouvre directement après téléchargement. Il essaie aussi de synchroniser `data/snapshot.json` depuis GitHub à l'ouverture et via le bouton manuel, sous réserve du réseau et des règles du navigateur ; sinon la date de l'instantané reste visible. Les tâches GitHub planifiées peuvent être retardées ou désactivées après une longue période sans activité ; dans ce cas, l'onglet Actions permet la relance manuelle.\n\n"
               "## Code complet\n\n```html\n" + html + "\n```\n")
@@ -800,6 +877,7 @@ def main() -> None:
         "oil_price_history": lambda: parse_oil_price_history(fetch(OIL_PRICE_HISTORY_URL), now.date()),
         "gas": lambda: parse_gas(fetch(GAS_URL)),
         "wasde": lambda: fetch_wasde(now.date()),
+        "crop_progress": lambda: fetch_crop_progress(now.date()),
         "news": lambda: news_result(fetch(NEWS_URL)),
     }
     tasks["brent"] = lambda: parse_eia_spot(fetch(EIA_OIL_SPOT_URL), "brent", now.date())
@@ -813,8 +891,8 @@ def main() -> None:
                 entsoe_query(code, now, entsoe_token), code, now))
     gie_key = os.environ.get("GIE_API_KEY", "")
     if gie_key:
-        tasks["gie"] = lambda: parse_gie(fetch(GIE_URL, {"x-key": gie_key}))
-        tasks["gie_fr"] = lambda: parse_gie(fetch(GIE_FR_URL, {"x-key": gie_key}), "fr")
+        tasks["gie"] = lambda: parse_gie(fetch_gie_history(GIE_URL, gie_key))
+        tasks["gie_fr"] = lambda: parse_gie(fetch_gie_history(GIE_FR_URL, gie_key), "fr")
         tasks["alsi"] = lambda: parse_alsi(fetch(ALSI_URL, {"x-key": gie_key}), "eu", now.date())
         tasks["alsi_fr"] = lambda: parse_alsi(fetch(ALSI_FR_URL, {"x-key": gie_key}), "fr", now.date())
     results = {}

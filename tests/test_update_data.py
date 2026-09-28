@@ -1,10 +1,12 @@
 import json
 import unittest
+from unittest.mock import patch
 from datetime import date, datetime, timezone
 
 from scripts.update_data import (build_snapshot, parse_alsi, parse_eia_spot, parse_fred, parse_norway,
                                  parse_gie, parse_oil_flows, parse_wasde, parse_rte_power,
-                                 parse_entsoe_forecast, parse_oil_price_history,
+                                 parse_entsoe_forecast, parse_oil_price_history, fetch_gie_history,
+                                 parse_crop_progress, crop_progress_link,
                                  verified_calendar)
 
 
@@ -54,6 +56,39 @@ WASDE - 675 - 24
 
 
 class PublicationParsingTest(unittest.TestCase):
+    def test_usda_crop_condition_and_harvest_keep_comparisons_distinct(self):
+        sample = b'''Released September 21, 2026, by NASS.
+Corn Harvested - Selected States
+18 States ......: 10 8 13 11
+Corn Condition - Selected States: Week Ending September 20, 2026
+18 States ......: 6 11 26 44 13
+Previous year ..: 3 7 24 49 17
+Soybeans Harvested - Selected States
+18 States ......: 8 6 12 8
+Soybean Condition - Selected States: Week Ending September 20, 2026
+18 States ......: 4 10 28 46 12
+Previous year ..: 4 8 27 48 13
+Cotton Bolls Opening - Selected States'''
+        result = parse_crop_progress(sample, 'https://esmis.nal.usda.gov/report.txt', date(2026,9,28))
+        by_id = {item['id']:item for item in result['metrics']}
+        self.assertEqual(by_id['ag_corn_condition']['value'],57)
+        self.assertEqual(by_id['ag_corn_condition']['change'],-9)
+        self.assertEqual(by_id['ag_corn_harvest']['change'],2)
+        self.assertEqual(by_id['ag_soy_harvest']['value'],12)
+        self.assertEqual(by_id['ag_soy_condition']['change'],-3)
+        page = b'<a href="/sites/default/release-files/796068/prog3826_0.txt">txt</a>'
+        self.assertEqual(crop_progress_link(page),
+                         'https://esmis.nal.usda.gov/sites/default/release-files/796068/prog3826_0.txt')
+
+    def test_gie_history_fetches_second_page_under_documented_limit(self):
+        page1 = json.dumps({'last_page':3,'data':[{'gasDayStart':'2026-09-27'}]}).encode()
+        page2 = json.dumps({'last_page':3,'data':[{'gasDayStart':'2025-09-27'}]}).encode()
+        with patch('scripts.update_data.fetch', side_effect=[page1,page2]) as mocked:
+            result = json.loads(fetch_gie_history('https://agsi.gie.eu/api?country=fr&size=300','test-key'))
+        self.assertEqual(len(result['data']), 2)
+        self.assertEqual(mocked.call_args_list[1].args[0],
+                         'https://agsi.gie.eu/api?country=fr&size=300&page=2')
+
     def test_one_year_oil_prices_are_dated_spot_history_with_missing_days_skipped(self):
         from datetime import timedelta
         start = date(2026, 5, 1)

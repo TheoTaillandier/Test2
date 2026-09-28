@@ -9,6 +9,7 @@ Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA
 - EIA WPSR : stocks de brut, Cushing, Gulf Coast, essence, distillats, jet et SPR ; production, importations, exportations et brut traité par les raffineries US.
 - EIA WNGSR : stockage de gaz US et régions, variation hebdomadaire et écart à la moyenne cinq ans.
 - USDA WASDE : production, exportations prévues et stocks de maïs et soja US ; stocks mondiaux de maïs et blé, commerce mondial prévu du blé. Les révisions comparent les deux colonnes de prévision du même rapport.
+- USDA NASS Crop Progress : état bon/excellent du maïs et du soja US comparé à la même semaine N−1, avancement de récolte comparé à la moyenne cinq ans ; rapport hebdomadaire en saison, daté et validé avant publication. Les liens FranceAgriMer et météo restent des sources à consulter, pas des observations inventées.
 - EIA Today in Energy : titres et résumés d'analyses récentes.
 - Sodir (Norwegian Offshore Directorate) : chiffre mensuel provisoire d'août 2026 (pétrole, LGN et condensats), repère européen daté ; la source refuse actuellement les lectures automatisées du robot GitHub et ce chiffre n'est donc pas rafraîchi automatiquement.
 - EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication. Une série FRED de 12 mois compare les clôtures spot Brent et WTI, sans se substituer à la cotation en séance.
@@ -19,8 +20,8 @@ Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA
 - Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.
 - Marchés : cinq tuiles de cotations en séance TradingView/OANDA (Brent, WTI, gaz US, cuivre, or), plus un graphique et un tableau. Instruments OTC indicatifs ; ils ne remplacent ni les futures ICE/NYMEX ni le spot EIA daté. Le gaz US OANDA n'est pas une cotation Henry Hub physique. Les widgets nécessitent Internet et le fournisseur peut limiter la diffusion. Aluminium, cacao et café sont accessibles via leurs pages de marché ; leurs prix ne sont pas intégrés sans droits vérifiés.
 - TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. Aucune valeur ou spread instantané n'est inventé. ENTSO-E fournit des prévisions électriques ouvertes, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.
-- Physique : stockage AGSI France sur 400 observations et comparaison de 90 jours à l'année précédente, émission ALSI France sur 14 jours, stocks de brut EIA sur 26 semaines et comparaison Brent/WTI spot sur un an. Graphiques avec axes et unités. Les signaux de pression sont des scénarios conditionnels liés aux chiffres publiés, jamais un mouvement de prix constaté. FranceAgriMer Céré’Obs, USDA Crop Progress, Météo-France et NOAA sont liés dans Agriculture ; aucun état de culture n'est inventé si la source n'est pas collectée.
-- LME : [rapports de stocks](https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports) à consulter, sans chiffre de stock automatisé tant qu'un flux stable n'est pas vérifié.
+- Physique : stockage AGSI France sur deux pages de 300 observations et comparaison de 90 jours à l'année précédente, émission ALSI France sur 14 jours, stocks de brut EIA sur 26 semaines et comparaison Brent/WTI spot sur un an lorsque FRED répond. Graphiques avec axes et unités. Les signaux de pression sont des scénarios conditionnels liés aux chiffres publiés, jamais un mouvement de prix constaté. FranceAgriMer Céré’Obs, USDA Crop Progress, Météo-France et NOAA sont liés dans Agriculture ; aucun état de culture n'est inventé si la source n'est pas collectée.
+- USGS MCS 2026 : production mondiale de cuivre minier et d'aluminium primaire en 2025 (74 Mt contre 72,8 Mt en 2024 pour l'aluminium). Ce sont des repères annuels, sans signal de séance. LME : [rapports de stocks](https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports) à consulter, sans chiffre de stock automatisé tant qu'un flux stable n'est pas vérifié.
 
 Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; TWh = térawattheures ; GWh/j = gigawattheures par jour ; 10³ m³ GNL = milliers de mètres cubes de GNL liquide ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks, prix et flux ne sont jamais additionnés.
 
@@ -5756,7 +5757,12 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         lng_fr_sendout:'Quantité de gaz issue des terminaux et envoyée au réseau français chaque jour.',
         ag_corn_stocks:'Stocks de fin de campagne prévus : moins de stocks rendent le marché plus sensible aux aléas de récolte.',
         ag_world_wheat:'Stocks mondiaux prévus ; vérifier aussi la part exportable avant de conclure sur MATIF.',
-        metal_copper:'Tonnage minier annuel : aucune conclusion de court terme sans inventaires et demande.'
+        metal_copper:'Tonnage minier annuel : aucune conclusion de court terme sans inventaires et demande.',
+        metal_aluminum:'Aluminium primaire mondial. Son coût marginal dépend notamment de l’électricité ; ce total annuel ne renseigne pas sur les stocks du jour.',
+        ag_corn_condition:'Bon + excellent selon les enquêtes USDA ; comparer à la même semaine de l’année passée, pas au niveau des stocks.',
+        ag_soy_condition:'La condition de culture reflète déjà une partie des effets météo sur le rendement potentiel.',
+        ag_corn_harvest:'Avancement de récolte : l’écart à la moyenne cinq ans renseigne sur le rythme d’arrivée du grain.',
+        ag_soy_harvest:'Comparer à la moyenne cinq ans ; une récolte rapide augmente temporairement les disponibilités.'
       };
       if (explanations[item.id]) card.append(line(explanations[item.id], 'div', 'detail'));
       const href = safeLink(item.url);
@@ -5925,6 +5931,20 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     }
     function renderWatch() {
       const box = document.getElementById('watch-list');
+      box.append(line('COTATIONS EN SÉANCE · INDICATIVES', 'div', 'watch-group'));
+      for (const [name,symbol,detail] of [
+        ['Brent · OANDA','OANDA:BCOUSD','USD/baril · CFD indicatif, distinct du future ICE'],
+        ['WTI · OANDA','OANDA:WTICOUSD','USD/baril · CFD indicatif'],
+        ['Gaz US · OANDA','OANDA:NATGASUSD','USD/MMBtu · indicatif, distinct du spot Henry Hub']]) {
+        const row = line('', 'div', 'quote-row');
+        row.append(line(name, 'strong'));
+        const widget = line('', 'div', 'quote-value');
+        widget.style.width = '220px'; widget.style.height = '70px';
+        row.append(widget,line(detail + ' · cours et horaire chez TradingView', 'small', 'quote-note'));
+        box.append(row);
+        embed(widget,'https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js',
+          {symbol,width:'100%',locale:'fr',colorTheme:'dark',isTransparent:true});
+      }
       box.append(line('REPÈRES SPOT OFFICIELS · CLÔTURES DATÉES', 'div', 'watch-group'));
       for (const id of ['price_brent', 'price_wti', 'price_henry']) {
         const item = byId[id];
@@ -6032,7 +6052,10 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         {id:'gas_eu', label:'Stockage Europe', market:'TTF', rising:'Stock européen en hausse : tension potentielle moindre.', falling:'Stock européen en baisse : tension potentielle accrue.'},
         {id:'lng_fr_sendout', label:'GNL · terminaux France', market:'PEG / TTF', rising:'Émission plus forte : davantage de gaz arrive au réseau français.', falling:'Émission plus faible : apport des terminaux plus limité.'}],
       agri: [
-        {id:'ag_world_corn', label:'Stocks mondiaux de maïs', market:'Maïs', rising:'Révision des stocks à la hausse : pression potentielle à la baisse.', falling:'Révision des stocks à la baisse : pression potentielle à la hausse.'}]
+        {id:'ag_corn_condition',label:'Maïs US · état des cultures',market:'CBOT maïs',rising:'Part bon/excellent supérieure à N−1 : potentiel de rendement plus confortable.',falling:'Part bon/excellent inférieure à N−1 : récolte plus vulnérable ; surveiller météo et rendement final.'},
+        {id:'ag_world_corn', label:'Stocks mondiaux de maïs', market:'Maïs', rising:'Révision des stocks à la hausse : pression potentielle à la baisse.', falling:'Révision des stocks à la baisse : pression potentielle à la hausse.'}],
+      metals: [
+        {id:'metal_aluminum',label:'Aluminium · offre mondiale annuelle',market:'Aluminium',rising:'Production 2025 supérieure à 2024 : offre structurelle plus abondante. Ce n’est pas un signal de séance.',falling:'Production annuelle plus faible : vérifier stocks LME et demande avant d’interpréter le prix.'}]
     };
     function renderSignals() {
       const box = document.getElementById('signals');
@@ -6050,7 +6073,8 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         card.append(line(known ? changeText(item) : 'Variation récente non vérifiée', 'small'));
         card.append(line(known && delta ? delta > 0 ? rule.rising : rule.falling :
           'Pas de signal directionnel récent. Vérifier la prochaine publication.', 'p'));
-        card.append(line('Marché concerné : ' + rule.market + ' · scénario, pas une réaction de cours.', 'small'));
+        card.append(line('Marché concerné : ' + rule.market + ' · ' +
+          (selectedSector === 'metals' ? 'repère annuel, sans implication instantanée.' : 'scénario, pas une réaction de cours.'), 'small'));
         box.append(card);
       }
       if (!box.children.length) box.append(line('Pas encore de variation récente exploitable pour ce secteur. Les chiffres datés restent accessibles ci-dessous.', 'p', 'empty'));
@@ -6115,6 +6139,21 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       const card = document.getElementById('comparison-chart');
       card.replaceChildren();
       let title, a, b, unit, note;
+      if (selectedSector === 'oil' && !history.oil_prices) {
+        card.hidden = false;
+        card.append(line('Brent et WTI · un an · cotations indicatives', 'h3'));
+        card.append(line('Historique spot officiel temporairement indisponible. Ces deux courbes OANDA restent séparées et suivent le prix indicatif de leur fournisseur.', 'p', 'detail'));
+        const duo = line('', 'div', 'chart-duo');
+        for (const [name,symbol] of [['Brent','OANDA:BCOUSD'],['WTI','OANDA:WTICOUSD']]) {
+          const panel = line('', 'div', 'widget');
+          panel.style.height = '240px';
+          duo.append(panel);
+          embed(panel,'https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js',
+            {symbols:[[name,symbol+'|1D']],dateRanges:['12m|1D'],colorTheme:'dark',isTransparent:true,
+             locale:'fr',autosize:true,width:'100%',height:'100%',chartOnly:false});
+        }
+        card.append(duo); return;
+      }
       if (selectedSector === 'oil' && history.oil_prices) {
         title = 'Brent vs WTI · 12 mois · clôtures spot officielles';
         a = history.oil_prices.brent || []; b = history.oil_prices.wti || [];
@@ -6175,14 +6214,26 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       document.getElementById('sector-heading').textContent = sectors[selectedSector];
       const box = document.getElementById('metrics');
       box.replaceChildren();
-      const preferred = selectedSector === 'oil' ? ['price_brent','oil_norway_liquids',
-        'price_wti','oil_crude','oil_cushing'] :
+      const preferred = selectedSector === 'oil' ? ['oil_crude','oil_cushing','oil_gasoline',
+        'oil_refinery','oil_imports','oil_exports','oil_norway_liquids'] :
         selectedSector === 'gas' ? ['gas_fr','gas_fr_twh','gas_fr_net','lng_fr_sendout',
-          'lng_fr_inventory','gas_eu','gas_eu_twh','lng_eu_sendout','price_henry','gas_us'] : [];
+          'gas_eu','lng_fr_inventory','gas_us'] :
+        selectedSector === 'agri' ? ['ag_corn_condition','ag_corn_harvest','ag_soy_condition',
+          'ag_soy_harvest','ag_corn_stocks','ag_world_wheat','ag_soy_stocks'] :
+        ['metal_copper','metal_aluminum'];
       const order = new Map(preferred.map((id, index) => [id, index]));
       const sorted = metrics.filter(metric => metric.sector === selectedSector)
         .sort((a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999));
-      for (const item of sorted) box.append(renderMetric(item));
+      for (const item of sorted.filter(item => preferred.includes(item.id))) box.append(renderMetric(item));
+      const others = sorted.filter(item => !preferred.includes(item.id));
+      if (others.length) {
+        const details = line('', 'details', 'card side-pad');
+        details.style.gridColumn = '1 / -1';
+        details.append(line('Autres mesures datées (' + others.length + ')', 'summary'));
+        const extra = line('', 'div', 'metrics');
+        for (const item of others) extra.append(renderMetric(item));
+        details.append(extra); box.append(details);
+      }
       if (!box.children.length) box.append(line('Aucune valeur vérifiée disponible pour ce secteur.', 'p', 'empty'));
       document.querySelectorAll('.filters button').forEach(button => button.classList.toggle('active', button.dataset.sector === selectedSector));
       renderTakeaways();
@@ -6341,7 +6392,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         tick.textContent = number(min + level * (max-min),0) + ' MW';
         svg.append(tick);
       }
-      for (const [read, css] of [(row => row.load, 'demand-line'), (residual, 'residual-line')]) {
+      for (const [read, css] of [[row => row.load, 'demand-line'], [residual, 'residual-line']]) {
         const lineSvg = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
         lineSvg.setAttribute('class', css);
         lineSvg.setAttribute('points', observed.map(row => {
