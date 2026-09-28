@@ -6,6 +6,7 @@ from datetime import date, datetime, timezone
 from scripts.update_data import (build_snapshot, parse_alsi, parse_eia_spot, parse_fred, parse_norway,
                                  parse_gie, parse_oil_flows, parse_wasde, parse_rte_power,
                                  parse_entsoe_forecast, parse_oil_price_history, fetch_gie_history,
+                                 parse_oil_price_mirror,
                                  parse_crop_progress, crop_progress_link,
                                  verified_calendar)
 
@@ -56,6 +57,19 @@ WASDE - 675 - 24
 
 
 class PublicationParsingTest(unittest.TestCase):
+    def test_oil_mirror_keeps_dated_spot_history_separate_from_live_prices(self):
+        from datetime import timedelta
+        base = date(2026, 9, 25)
+        dates = [(base - timedelta(days=n)).isoformat() for n in range(250)]
+        brent = ('Date,Price\n' + ''.join(f'{day},108.2\n' for day in dates)).encode()
+        wti = ('Date,Price\n' + ''.join(f'{day},102.1\n' for day in dates)).encode()
+        result = parse_oil_price_mirror(brent, wti, date(2026, 9, 28))
+        self.assertEqual(result['as_of'], '2026-09-25')
+        self.assertEqual(len(result['series']['brent']), 250)
+        self.assertIn('miroir', result['provenance'])
+        with self.assertRaisesRegex(ValueError, 'stale'):
+            parse_oil_price_mirror(brent, wti, date(2026, 10, 20))
+
     def test_usda_crop_condition_and_harvest_keep_comparisons_distinct(self):
         sample = b'''Released September 21, 2026, by NASS.
 Corn Harvested - Selected States

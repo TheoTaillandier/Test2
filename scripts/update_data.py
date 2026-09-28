@@ -50,6 +50,7 @@ ALSI_FR_URL = "https://alsi.gie.eu/api?country=fr&size=14"
 ALSI_REPORT_URL = "https://alsi.gie.eu/"
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 OIL_PRICE_HISTORY_URL = FRED_URL + "?id=DCOILBRENTEU,DCOILWTICO&cosd=2025-09-01"
+OIL_MIRROR_BASE = "https://raw.githubusercontent.com/datasets/oil-prices/main/data/"
 RTE_REPORT_URL = "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
 RTE_URL = ("https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/"
            "eco2mix-national-tr/records?limit=100&where=date_heure%20%3C%3D%20now%28%29"
@@ -301,6 +302,40 @@ def parse_oil_price_history(raw: bytes, today: date) -> dict:
         raise ValueError("FRED one-year oil history missing or stale")
     return {"series": series, "as_of": max(series["brent"][-1]["date"], series["wti"][-1]["date"]),
             "url": "https://fred.stlouisfed.org/"}
+
+
+def parse_oil_price_mirror(brent_raw: bytes, wti_raw: bytes, today: date) -> dict:
+    """Secondary, dated EIA mirror when FRED cannot be reached by Actions."""
+    series = {}
+    cutoff = today - timedelta(days=370)
+    for name, raw in (("brent", brent_raw), ("wti", wti_raw)):
+        reader = csv.DictReader(StringIO(raw.decode("utf-8-sig", "replace")))
+        if not {"Date", "Price"} <= set(reader.fieldnames or []):
+            raise ValueError("EIA mirror columns missing")
+        points = []
+        for row in reader:
+            try:
+                day = date.fromisoformat(row["Date"])
+            except (TypeError, ValueError):
+                continue
+            value = measured(row["Price"])
+            if cutoff <= day <= today and value is not None and 5 <= value <= 300:
+                points.append({"date": day.isoformat(), "value": round(value, 2)})
+        points.sort(key=lambda point: point["date"])
+        if len(points) < 100 or (today - date.fromisoformat(points[-1]["date"])).days > 15:
+            raise ValueError("EIA mirror series incomplete or stale")
+        series[name] = points
+    return {"series": series, "as_of": max(series["brent"][-1]["date"], series["wti"][-1]["date"]),
+            "url": "https://github.com/datasets/oil-prices",
+            "provenance": "EIA · miroir datasets/oil-prices"}
+
+
+def fetch_oil_price_history(today: date) -> dict:
+    try:
+        return parse_oil_price_history(fetch(OIL_PRICE_HISTORY_URL), today)
+    except Exception:
+        return parse_oil_price_mirror(fetch(OIL_MIRROR_BASE + "brent-daily.csv"),
+                                      fetch(OIL_MIRROR_BASE + "wti-daily.csv"), today)
 
 
 def crop_progress_link(raw: bytes) -> str:
@@ -800,6 +835,8 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
                         "url": result.get("url", NEWS_URL), "checked_at": now.isoformat()}
         if result.get("published"):
             sources[key]["published"] = result["published"]
+        if result.get("provenance"):
+            sources[key]["provenance"] = result["provenance"]
         for item in result.get("metrics", []):
             values[item["id"]] = item
         if key == "oil_history":
@@ -851,7 +888,7 @@ def save_snapshot(snapshot: dict) -> None:
               "- USDA NASS Crop Progress : état bon/excellent du maïs et du soja US comparé à la même semaine N−1, avancement de récolte comparé à la moyenne cinq ans ; rapport hebdomadaire en saison, daté et validé avant publication. Les liens FranceAgriMer et météo restent des sources à consulter, pas des observations inventées.\n"
               "- EIA Today in Energy : titres et résumés d'analyses récentes.\n"
               "- Sodir (Norwegian Offshore Directorate) : chiffre mensuel provisoire d'août 2026 (pétrole, LGN et condensats), repère européen daté ; la source refuse actuellement les lectures automatisées du robot GitHub et ce chiffre n'est donc pas rafraîchi automatiquement.\n"
-              "- EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication. Une série FRED de 12 mois compare les clôtures spot Brent et WTI, sans se substituer à la cotation en séance.\n"
+              "- EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication. Une série de 12 mois compare les clôtures spot Brent et WTI : FRED, puis miroir public EIA `datasets/oil-prices` si FRED est indisponible, avec date et provenance explicites ; elle ne se substitue pas à la cotation en séance.\n"
               "- GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.\n"
               "- RTE éCO2mix national temps réel : [dataset officiel](https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/) actualisé à la source au quart d'heure ; consommation, nucléaire, gaz, vent, solaire, hydraulique, bioénergies et échanges physiques. Export = solde négatif ; import = positif. Le cockpit collecte un instantané toutes les deux heures via GitHub Actions et indique l'heure de la mesure et de la collecte. Demande résiduelle = consommation − éolien − solaire (calcul indicatif, **pas une prévision du prix**). Aucun compte requis.\n"
               "- ENTSO-E : prévision *day-ahead* de demande (A65/A01, Article 6.1.b, données [CC BY 4.0](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions)), France et Allemagne/Luxembourg ; affichage du pic prévu pour les prochaines 24 heures. Pour activer : créer un compte sur https://transparency.entsoe.eu/, demander l'accès API à `transparency@entsoe.eu` (objet `RESTful API access` et adresse enregistrée dans le corps), puis générer le jeton dans « My Account ». Enregistrer le jeton **uniquement** comme secret GitHub Actions `ENTSOE_API_TOKEN` via Settings → Secrets and variables → Actions → New repository secret ; relancer l'action. Ne jamais le coller dans le HTML, un fichier GitHub ou une conversation. Sans clé, RTE Power fonctionne déjà.\n"
@@ -874,7 +911,7 @@ def main() -> None:
         "oil": lambda: parse_oil(fetch(OIL_URL)),
         "oil_flows": lambda: parse_oil_flows(fetch(OIL_FLOW_URL)),
         "oil_history": lambda: parse_oil_history(fetch(OIL_HISTORY_URL)),
-        "oil_price_history": lambda: parse_oil_price_history(fetch(OIL_PRICE_HISTORY_URL), now.date()),
+        "oil_price_history": lambda: fetch_oil_price_history(now.date()),
         "gas": lambda: parse_gas(fetch(GAS_URL)),
         "wasde": lambda: fetch_wasde(now.date()),
         "crop_progress": lambda: fetch_crop_progress(now.date()),

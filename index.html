@@ -8597,7 +8597,7 @@
         title = 'Brent vs WTI · 12 mois · clôtures spot officielles';
         a = history.oil_prices.brent || []; b = history.oil_prices.wti || [];
         unit = '$/bbl';
-        note = 'Séries EIA via FRED, publiées avec retard. Ce graphique historique ne remplace pas la cotation en séance au-dessus.';
+        note = 'Séries EIA historiques via ' + (snapshot.sources?.oil_price_history?.provenance || 'FRED') + ', publiées avec retard. Ce graphique ne remplace pas la cotation en séance au-dessus.';
       } else if (selectedSector === 'gas' && Array.isArray(history.gas_fr)) {
         title = 'Stockage France · 90 derniers jours vs mêmes dates N−1';
         const all = history.gas_fr;
