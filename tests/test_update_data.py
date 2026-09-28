@@ -4,7 +4,7 @@ from datetime import date, datetime, timezone
 
 from scripts.update_data import (build_snapshot, parse_alsi, parse_eia_spot, parse_fred, parse_norway,
                                  parse_gie, parse_oil_flows, parse_wasde, parse_rte_power,
-                                 parse_entsoe_forecast,
+                                 parse_entsoe_forecast, parse_oil_price_history,
                                  verified_calendar)
 
 
@@ -54,6 +54,19 @@ WASDE - 675 - 24
 
 
 class PublicationParsingTest(unittest.TestCase):
+    def test_one_year_oil_prices_are_dated_spot_history_with_missing_days_skipped(self):
+        from datetime import timedelta
+        start = date(2026, 5, 1)
+        rows = ['DATE,DCOILBRENTEU,DCOILWTICO']
+        for n in range(151):
+            day = start + timedelta(days=n)
+            rows.append(f'{day},108.40,{"." if n == 40 else "101.10"}')
+        result = parse_oil_price_history(('\n'.join(rows) + '\n').encode(), date(2026, 9, 28))
+        self.assertEqual(result['series']['brent'][-1]['value'], 108.4)
+        self.assertEqual(len(result['series']['wti']), 150)
+        with self.assertRaisesRegex(ValueError, 'stale'):
+            parse_oil_price_history(('\n'.join(rows[:20]) + '\n').encode(), date(2026, 9, 28))
+
     def test_eia_flow_rates_are_converted_from_thousand_barrels_per_day(self):
         result = parse_oil_flows(FLOW_SAMPLE)
         metrics = {row['id']: row for row in result['metrics']}

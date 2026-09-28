@@ -41,13 +41,14 @@ NEWS_URL = "https://www.eia.gov/rss/todayinenergy.xml"
 SODIR_URL = "https://www.sodir.no/en/whats-new/news/production-figures/"
 EIA_OIL_SPOT_URL = "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
 EIA_GAS_SPOT_URL = "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
-GIE_URL = "https://agsi.gie.eu/api?type=eu&size=14"
+GIE_URL = "https://agsi.gie.eu/api?type=eu&size=400"
 GIE_REPORT_URL = "https://agsi.gie.eu/"
-GIE_FR_URL = "https://agsi.gie.eu/api?country=fr&size=14"
+GIE_FR_URL = "https://agsi.gie.eu/api?country=fr&size=400"
 ALSI_URL = "https://alsi.gie.eu/api?type=eu&size=14"
 ALSI_FR_URL = "https://alsi.gie.eu/api?country=fr&size=14"
 ALSI_REPORT_URL = "https://alsi.gie.eu/"
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
+OIL_PRICE_HISTORY_URL = FRED_URL + "?id=DCOILBRENTEU,DCOILWTICO"
 RTE_REPORT_URL = "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
 RTE_URL = ("https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/"
            "eco2mix-national-tr/records?limit=100&where=date_heure%20%3C%3D%20now%28%29"
@@ -272,6 +273,31 @@ def parse_oil_history(raw: bytes) -> dict:
         raise ValueError("EIA historical crude series invalid")
     return {"points": points, "as_of": points[-1]["date"],
             "published": report["metadata"].get("release_date"), "url": OIL_REPORT_URL}
+
+
+def parse_oil_price_history(raw: bytes, today: date) -> dict:
+    """Official daily spot history for context only; never a live quote."""
+    rows = csv.DictReader(StringIO(raw.decode("utf-8-sig", "replace")))
+    if not rows.fieldnames or not {"DATE", "DCOILBRENTEU", "DCOILWTICO"} <= set(rows.fieldnames):
+        raise ValueError("FRED oil price columns missing")
+    cutoff = today - timedelta(days=370)
+    series = {"brent": [], "wti": []}
+    for row in rows:
+        try:
+            day = date.fromisoformat(row["DATE"])
+        except (ValueError, TypeError):
+            continue
+        if not cutoff <= day <= today:
+            continue
+        for name, column in (("brent", "DCOILBRENTEU"), ("wti", "DCOILWTICO")):
+            value = measured(row[column])
+            if value is not None and 5 <= value <= 300:
+                series[name].append({"date": day.isoformat(), "value": round(value, 2)})
+    if min(map(len, series.values())) < 100 or max(
+            (today - date.fromisoformat(points[-1]["date"])).days for points in series.values()) > 15:
+        raise ValueError("FRED one-year oil history missing or stale")
+    return {"series": series, "as_of": max(series["brent"][-1]["date"], series["wti"][-1]["date"]),
+            "url": "https://fred.stlouisfed.org/"}
 
 
 def parse_gas(raw: bytes) -> dict:
@@ -668,7 +694,7 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
     sources = previous.get("sources", {}).copy()
     history = previous.get("history", {}).copy()
     stories = previous.get("stories", [])
-    for key in ("oil", "oil_flows", "oil_history", "gas", "wasde", "news", "norway",
+    for key in ("oil", "oil_flows", "oil_history", "oil_price_history", "gas", "wasde", "news", "norway",
                 "brent", "wti", "henry", "gie", "gie_fr", "alsi", "alsi_fr",
                 "rte_power", "entsoe_fr", "entsoe_de"):
         result = results.get(key)
@@ -706,6 +732,8 @@ def build_snapshot(previous: dict, results: dict, now: datetime) -> dict:
             values[item["id"]] = item
         if key == "oil_history":
             history["oil_crude"] = result["points"]
+        if key == "oil_price_history":
+            history["oil_prices"] = result["series"]
         if key in ("gie", "gie_fr", "alsi", "alsi_fr") and result.get("points"):
             history[{"gie": "gas_eu", "gie_fr": "gas_fr",
                      "alsi": "lng_eu_sendout", "alsi_fr": "lng_fr_sendout"}[key]] = result["points"]
@@ -739,25 +767,25 @@ def save_snapshot(snapshot: dict) -> None:
     HTML.write_text(html, encoding="utf-8")
     readme = ("# Commodity Cockpit\n\n"
               "Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.\n\n"
-              "Les chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml), puis intégrés à `index.html`. Chaque chiffre indique sa source, sa période et son unité. Brent, WTI et Henry Hub sont des cours spot EIA quotidiens, publiés avec retard ; ce ne sont pas des futures temps réel. Les liens TTF, PEG et JKM ne sont pas des cotations copiées. L'onglet **Power FR** affiche les mesures électriques RTE et, avec une clé ENTSO-E, des prévisions de demande France et DE-LU.\n\n"
+              "Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA : elles demandent Internet et sont indicatives, distinctes du contrat ICE et de Henry Hub physique. Le spot officiel EIA est montré séparément avec sa date. Les autres chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml). Le bouton **Actualiser les données** récupère la dernière publication GitHub même depuis un HTML téléchargé ; hors connexion, le fichier garde son instantané daté. L'onglet **Power FR** affiche RTE et, avec une clé ENTSO-E, les prévisions de demande France et DE-LU.\n\n"
               "## Sources & automatisation\n\n"
               "- EIA WPSR : stocks de brut, Cushing, Gulf Coast, essence, distillats, jet et SPR ; production, importations, exportations et brut traité par les raffineries US.\n"
               "- EIA WNGSR : stockage de gaz US et régions, variation hebdomadaire et écart à la moyenne cinq ans.\n"
               "- USDA WASDE : production, exportations prévues et stocks de maïs et soja US ; stocks mondiaux de maïs et blé, commerce mondial prévu du blé. Les révisions comparent les deux colonnes de prévision du même rapport.\n"
               "- EIA Today in Energy : titres et résumés d'analyses récentes.\n"
               "- Sodir (Norwegian Offshore Directorate) : chiffre mensuel provisoire d'août 2026 (pétrole, LGN et condensats), repère européen daté ; la source refuse actuellement les lectures automatisées du robot GitHub et ce chiffre n'est donc pas rafraîchi automatiquement.\n"
-              "- EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication.\n"
+              "- EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication. Une série FRED de 12 mois compare les clôtures spot Brent et WTI, sans se substituer à la cotation en séance.\n"
               "- GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.\n"
               "- RTE éCO2mix national temps réel : [dataset officiel](https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/) actualisé à la source au quart d'heure ; consommation, nucléaire, gaz, vent, solaire, hydraulique, bioénergies et échanges physiques. Export = solde négatif ; import = positif. Le cockpit collecte un instantané toutes les deux heures via GitHub Actions et indique l'heure de la mesure et de la collecte. Demande résiduelle = consommation − éolien − solaire (calcul indicatif, **pas une prévision du prix**). Aucun compte requis.\n"
               "- ENTSO-E : prévision *day-ahead* de demande (A65/A01, Article 6.1.b, données [CC BY 4.0](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions)), France et Allemagne/Luxembourg ; affichage du pic prévu pour les prochaines 24 heures. Pour activer : créer un compte sur https://transparency.entsoe.eu/, demander l'accès API à `transparency@entsoe.eu` (objet `RESTful API access` et adresse enregistrée dans le corps), puis générer le jeton dans « My Account ». Enregistrer le jeton **uniquement** comme secret GitHub Actions `ENTSOE_API_TOKEN` via Settings → Secrets and variables → Actions → New repository secret ; relancer l'action. Ne jamais le coller dans le HTML, un fichier GitHub ou une conversation. Sans clé, RTE Power fonctionne déjà.\n"
               "- Prix électriques France/DE : bouton vers le [marché officiel RTE](https://www.rte-france.com/en/data-publications/eco2mix/market-data) ; les prix day-ahead EPEX ne sont pas couverts par la [liste ENTSO-E de réutilisation libre](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions) et RTE interdit la copie de ses prix via éCO2mix. Le jeton ENTSO-E n'est pas un droit de redistribution de ces cotations.\n"
               "- Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.\n"
-              "- Marchés : graphique et tableau de cotations indicatives TradingView/OANDA (Brent, WTI, gaz US, cuivre et or). Ce sont des instruments OTC indicatifs ; ils ne remplacent ni les futures ICE/NYMEX ni le spot EIA daté. Les widgets nécessitent Internet et le fournisseur peut limiter la diffusion. Aluminium, cacao et café sont accessibles via leurs pages de marché ; leurs prix ne sont pas intégrés sans droits vérifiés.\n"
+              "- Marchés : cinq tuiles de cotations en séance TradingView/OANDA (Brent, WTI, gaz US, cuivre, or), plus un graphique et un tableau. Instruments OTC indicatifs ; ils ne remplacent ni les futures ICE/NYMEX ni le spot EIA daté. Le gaz US OANDA n'est pas une cotation Henry Hub physique. Les widgets nécessitent Internet et le fournisseur peut limiter la diffusion. Aluminium, cacao et café sont accessibles via leurs pages de marché ; leurs prix ne sont pas intégrés sans droits vérifiés.\n"
               "- TTF/PEG/JKM : liens vers sources de marché ; un flux de cotations automatisé et redistribué publiquement nécessite un droit de diffusion. Aucune valeur ou spread instantané n'est inventé. ENTSO-E fournit des prévisions électriques ouvertes, ENTSOG des flux physiques de gaz, et GIE les stocks/terminaux.\n"
-              "- Physique : courbes de 14 jours de remplissage AGSI France et d'émission ALSI France, 26 semaines de stocks de brut EIA ; les signaux de pression sont des scénarios conditionnels liés aux chiffres publiés, jamais un mouvement de prix constaté.\n"
+              "- Physique : stockage AGSI France sur 400 observations et comparaison de 90 jours à l'année précédente, émission ALSI France sur 14 jours, stocks de brut EIA sur 26 semaines et comparaison Brent/WTI spot sur un an. Graphiques avec axes et unités. Les signaux de pression sont des scénarios conditionnels liés aux chiffres publiés, jamais un mouvement de prix constaté. FranceAgriMer Céré’Obs, USDA Crop Progress, Météo-France et NOAA sont liés dans Agriculture ; aucun état de culture n'est inventé si la source n'est pas collectée.\n"
               "- LME : [rapports de stocks](https://www.lme.com/Market-data/Reports-and-data/Warehouse-and-stocks-reports) à consulter, sans chiffre de stock automatisé tant qu'un flux stable n'est pas vérifié.\n\n"
               "Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; TWh = térawattheures ; GWh/j = gigawattheures par jour ; 10³ m³ GNL = milliers de mètres cubes de GNL liquide ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks, prix et flux ne sont jamais additionnés.\n\n"
-              "Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les fichiers publics. Le fichier HTML contient un instantané et s'ouvre directement après téléchargement. Un téléchargement isolé ne reçoit pas les nouvelles données : récupérer la dernière version depuis GitHub. Les tâches GitHub planifiées peuvent être retardées ou désactivées après une longue période sans activité ; dans ce cas, l'onglet Actions permet la relance manuelle.\n\n"
+              "Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les fichiers publics. Le fichier HTML contient un instantané et s'ouvre directement après téléchargement. Il essaie aussi de synchroniser `data/snapshot.json` depuis GitHub à l'ouverture et via le bouton manuel, sous réserve du réseau et des règles du navigateur ; sinon la date de l'instantané reste visible. Les tâches GitHub planifiées peuvent être retardées ou désactivées après une longue période sans activité ; dans ce cas, l'onglet Actions permet la relance manuelle.\n\n"
               "## Code complet\n\n```html\n" + html + "\n```\n")
     README.write_text(readme, encoding="utf-8")
 
@@ -769,6 +797,7 @@ def main() -> None:
         "oil": lambda: parse_oil(fetch(OIL_URL)),
         "oil_flows": lambda: parse_oil_flows(fetch(OIL_FLOW_URL)),
         "oil_history": lambda: parse_oil_history(fetch(OIL_HISTORY_URL)),
+        "oil_price_history": lambda: parse_oil_price_history(fetch(OIL_PRICE_HISTORY_URL), now.date()),
         "gas": lambda: parse_gas(fetch(GAS_URL)),
         "wasde": lambda: fetch_wasde(now.date()),
         "news": lambda: news_result(fetch(NEWS_URL)),
