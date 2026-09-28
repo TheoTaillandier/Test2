@@ -225,7 +225,7 @@
       "url": "https://ir.eia.gov/ngs/schedule.html"
     }
   ],
-  "generated_at": "2026-09-28T15:31:55+00:00",
+  "generated_at": "2026-09-28T15:41:39+00:00",
   "history": {
     "gas_eu": [
       {
@@ -2626,7 +2626,7 @@
       },
       {
         "date": "2026-09-26",
-        "value": 70.87
+        "value": 70.88
       }
     ],
     "gas_fr": [
@@ -9425,7 +9425,7 @@
     },
     {
       "as_of": "2026-09-26",
-      "change": 0.25,
+      "change": 0.26,
       "comparison": "points vs veille",
       "detail": "Estimé par les opérateurs",
       "id": "gas_eu",
@@ -9434,11 +9434,11 @@
       "source": "GIE AGSI+",
       "unit": "%",
       "url": "https://agsi.gie.eu/",
-      "value": 70.87
+      "value": 70.88
     },
     {
       "as_of": "2026-09-26",
-      "change": 2.875,
+      "change": 2.895,
       "comparison": "vs veille",
       "detail": "Estimé par les opérateurs",
       "id": "gas_eu_twh",
@@ -9447,7 +9447,7 @@
       "source": "GIE AGSI+",
       "unit": "TWh",
       "url": "https://agsi.gie.eu/",
-      "value": 801.992
+      "value": 802.027
     },
     {
       "as_of": "2026-09-26",
@@ -9460,7 +9460,7 @@
       "source": "GIE AGSI+",
       "unit": "GWh/j",
       "url": "https://agsi.gie.eu/",
-      "value": -2831.3
+      "value": -2849.9
     },
     {
       "as_of": "2026-09-26",
@@ -9649,61 +9649,61 @@
   "sources": {
     "alsi": {
       "as_of": "2026-09-26",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://alsi.gie.eu/"
     },
     "alsi_fr": {
       "as_of": "2026-09-26",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://alsi.gie.eu/"
     },
     "brent": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     },
     "crop_progress": {
       "as_of": "2026-09-21",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://esmis.nal.usda.gov/sites/default/release-files/796068/prog3826_0.txt"
     },
     "entsoe_de": {
       "as_of": "2026-09-29T07:45:00+00:00",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://transparency.entsoe.eu/"
     },
     "entsoe_fr": {
       "as_of": "2026-09-29T11:00:00+00:00",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://transparency.entsoe.eu/"
     },
     "gas": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://ir.eia.gov/ngs/ngs.html"
     },
     "gie": {
       "as_of": "2026-09-26",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://agsi.gie.eu/"
     },
     "gie_fr": {
       "as_of": "2026-09-26",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://agsi.gie.eu/"
     },
     "henry": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
     },
@@ -9714,7 +9714,7 @@
     },
     "news": {
       "as_of": "2026-09-25",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/rss/todayinenergy.xml"
     },
@@ -9726,33 +9726,33 @@
     },
     "oil": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_flows": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_history": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "published": "2026-09-23",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_price_history": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "provenance": "EIA · miroir datasets/oil-prices",
       "status": "ok",
       "url": "https://github.com/datasets/oil-prices"
     },
     "power_price_de": {
       "as_of": "2026-09-29T21:45:00+00:00",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "licence": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de",
       "provenance": "Fraunhofer ISE Energy-Charts · day-ahead",
       "status": "ok",
@@ -9760,7 +9760,7 @@
     },
     "power_price_fr": {
       "as_of": "2026-09-29T21:45:00+00:00",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "licence": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de",
       "provenance": "Fraunhofer ISE Energy-Charts · day-ahead",
       "status": "ok",
@@ -9768,19 +9768,19 @@
     },
     "rte_power": {
       "as_of": "2026-09-28T15:15:00+00:00",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
     },
     "wasde": {
       "as_of": "2026-09",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt"
     },
     "wti": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-28T15:31:55+00:00",
+      "checked_at": "2026-09-28T15:41:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     }
