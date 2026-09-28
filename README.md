@@ -2,7 +2,7 @@
 
 Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.
 
-Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA : elles demandent Internet et sont indicatives, distinctes du contrat ICE et de Henry Hub physique. Le spot officiel EIA est montré séparément avec sa date. Les autres chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml). Le bouton **Actualiser les données** récupère la dernière publication GitHub même depuis un HTML téléchargé ; hors connexion, le fichier garde son instantané daté. L'onglet **Power FR** affiche RTE et, avec une clé ENTSO-E, les prévisions de demande France et DE-LU.
+Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA : elles demandent Internet et sont indicatives, distinctes du contrat ICE et de Henry Hub physique. Le spot officiel EIA est montré séparément avec sa date. Les autres chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml). Le bouton **Actualiser les données** récupère la dernière publication GitHub même depuis un HTML téléchargé ; hors connexion, le fichier garde son instantané daté. L'onglet **Power FR** affiche RTE et, avec une clé ENTSO-E, les prévisions de demande France et DE-LU. [Méthodologie, unités et limites](methodology.md).
 
 ## Sources & automatisation
 
@@ -14,7 +14,7 @@ Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA
 - Sodir (Norwegian Offshore Directorate) : chiffre mensuel provisoire d'août 2026 (pétrole, LGN et condensats), repère européen daté ; la source refuse actuellement les lectures automatisées du robot GitHub et ce chiffre n'est donc pas rafraîchi automatiquement.
 - EIA, tableaux de prix spot quotidiens : Brent Europe, WTI Cushing et Henry Hub ; le collecteur vérifie la correspondance des six dates et six colonnes avant publication. Une série de 12 mois compare les clôtures spot Brent et WTI : FRED, puis miroir public EIA `datasets/oil-prices` si FRED est indisponible, avec date et provenance explicites ; elle ne se substitue pas à la cotation en séance.
 - GIE AGSI+ / ALSI : avec une clé API gratuite (accès aux **deux plateformes**), stockage gaz France/UE, soutirage net, stocks en cuves GNL et émissions des terminaux GNL France/UE. Ce sont des observations physiques quotidiennes, **pas des prix TTF, PEG ou JKM**. Créer la clé sur https://agsi.gie.eu/account, choisir accès AGSI + ALSI et enregistrer `GIE_API_KEY` dans Settings → Secrets and variables → Actions → New repository secret. Relancer le workflow depuis Actions. Sans clé, ces chiffres ne sont pas affichés.
-- RTE éCO2mix national temps réel : [dataset officiel](https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/) actualisé à la source au quart d'heure ; consommation, nucléaire, gaz, vent, solaire, hydraulique, bioénergies et échanges physiques. Export = solde négatif ; import = positif. Le cockpit collecte un instantané toutes les deux heures via GitHub Actions et indique l'heure de la mesure et de la collecte. Demande résiduelle = consommation − éolien − solaire (calcul indicatif, **pas une prévision du prix**). Aucun compte requis.
+- RTE éCO2mix national temps réel : [dataset officiel](https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/) actualisé à la source au quart d'heure ; consommation, nucléaire, gaz, vent, solaire, hydraulique, bioénergies et échanges physiques. Export = solde négatif ; import = positif. Le cockpit collecte les dernières pages toutes les deux heures et conserve le dernier relevé de chaque heure dans `data/power_fr.json` sur 365 jours glissants. L'historique s'accumule depuis la première collecte, il n'invente pas une année déjà acquise. Il est aussi embarqué dans le HTML téléchargé. Demande résiduelle = consommation − éolien − solaire (calcul indicatif, **pas une prévision du prix**). Aucun compte requis.
 - ENTSO-E : prévision *day-ahead* de demande (A65/A01, Article 6.1.b, données [CC BY 4.0](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions)), France et Allemagne/Luxembourg ; affichage du pic prévu pour les prochaines 24 heures. Pour activer : créer un compte sur https://transparency.entsoe.eu/, demander l'accès API à `transparency@entsoe.eu` (objet `RESTful API access` et adresse enregistrée dans le corps), puis générer le jeton dans « My Account ». Enregistrer le jeton **uniquement** comme secret GitHub Actions `ENTSOE_API_TOKEN` via Settings → Secrets and variables → Actions → New repository secret ; relancer l'action. Ne jamais le coller dans le HTML, un fichier GitHub ou une conversation. Sans clé, RTE Power fonctionne déjà.
 - Prix électriques France/DE : bouton vers le [marché officiel RTE](https://www.rte-france.com/en/data-publications/eco2mix/market-data) ; les prix day-ahead EPEX ne sont pas couverts par la [liste ENTSO-E de réutilisation libre](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions) et RTE interdit la copie de ses prix via éCO2mix. Le jeton ENTSO-E n'est pas un droit de redistribution de ces cotations.
 - Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.
@@ -190,6 +190,19 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     .power-chart .demand-line { stroke:var(--accent); }
     .power-chart .residual-line { stroke:var(--warm); }
     .power-chart line { stroke:var(--border); vector-effect:non-scaling-stroke; }
+    .power-history-panel { padding:16px; margin-top:12px; }
+    .power-history-panel h2 { font-size:14px; margin:0 0 5px; }
+    .power-history-panel p { color:var(--muted); font-size:11px; margin:5px 0 12px; }
+    .power-controls { display:flex; gap:6px; flex-wrap:wrap; margin:9px 0; }
+    .power-controls button { border:1px solid var(--border); border-radius:6px; background:var(--surface-2); color:var(--muted); padding:6px 10px; font:inherit; font-size:11px; cursor:pointer; }
+    .power-controls button[aria-pressed="true"] { border-color:var(--accent); color:var(--accent); }
+    .power-history-chart { min-height:260px; }
+    .power-history-chart svg { display:block; width:100%; height:235px; }
+    .power-history-chart svg line { stroke:var(--border); }
+    .power-history-chart svg polyline { fill:none; stroke:var(--accent); stroke-width:2; vector-effect:non-scaling-stroke; }
+    .power-history-chart svg .zero { stroke:var(--warm); stroke-dasharray:4 4; }
+    .power-history-chart svg text { fill:var(--muted); font-size:11px; }
+    .power-meta { color:var(--muted); font-size:11px; }
     .power-legend { display:flex; justify-content:space-between; color:var(--muted); font-size:10px; gap:10px; }
     .power-legend b { color:var(--text); }
     .power-mix-row { display:grid; grid-template-columns:90px 1fr 75px; align-items:center; gap:10px; margin:11px 0; font-size:11px; }
@@ -308,11 +321,20 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         <section class="card"><h2>Demande et demande résiduelle · 24 h</h2><p>Résiduelle indicative = consommation − production éolienne − solaire ; un indicateur de tension physique, pas une prévision de prix.</p><div id="power-curve" class="empty">Collecte RTE en attente.</div><div class="power-legend" id="power-axis"></div></section>
         <section class="card"><h2>Production française · dernière observation</h2><p>Puissance par filière, en MW. Les parts portent sur la production affichée, pas sur la consommation.</p><div id="power-mix" class="empty">Collecte RTE en attente.</div><small id="power-mix-time" class="detail"></small></section>
       </div>
+      <section class="card power-history-panel">
+        <h2>Historique physique · RTE</h2>
+        <p>Observations horaires conservées au fil des collectes. Le choix « 1 an » montre uniquement la période réellement disponible ; les valeurs absentes ne sont pas reconstruites.</p>
+        <div class="power-controls" id="power-span" aria-label="Période du graphique"></div>
+        <div class="power-controls" id="power-series" aria-label="Mesure du graphique"></div>
+        <div class="power-history-chart" id="power-history-chart"><span class="empty">Historique RTE en attente.</span></div>
+        <div class="power-meta" id="power-history-meta"></div>
+        <p id="power-history-reading"></p>
+      </section>
       <div class="power-bottom">
         <section class="card"><h2>Pour surveiller le gaz et les échanges</h2><p id="power-readout">Le gaz électrique, l'éolien, le solaire et le solde d'import/export seront affichés après la première collecte RTE.</p><p>Un solde RTE négatif signifie une exportation nette ; positif, une importation nette. Les données sont des télémesures complétées d'estimations.</p><a href="https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/" target="_blank" rel="noopener noreferrer">Source RTE éCO2mix ↗</a></section>
         <section class="card"><h2>Demande anticipée · France et DE-LU</h2><p>Point haut prévu dans les prochaines 24 h, prévision day-ahead ENTSO-E sous licence CC BY 4.0. Chaque marché a sa taille : comparer la trajectoire, pas les niveaux bruts.</p><div class="power-forecast" id="power-forecast"></div><p id="power-forecast-note"></p><a href="https://transparency.entsoe.eu/" target="_blank" rel="noopener noreferrer">Transparence ENTSO-E ↗</a></section>
         <section class="card"><h2>Prix power France / Allemagne</h2><p>Pour le spot day-ahead et son écart, consulter la vue officielle EPEX/RTE. Les prix de bourse ne figurent pas dans la liste ENTSO-E des séries librement redistribuables ; la clé API ne change pas ces droits.</p><a href="https://www.rte-france.com/en/data-publications/eco2mix/market-data" target="_blank" rel="noopener noreferrer">Voir les prix spot RTE ↗</a></section>
-        <section class="card"><h2>Sources, délais et accès</h2><p>RTE actualise sa source au quart d'heure ; cette page reflète la dernière exécution planifiée puis doit être retéléchargée sur GitHub. Heure des mesures et heure de collecte sont affichées séparément.</p><p>La clé ENTSO-E reste dans le secret <code>ENTSOE_API_TOKEN</code> du dépôt. Le flux GIE du gaz utilise séparément <code>GIE_API_KEY</code>.</p></section>
+        <section class="card"><h2>Méthode et qualité des mesures</h2><p><b>Observé provisoire</b> : RTE éCO2mix, dernier relevé de chaque heure UTC. <b>Calculé</b> : demande résiduelle = consommation − éolien − solaire ; ce calcul ne représente pas le dispatch réel d'une centrale ni un prix. Les trous de collecte restent visibles dans la courbe.</p><p>La couverture réelle, la date de mesure et l'heure de collecte sont affichées. Le fichier HTML embarque l'historique ; « Actualiser les données » le synchronise depuis GitHub si le réseau le permet.</p><p>Les jetons ENTSO-E et GIE restent dans les secrets GitHub.</p></section>
       </div>
     </main>
   </section>
@@ -548,7 +570,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "url": "https://ir.eia.gov/ngs/schedule.html"
     }
   ],
-  "generated_at": "2026-09-28T13:56:10+00:00",
+  "generated_at": "2026-09-28T14:55:25+00:00",
   "history": {
     "gas_eu": [
       {
@@ -7592,74 +7614,6 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "power_fr": [
       {
-        "at": "2026-09-27T13:45:00+00:00",
-        "bioenergies": 1005,
-        "charbon": 0,
-        "ech_physiques": -5920,
-        "eolien": 4147,
-        "fioul": 37,
-        "gaz": 255,
-        "hydraulique": 1909,
-        "load": 38753,
-        "nucleaire": 26121,
-        "pompage": -2551,
-        "prevision_j": 38650,
-        "prevision_j1": 40000,
-        "solaire": 14165,
-        "taux_co2": 13
-      },
-      {
-        "at": "2026-09-27T14:00:00+00:00",
-        "bioenergies": 1011,
-        "charbon": 0,
-        "ech_physiques": -6016,
-        "eolien": 4233,
-        "fioul": 37,
-        "gaz": 259,
-        "hydraulique": 1874,
-        "load": 38720,
-        "nucleaire": 26544,
-        "pompage": -2452,
-        "prevision_j": 38400,
-        "prevision_j1": 39800,
-        "solaire": 13582,
-        "taux_co2": 13
-      },
-      {
-        "at": "2026-09-27T14:15:00+00:00",
-        "bioenergies": 1010,
-        "charbon": 0,
-        "ech_physiques": -7089,
-        "eolien": 4421,
-        "fioul": 37,
-        "gaz": 521,
-        "hydraulique": 2232,
-        "load": 38705,
-        "nucleaire": 27464,
-        "pompage": -2449,
-        "prevision_j": 38100,
-        "prevision_j1": 39500,
-        "solaire": 12858,
-        "taux_co2": 15
-      },
-      {
-        "at": "2026-09-27T14:30:00+00:00",
-        "bioenergies": 1012,
-        "charbon": 0,
-        "ech_physiques": -7654,
-        "eolien": 4337,
-        "fioul": 37,
-        "gaz": 541,
-        "hydraulique": 2374,
-        "load": 38399,
-        "nucleaire": 28450,
-        "pompage": -2447,
-        "prevision_j": 37800,
-        "prevision_j1": 39200,
-        "solaire": 11833,
-        "taux_co2": 16
-      },
-      {
         "at": "2026-09-27T14:45:00+00:00",
         "bioenergies": 1011,
         "charbon": 0,
@@ -9222,6 +9176,74 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         "prevision_j1": 47000,
         "solaire": 11945,
         "taux_co2": 21
+      },
+      {
+        "at": "2026-09-28T13:45:00+00:00",
+        "bioenergies": 980,
+        "charbon": 0,
+        "ech_physiques": -5186,
+        "eolien": 2219,
+        "fioul": 37,
+        "gaz": 1806,
+        "hydraulique": 2670,
+        "load": 47708,
+        "nucleaire": 33894,
+        "pompage": -321,
+        "prevision_j": 47300,
+        "prevision_j1": 46750,
+        "solaire": 11568,
+        "taux_co2": 24
+      },
+      {
+        "at": "2026-09-28T14:00:00+00:00",
+        "bioenergies": 987,
+        "charbon": 0,
+        "ech_physiques": -5197,
+        "eolien": 2212,
+        "fioul": 37,
+        "gaz": 2188,
+        "hydraulique": 2759,
+        "load": 47398,
+        "nucleaire": 33928,
+        "pompage": -321,
+        "prevision_j": 47000,
+        "prevision_j1": 46500,
+        "solaire": 10868,
+        "taux_co2": 27
+      },
+      {
+        "at": "2026-09-28T14:15:00+00:00",
+        "bioenergies": 973,
+        "charbon": 0,
+        "ech_physiques": -6228,
+        "eolien": 2210,
+        "fioul": 37,
+        "gaz": 2754,
+        "hydraulique": 3554,
+        "load": 47198,
+        "nucleaire": 33966,
+        "pompage": -320,
+        "prevision_j": 46950,
+        "prevision_j1": 46250,
+        "solaire": 10265,
+        "taux_co2": 31
+      },
+      {
+        "at": "2026-09-28T14:30:00+00:00",
+        "bioenergies": 980,
+        "charbon": 0,
+        "ech_physiques": -6999,
+        "eolien": 2321,
+        "fioul": 36,
+        "gaz": 3074,
+        "hydraulique": 3530,
+        "load": 46379,
+        "nucleaire": 34043,
+        "pompage": 0,
+        "prevision_j": 46900,
+        "prevision_j1": 46000,
+        "solaire": 9409,
+        "taux_co2": 34
       }
     ]
   },
@@ -9605,146 +9627,146 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     {
       "as_of": "2026-09-28",
-      "change": -527,
+      "change": -1478,
       "comparison": "vs ~1 h",
-      "detail": "Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_load",
       "label": "Demande France",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 47857
+      "value": 46379
     },
     {
       "as_of": "2026-09-28",
       "change": null,
       "comparison": "export si négatif · import si positif",
-      "detail": "Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_exchange",
       "label": "Solde des échanges physiques",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": -4669
+      "value": -6999
     },
     {
       "as_of": "2026-09-28",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_nucleaire",
       "label": "Nucléaire",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 33786
+      "value": 34043
     },
     {
       "as_of": "2026-09-28",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_gaz",
       "label": "Gaz électrique",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 1456
+      "value": 3074
     },
     {
       "as_of": "2026-09-28",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_eolien",
       "label": "Éolien",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 2238
+      "value": 2321
     },
     {
       "as_of": "2026-09-28",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_solaire",
       "label": "Solaire",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 11945
+      "value": 9409
     },
     {
       "as_of": "2026-09-28",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_hydraulique",
       "label": "Hydraulique",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 2614
+      "value": 3530
     },
     {
       "as_of": "2026-09-28",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_bioenergies",
       "label": "Bioénergies",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 984
+      "value": 980
     },
     {
       "as_of": "2026-09-28",
       "change": null,
       "comparison": "demande − éolien − solaire",
-      "detail": "Calcul indicatif, sans jugement sur le prix ni l'appel au gaz. Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Calcul indicatif, sans jugement sur le prix ni l'appel au gaz. Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_residual",
       "label": "Demande résiduelle indicative",
       "sector": "power",
       "source": "Calcul sur RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 33674
+      "value": 34649
     },
     {
       "as_of": "2026-09-28",
       "change": null,
       "comparison": "production française",
-      "detail": "Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_carbon",
       "label": "Intensité CO₂ estimée",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "g/kWh",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 21
+      "value": 34
     },
     {
       "as_of": "2026-09-28",
       "change": null,
       "comparison": "réalisé − prévision réactualisée le jour même",
-      "detail": "Observation 2026-09-28T13:30:00+00:00 UTC",
+      "detail": "Observation 2026-09-28T14:30:00+00:00 UTC",
       "id": "power_load_gap",
       "label": "Écart à prévision de demande J",
       "sector": "power",
       "source": "Calcul sur RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 257
+      "value": -521
     },
     {
       "as_of": "2026-09-26",
@@ -9887,7 +9909,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "source": "ENTSO-E · prévision J-1",
       "unit": "MW",
       "url": "https://transparency.entsoe.eu/",
-      "value": 49631
+      "value": 49600
     },
     {
       "as_of": "2026-09-29",
@@ -9972,61 +9994,61 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
   "sources": {
     "alsi": {
       "as_of": "2026-09-26",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://alsi.gie.eu/"
     },
     "alsi_fr": {
       "as_of": "2026-09-26",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://alsi.gie.eu/"
     },
     "brent": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     },
     "crop_progress": {
       "as_of": "2026-09-21",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://esmis.nal.usda.gov/sites/default/release-files/796068/prog3826_0.txt"
     },
     "entsoe_de": {
       "as_of": "2026-09-29T07:45:00+00:00",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://transparency.entsoe.eu/"
     },
     "entsoe_fr": {
       "as_of": "2026-09-29T11:00:00+00:00",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://transparency.entsoe.eu/"
     },
     "gas": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://ir.eia.gov/ngs/ngs.html"
     },
     "gie": {
       "as_of": "2026-09-26",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://agsi.gie.eu/"
     },
     "gie_fr": {
       "as_of": "2026-09-26",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://agsi.gie.eu/"
     },
     "henry": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
     },
@@ -10037,7 +10059,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "news": {
       "as_of": "2026-09-25",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/rss/todayinenergy.xml"
     },
@@ -10049,45 +10071,45 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "oil": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_flows": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_history": {
       "as_of": "2026-09-18",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "published": "2026-09-23",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_price_history": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "provenance": "EIA · miroir datasets/oil-prices",
       "status": "ok",
       "url": "https://github.com/datasets/oil-prices"
     },
     "rte_power": {
-      "as_of": "2026-09-28T13:30:00+00:00",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "as_of": "2026-09-28T14:30:00+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
     },
     "wasde": {
       "as_of": "2026-09",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt"
     },
     "wti": {
       "as_of": "2026-09-22",
-      "checked_at": "2026-09-28T13:56:10+00:00",
+      "checked_at": "2026-09-28T14:55:25+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     }
@@ -10152,8 +10174,14 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
   ]
 }
 </script>
+  <script id="power-history-data" type="application/json">
+{"schema":1,"source":"RTE éCO2mix national temps réel","url":"https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/","quality":"observé provisoire · un relevé par heure UTC","generated_at":"2026-09-28T14:55:25+00:00","first_at":"2026-09-20T07:45:00+00:00","last_at":"2026-09-28T14:30:00+00:00","points":[{"at":"2026-09-20T07:45:00+00:00","load":36025,"nucleaire":29829,"gaz":500,"eolien":2997,"solaire":7923,"hydraulique":1416,"bioenergies":958,"charbon":0,"fioul":33,"ech_physiques":-5492},{"at":"2026-09-20T08:45:00+00:00","load":38871,"nucleaire":29547,"gaz":501,"eolien":2047,"solaire":9922,"hydraulique":1479,"bioenergies":963,"charbon":0,"fioul":35,"ech_physiques":-4670},{"at":"2026-09-20T09:45:00+00:00","load":40689,"nucleaire":28030,"gaz":500,"eolien":1418,"solaire":11731,"hydraulique":1322,"bioenergies":964,"charbon":0,"fioul":33,"ech_physiques":-1268},{"at":"2026-09-20T10:45:00+00:00","load":41846,"nucleaire":28134,"gaz":500,"eolien":1169,"solaire":11673,"hydraulique":1404,"bioenergies":967,"charbon":0,"fioul":33,"ech_physiques":-180},{"at":"2026-09-20T11:45:00+00:00","load":39522,"nucleaire":28324,"gaz":500,"eolien":1148,"solaire":12532,"hydraulique":1323,"bioenergies":970,"charbon":0,"fioul":33,"ech_physiques":-2692},{"at":"2026-09-20T12:45:00+00:00","load":39673,"nucleaire":28790,"gaz":496,"eolien":1150,"solaire":11886,"hydraulique":1260,"bioenergies":967,"charbon":0,"fioul":33,"ech_physiques":-2453},{"at":"2026-09-20T13:45:00+00:00","load":38997,"nucleaire":29659,"gaz":490,"eolien":1176,"solaire":10663,"hydraulique":1338,"bioenergies":967,"charbon":0,"fioul":33,"ech_physiques":-3117},{"at":"2026-09-20T14:45:00+00:00","load":38550,"nucleaire":29922,"gaz":499,"eolien":3321,"solaire":12748,"hydraulique":1861,"bioenergies":968,"charbon":0,"fioul":33,"ech_physiques":-8135},{"at":"2026-09-20T15:45:00+00:00","load":39191,"nucleaire":32201,"gaz":494,"eolien":3292,"solaire":7921,"hydraulique":2192,"bioenergies":961,"charbon":0,"fioul":33,"ech_physiques":-6448},{"at":"2026-09-20T16:45:00+00:00","load":41609,"nucleaire":35421,"gaz":1065,"eolien":2833,"solaire":3218,"hydraulique":3317,"bioenergies":962,"charbon":0,"fioul":34,"ech_physiques":-5214},{"at":"2026-09-20T17:45:00+00:00","load":43046,"nucleaire":35677,"gaz":1476,"eolien":2526,"solaire":538,"hydraulique":5257,"bioenergies":961,"charbon":0,"fioul":37,"ech_physiques":-3837},{"at":"2026-09-20T18:45:00+00:00","load":42371,"nucleaire":35876,"gaz":1496,"eolien":3034,"solaire":218,"hydraulique":5231,"bioenergies":958,"charbon":0,"fioul":35,"ech_physiques":-4801},{"at":"2026-09-20T19:45:00+00:00","load":39936,"nucleaire":36019,"gaz":1501,"eolien":3215,"solaire":0,"hydraulique":3738,"bioenergies":962,"charbon":0,"fioul":35,"ech_physiques":-5423},{"at":"2026-09-20T20:45:00+00:00","load":40364,"nucleaire":36062,"gaz":1544,"eolien":3302,"solaire":0,"hydraulique":4301,"bioenergies":958,"charbon":0,"fioul":35,"ech_physiques":-5378},{"at":"2026-09-20T21:45:00+00:00","load":40445,"nucleaire":37084,"gaz":1626,"eolien":3026,"solaire":0,"hydraulique":3226,"bioenergies":965,"charbon":0,"fioul":35,"ech_physiques":-5522},{"at":"2026-09-20T22:45:00+00:00","load":36809,"nucleaire":37165,"gaz":805,"eolien":2888,"solaire":0,"hydraulique":3217,"bioenergies":967,"charbon":0,"fioul":34,"ech_physiques":-8279},{"at":"2026-09-20T23:45:00+00:00","load":36085,"nucleaire":37180,"gaz":472,"eolien":2925,"solaire":0,"hydraulique":2744,"bioenergies":970,"charbon":0,"fioul":33,"ech_physiques":-8204},{"at":"2026-09-21T00:45:00+00:00","load":33681,"nucleaire":37177,"gaz":485,"eolien":2833,"solaire":0,"hydraulique":2387,"bioenergies":977,"charbon":0,"fioul":35,"ech_physiques":-9920},{"at":"2026-09-21T01:45:00+00:00","load":32352,"nucleaire":37063,"gaz":490,"eolien":2748,"solaire":0,"hydraulique":2247,"bioenergies":973,"charbon":0,"fioul":33,"ech_physiques":-10292},{"at":"2026-09-21T02:45:00+00:00","load":32402,"nucleaire":37190,"gaz":669,"eolien":2690,"solaire":0,"hydraulique":2320,"bioenergies":970,"charbon":0,"fioul":35,"ech_physiques":-11014},{"at":"2026-09-21T03:45:00+00:00","load":35055,"nucleaire":37181,"gaz":1161,"eolien":2449,"solaire":0,"hydraulique":3254,"bioenergies":967,"charbon":0,"fioul":37,"ech_physiques":-9823},{"at":"2026-09-21T04:45:00+00:00","load":39329,"nucleaire":37337,"gaz":2124,"eolien":2342,"solaire":0,"hydraulique":5292,"bioenergies":961,"charbon":0,"fioul":37,"ech_physiques":-8807},{"at":"2026-09-21T05:45:00+00:00","load":43271,"nucleaire":37355,"gaz":3121,"eolien":2397,"solaire":308,"hydraulique":7593,"bioenergies":968,"charbon":0,"fioul":328,"ech_physiques":-9217},{"at":"2026-09-21T06:45:00+00:00","load":44945,"nucleaire":37327,"gaz":3242,"eolien":2420,"solaire":2625,"hydraulique":6133,"bioenergies":968,"charbon":0,"fioul":352,"ech_physiques":-8395},{"at":"2026-09-21T07:45:00+00:00","load":45824,"nucleaire":37233,"gaz":1722,"eolien":1886,"solaire":7401,"hydraulique":4058,"bioenergies":960,"charbon":0,"fioul":37,"ech_physiques":-7454},{"at":"2026-09-21T08:45:00+00:00","load":46549,"nucleaire":37109,"gaz":783,"eolien":1711,"solaire":12802,"hydraulique":2941,"bioenergies":954,"charbon":0,"fioul":37,"ech_physiques":-8394},{"at":"2026-09-21T09:45:00+00:00","load":47199,"nucleaire":36506,"gaz":546,"eolien":1926,"solaire":16583,"hydraulique":2307,"bioenergies":951,"charbon":0,"fioul":36,"ech_physiques":-9798},{"at":"2026-09-21T10:45:00+00:00","load":47489,"nucleaire":34252,"gaz":317,"eolien":2091,"solaire":18601,"hydraulique":2136,"bioenergies":953,"charbon":0,"fioul":37,"ech_physiques":-8913},{"at":"2026-09-21T11:45:00+00:00","load":46132,"nucleaire":34065,"gaz":344,"eolien":2181,"solaire":19160,"hydraulique":2182,"bioenergies":963,"charbon":0,"fioul":37,"ech_physiques":-10590},{"at":"2026-09-21T12:45:00+00:00","load":46737,"nucleaire":33888,"gaz":396,"eolien":2350,"solaire":18198,"hydraulique":2008,"bioenergies":956,"charbon":0,"fioul":37,"ech_physiques":-9050},{"at":"2026-09-21T13:45:00+00:00","load":45306,"nucleaire":34095,"gaz":436,"eolien":2363,"solaire":16845,"hydraulique":1912,"bioenergies":957,"charbon":0,"fioul":36,"ech_physiques":-9548},{"at":"2026-09-21T14:45:00+00:00","load":44917,"nucleaire":35071,"gaz":454,"eolien":2746,"solaire":13709,"hydraulique":2826,"bioenergies":957,"charbon":0,"fioul":36,"ech_physiques":-9507},{"at":"2026-09-21T15:45:00+00:00","load":45056,"nucleaire":36422,"gaz":1591,"eolien":3244,"solaire":8907,"hydraulique":4058,"bioenergies":956,"charbon":0,"fioul":35,"ech_physiques":-10337},{"at":"2026-09-21T16:45:00+00:00","load":47409,"nucleaire":36425,"gaz":3480,"eolien":3655,"solaire":3658,"hydraulique":7569,"bioenergies":959,"charbon":0,"fioul":35,"ech_physiques":-8555},{"at":"2026-09-21T17:45:00+00:00","load":48103,"nucleaire":36371,"gaz":3693,"eolien":3185,"solaire":511,"hydraulique":7716,"bioenergies":956,"charbon":0,"fioul":35,"ech_physiques":-4407},{"at":"2026-09-21T18:45:00+00:00","load":45774,"nucleaire":36321,"gaz":3833,"eolien":3775,"solaire":200,"hydraulique":7623,"bioenergies":956,"charbon":0,"fioul":35,"ech_physiques":-7334},{"at":"2026-09-21T19:45:00+00:00","load":42691,"nucleaire":36812,"gaz":4124,"eolien":4337,"solaire":0,"hydraulique":6996,"bioenergies":959,"charbon":0,"fioul":36,"ech_physiques":-10296},{"at":"2026-09-21T20:45:00+00:00","load":43441,"nucleaire":37196,"gaz":3795,"eolien":4179,"solaire":0,"hydraulique":5451,"bioenergies":958,"charbon":0,"fioul":36,"ech_physiques":-8171},{"at":"2026-09-21T21:45:00+00:00","load":41864,"nucleaire":37296,"gaz":2861,"eolien":4355,"solaire":0,"hydraulique":3767,"bioenergies":962,"charbon":0,"fioul":36,"ech_physiques":-7280},{"at":"2026-09-21T22:45:00+00:00","load":38810,"nucleaire":37315,"gaz":3006,"eolien":4384,"solaire":0,"hydraulique":3451,"bioenergies":958,"charbon":0,"fioul":35,"ech_physiques":-10386},{"at":"2026-09-21T23:45:00+00:00","load":37667,"nucleaire":37369,"gaz":2029,"eolien":4136,"solaire":0,"hydraulique":3211,"bioenergies":964,"charbon":0,"fioul":37,"ech_physiques":-9903},{"at":"2026-09-22T00:45:00+00:00","load":35453,"nucleaire":37416,"gaz":1854,"eolien":4095,"solaire":0,"hydraulique":2846,"bioenergies":959,"charbon":0,"fioul":36,"ech_physiques":-11669},{"at":"2026-09-22T01:45:00+00:00","load":33906,"nucleaire":37353,"gaz":1920,"eolien":3980,"solaire":0,"hydraulique":2924,"bioenergies":942,"charbon":0,"fioul":37,"ech_physiques":-12962},{"at":"2026-09-22T02:45:00+00:00","load":33816,"nucleaire":37515,"gaz":1882,"eolien":3831,"solaire":0,"hydraulique":3044,"bioenergies":945,"charbon":0,"fioul":37,"ech_physiques":-13386},{"at":"2026-09-22T03:45:00+00:00","load":35811,"nucleaire":37554,"gaz":2235,"eolien":3913,"solaire":0,"hydraulique":3647,"bioenergies":947,"charbon":0,"fioul":37,"ech_physiques":-12473},{"at":"2026-09-22T04:45:00+00:00","load":40670,"nucleaire":37556,"gaz":3140,"eolien":3892,"solaire":0,"hydraulique":5623,"bioenergies":942,"charbon":0,"fioul":37,"ech_physiques":-10525},{"at":"2026-09-22T05:45:00+00:00","load":43892,"nucleaire":37581,"gaz":3819,"eolien":3777,"solaire":277,"hydraulique":7845,"bioenergies":940,"charbon":0,"fioul":37,"ech_physiques":-10696},{"at":"2026-09-22T06:45:00+00:00","load":45214,"nucleaire":37549,"gaz":3835,"eolien":3449,"solaire":3026,"hydraulique":6808,"bioenergies":964,"charbon":0,"fioul":36,"ech_physiques":-10803},{"at":"2026-09-22T07:45:00+00:00","load":45921,"nucleaire":37335,"gaz":1798,"eolien":2342,"solaire":8634,"hydraulique":3517,"bioenergies":948,"charbon":0,"fioul":37,"ech_physiques":-8654},{"at":"2026-09-22T08:45:00+00:00","load":46856,"nucleaire":37322,"gaz":506,"eolien":2145,"solaire":14396,"hydraulique":2786,"bioenergies":969,"charbon":0,"fioul":36,"ech_physiques":-9837},{"at":"2026-09-22T09:45:00+00:00","load":47886,"nucleaire":36314,"gaz":285,"eolien":2673,"solaire":18090,"hydraulique":2517,"bioenergies":967,"charbon":0,"fioul":37,"ech_physiques":-10964},{"at":"2026-09-22T10:45:00+00:00","load":48257,"nucleaire":34436,"gaz":284,"eolien":2694,"solaire":19975,"hydraulique":2460,"bioenergies":966,"charbon":0,"fioul":37,"ech_physiques":-10497},{"at":"2026-09-22T11:45:00+00:00","load":46257,"nucleaire":33481,"gaz":282,"eolien":2665,"solaire":20335,"hydraulique":2359,"bioenergies":973,"charbon":0,"fioul":36,"ech_physiques":-11828},{"at":"2026-09-22T12:45:00+00:00","load":46727,"nucleaire":33673,"gaz":287,"eolien":2674,"solaire":19372,"hydraulique":2409,"bioenergies":963,"charbon":0,"fioul":36,"ech_physiques":-10649},{"at":"2026-09-22T13:45:00+00:00","load":46218,"nucleaire":34155,"gaz":281,"eolien":2890,"solaire":18232,"hydraulique":2351,"bioenergies":969,"charbon":0,"fioul":36,"ech_physiques":-10616},{"at":"2026-09-22T14:45:00+00:00","load":45165,"nucleaire":34815,"gaz":438,"eolien":3271,"solaire":15056,"hydraulique":2803,"bioenergies":966,"charbon":0,"fioul":35,"ech_physiques":-10572},{"at":"2026-09-22T15:45:00+00:00","load":45292,"nucleaire":36992,"gaz":1241,"eolien":3743,"solaire":9895,"hydraulique":3710,"bioenergies":971,"charbon":0,"fioul":35,"ech_physiques":-11078},{"at":"2026-09-22T16:45:00+00:00","load":47766,"nucleaire":37417,"gaz":4038,"eolien":3918,"solaire":3978,"hydraulique":7994,"bioenergies":969,"charbon":0,"fioul":906,"ech_physiques":-11820},{"at":"2026-09-22T17:45:00+00:00","load":48151,"nucleaire":37464,"gaz":4280,"eolien":3955,"solaire":494,"hydraulique":8527,"bioenergies":973,"charbon":0,"fioul":920,"ech_physiques":-8463},{"at":"2026-09-22T18:45:00+00:00","load":46077,"nucleaire":37548,"gaz":4397,"eolien":5081,"solaire":190,"hydraulique":7143,"bioenergies":974,"charbon":0,"fioul":683,"ech_physiques":-9865},{"at":"2026-09-22T19:45:00+00:00","load":42530,"nucleaire":37606,"gaz":3933,"eolien":6127,"solaire":0,"hydraulique":5981,"bioenergies":977,"charbon":0,"fioul":161,"ech_physiques":-12212},{"at":"2026-09-22T20:45:00+00:00","load":43536,"nucleaire":37643,"gaz":3645,"eolien":6606,"solaire":0,"hydraulique":6906,"bioenergies":975,"charbon":0,"fioul":33,"ech_physiques":-12278},{"at":"2026-09-22T21:45:00+00:00","load":41579,"nucleaire":38369,"gaz":3623,"eolien":6307,"solaire":0,"hydraulique":4975,"bioenergies":979,"charbon":0,"fioul":33,"ech_physiques":-12705},{"at":"2026-09-22T22:45:00+00:00","load":38570,"nucleaire":38378,"gaz":2994,"eolien":5686,"solaire":0,"hydraulique":4046,"bioenergies":979,"charbon":0,"fioul":34,"ech_physiques":-13602},{"at":"2026-09-22T23:45:00+00:00","load":38069,"nucleaire":38407,"gaz":1616,"eolien":5285,"solaire":0,"hydraulique":3838,"bioenergies":974,"charbon":0,"fioul":36,"ech_physiques":-12043},{"at":"2026-09-23T00:45:00+00:00","load":35455,"nucleaire":38343,"gaz":1356,"eolien":4717,"solaire":0,"hydraulique":3417,"bioenergies":977,"charbon":0,"fioul":37,"ech_physiques":-13078},{"at":"2026-09-23T01:45:00+00:00","load":34011,"nucleaire":38474,"gaz":1626,"eolien":3799,"solaire":0,"hydraulique":3303,"bioenergies":975,"charbon":0,"fioul":37,"ech_physiques":-13875},{"at":"2026-09-23T02:45:00+00:00","load":34140,"nucleaire":38528,"gaz":1474,"eolien":3014,"solaire":0,"hydraulique":3685,"bioenergies":979,"charbon":0,"fioul":37,"ech_physiques":-13275},{"at":"2026-09-23T03:45:00+00:00","load":36016,"nucleaire":38563,"gaz":2426,"eolien":2537,"solaire":0,"hydraulique":3489,"bioenergies":994,"charbon":0,"fioul":37,"ech_physiques":-12037},{"at":"2026-09-23T04:45:00+00:00","load":40459,"nucleaire":38583,"gaz":3667,"eolien":2195,"solaire":0,"hydraulique":5351,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-10435},{"at":"2026-09-23T05:45:00+00:00","load":43656,"nucleaire":38544,"gaz":3853,"eolien":2018,"solaire":274,"hydraulique":7197,"bioenergies":997,"charbon":0,"fioul":37,"ech_physiques":-9616},{"at":"2026-09-23T06:45:00+00:00","load":45625,"nucleaire":38563,"gaz":3487,"eolien":1847,"solaire":3043,"hydraulique":5813,"bioenergies":1003,"charbon":0,"fioul":37,"ech_physiques":-8204},{"at":"2026-09-23T07:45:00+00:00","load":46280,"nucleaire":38535,"gaz":2419,"eolien":1134,"solaire":8521,"hydraulique":3438,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-8773},{"at":"2026-09-23T08:45:00+00:00","load":46899,"nucleaire":37905,"gaz":1337,"eolien":858,"solaire":14066,"hydraulique":2444,"bioenergies":1001,"charbon":0,"fioul":37,"ech_physiques":-9564},{"at":"2026-09-23T09:45:00+00:00","load":48382,"nucleaire":37708,"gaz":736,"eolien":756,"solaire":17818,"hydraulique":2288,"bioenergies":1001,"charbon":0,"fioul":37,"ech_physiques":-10311},{"at":"2026-09-23T10:45:00+00:00","load":48871,"nucleaire":36783,"gaz":532,"eolien":916,"solaire":19568,"hydraulique":2204,"bioenergies":1004,"charbon":0,"fioul":36,"ech_physiques":-10224},{"at":"2026-09-23T11:45:00+00:00","load":47556,"nucleaire":35788,"gaz":488,"eolien":988,"solaire":19881,"hydraulique":2107,"bioenergies":1007,"charbon":0,"fioul":36,"ech_physiques":-10415},{"at":"2026-09-23T12:45:00+00:00","load":47942,"nucleaire":36556,"gaz":352,"eolien":1039,"solaire":18799,"hydraulique":1993,"bioenergies":1007,"charbon":0,"fioul":35,"ech_physiques":-10078},{"at":"2026-09-23T13:45:00+00:00","load":47720,"nucleaire":36656,"gaz":462,"eolien":1333,"solaire":17845,"hydraulique":2385,"bioenergies":1002,"charbon":0,"fioul":35,"ech_physiques":-10245},{"at":"2026-09-23T14:45:00+00:00","load":46616,"nucleaire":36587,"gaz":704,"eolien":1883,"solaire":14631,"hydraulique":3477,"bioenergies":1007,"charbon":0,"fioul":35,"ech_physiques":-9714},{"at":"2026-09-23T15:45:00+00:00","load":47107,"nucleaire":37562,"gaz":1693,"eolien":1689,"solaire":9497,"hydraulique":4946,"bioenergies":1002,"charbon":0,"fioul":35,"ech_physiques":-9441},{"at":"2026-09-23T16:45:00+00:00","load":48955,"nucleaire":37737,"gaz":3809,"eolien":1793,"solaire":3639,"hydraulique":7986,"bioenergies":1009,"charbon":0,"fioul":321,"ech_physiques":-7395},{"at":"2026-09-23T17:45:00+00:00","load":48747,"nucleaire":37787,"gaz":4256,"eolien":2104,"solaire":464,"hydraulique":8231,"bioenergies":1007,"charbon":0,"fioul":835,"ech_physiques":-5964},{"at":"2026-09-23T18:45:00+00:00","load":46721,"nucleaire":37830,"gaz":4324,"eolien":2635,"solaire":181,"hydraulique":7749,"bioenergies":1011,"charbon":0,"fioul":44,"ech_physiques":-7444},{"at":"2026-09-23T19:45:00+00:00","load":43540,"nucleaire":37925,"gaz":4143,"eolien":2861,"solaire":0,"hydraulique":5991,"bioenergies":1014,"charbon":0,"fioul":36,"ech_physiques":-8419},{"at":"2026-09-23T20:45:00+00:00","load":44019,"nucleaire":37754,"gaz":3739,"eolien":3008,"solaire":0,"hydraulique":4820,"bioenergies":1010,"charbon":0,"fioul":36,"ech_physiques":-6340},{"at":"2026-09-23T21:45:00+00:00","load":42785,"nucleaire":37077,"gaz":2772,"eolien":3015,"solaire":0,"hydraulique":4208,"bioenergies":1009,"charbon":0,"fioul":36,"ech_physiques":-5322},{"at":"2026-09-23T22:45:00+00:00","load":39596,"nucleaire":37007,"gaz":1864,"eolien":2882,"solaire":0,"hydraulique":4974,"bioenergies":1014,"charbon":0,"fioul":36,"ech_physiques":-8155},{"at":"2026-09-23T23:45:00+00:00","load":38515,"nucleaire":36990,"gaz":1405,"eolien":2916,"solaire":0,"hydraulique":3473,"bioenergies":1019,"charbon":0,"fioul":35,"ech_physiques":-7296},{"at":"2026-09-24T00:45:00+00:00","load":35896,"nucleaire":37014,"gaz":755,"eolien":2804,"solaire":0,"hydraulique":3572,"bioenergies":1017,"charbon":0,"fioul":33,"ech_physiques":-8491},{"at":"2026-09-24T01:45:00+00:00","load":34323,"nucleaire":37046,"gaz":770,"eolien":2608,"solaire":0,"hydraulique":3154,"bioenergies":1015,"charbon":0,"fioul":98,"ech_physiques":-9255},{"at":"2026-09-24T02:45:00+00:00","load":34486,"nucleaire":37102,"gaz":771,"eolien":2309,"solaire":0,"hydraulique":3057,"bioenergies":1003,"charbon":0,"fioul":100,"ech_physiques":-9221},{"at":"2026-09-24T03:45:00+00:00","load":36224,"nucleaire":37095,"gaz":2096,"eolien":1976,"solaire":0,"hydraulique":3299,"bioenergies":999,"charbon":0,"fioul":101,"ech_physiques":-8878},{"at":"2026-09-24T04:45:00+00:00","load":40794,"nucleaire":37123,"gaz":3455,"eolien":1837,"solaire":0,"hydraulique":4266,"bioenergies":999,"charbon":0,"fioul":37,"ech_physiques":-7212},{"at":"2026-09-24T05:45:00+00:00","load":44431,"nucleaire":37127,"gaz":3561,"eolien":1713,"solaire":244,"hydraulique":6792,"bioenergies":1011,"charbon":0,"fioul":36,"ech_physiques":-6402},{"at":"2026-09-24T06:45:00+00:00","load":45971,"nucleaire":37045,"gaz":3559,"eolien":1650,"solaire":2646,"hydraulique":6124,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-6425},{"at":"2026-09-24T07:45:00+00:00","load":46592,"nucleaire":36785,"gaz":3080,"eolien":1437,"solaire":6864,"hydraulique":3830,"bioenergies":1012,"charbon":0,"fioul":37,"ech_physiques":-6442},{"at":"2026-09-24T08:45:00+00:00","load":47584,"nucleaire":36688,"gaz":1119,"eolien":1008,"solaire":11675,"hydraulique":3055,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-6455},{"at":"2026-09-24T09:45:00+00:00","load":48081,"nucleaire":36609,"gaz":949,"eolien":742,"solaire":15059,"hydraulique":3419,"bioenergies":1003,"charbon":0,"fioul":36,"ech_physiques":-8173},{"at":"2026-09-24T10:45:00+00:00","load":48795,"nucleaire":36711,"gaz":1059,"eolien":696,"solaire":16915,"hydraulique":3314,"bioenergies":1002,"charbon":0,"fioul":36,"ech_physiques":-8711},{"at":"2026-09-24T11:45:00+00:00","load":48126,"nucleaire":36540,"gaz":390,"eolien":704,"solaire":17300,"hydraulique":2744,"bioenergies":1007,"charbon":0,"fioul":36,"ech_physiques":-8850},{"at":"2026-09-24T12:45:00+00:00","load":48432,"nucleaire":36500,"gaz":681,"eolien":664,"solaire":16316,"hydraulique":2922,"bioenergies":1007,"charbon":0,"fioul":35,"ech_physiques":-7910},{"at":"2026-09-24T13:45:00+00:00","load":47374,"nucleaire":36644,"gaz":978,"eolien":721,"solaire":14582,"hydraulique":3064,"bioenergies":991,"charbon":0,"fioul":35,"ech_physiques":-8126},{"at":"2026-09-24T14:45:00+00:00","load":46801,"nucleaire":36459,"gaz":1104,"eolien":798,"solaire":11859,"hydraulique":3641,"bioenergies":995,"charbon":0,"fioul":35,"ech_physiques":-6931},{"at":"2026-09-24T15:45:00+00:00","load":46573,"nucleaire":36702,"gaz":3428,"eolien":819,"solaire":7614,"hydraulique":4208,"bioenergies":998,"charbon":0,"fioul":35,"ech_physiques":-7375},{"at":"2026-09-24T16:45:00+00:00","load":48474,"nucleaire":36740,"gaz":3878,"eolien":894,"solaire":3060,"hydraulique":6978,"bioenergies":999,"charbon":0,"fioul":35,"ech_physiques":-4107},{"at":"2026-09-24T17:45:00+00:00","load":48724,"nucleaire":36804,"gaz":4345,"eolien":1266,"solaire":435,"hydraulique":8483,"bioenergies":998,"charbon":0,"fioul":35,"ech_physiques":-3963},{"at":"2026-09-24T18:45:00+00:00","load":46471,"nucleaire":36838,"gaz":4641,"eolien":1919,"solaire":189,"hydraulique":7927,"bioenergies":999,"charbon":0,"fioul":35,"ech_physiques":-6351},{"at":"2026-09-24T19:45:00+00:00","load":43271,"nucleaire":36969,"gaz":4617,"eolien":2830,"solaire":0,"hydraulique":6592,"bioenergies":1000,"charbon":0,"fioul":36,"ech_physiques":-8627},{"at":"2026-09-24T20:45:00+00:00","load":44149,"nucleaire":37565,"gaz":4659,"eolien":3394,"solaire":0,"hydraulique":5071,"bioenergies":995,"charbon":0,"fioul":36,"ech_physiques":-7552},{"at":"2026-09-24T21:45:00+00:00","load":42584,"nucleaire":37723,"gaz":3884,"eolien":3723,"solaire":0,"hydraulique":4341,"bioenergies":1008,"charbon":0,"fioul":35,"ech_physiques":-8111},{"at":"2026-09-24T22:45:00+00:00","load":39586,"nucleaire":37852,"gaz":3407,"eolien":3962,"solaire":0,"hydraulique":3615,"bioenergies":997,"charbon":0,"fioul":37,"ech_physiques":-9909},{"at":"2026-09-24T23:45:00+00:00","load":38413,"nucleaire":37866,"gaz":2400,"eolien":4000,"solaire":0,"hydraulique":3058,"bioenergies":1009,"charbon":0,"fioul":36,"ech_physiques":-9858},{"at":"2026-09-25T00:45:00+00:00","load":35758,"nucleaire":37979,"gaz":1597,"eolien":3649,"solaire":0,"hydraulique":2850,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-11075},{"at":"2026-09-25T01:45:00+00:00","load":34441,"nucleaire":38550,"gaz":1464,"eolien":3355,"solaire":0,"hydraulique":2756,"bioenergies":1008,"charbon":0,"fioul":36,"ech_physiques":-12356},{"at":"2026-09-25T02:45:00+00:00","load":34240,"nucleaire":39125,"gaz":1555,"eolien":3284,"solaire":0,"hydraulique":2797,"bioenergies":1008,"charbon":0,"fioul":37,"ech_physiques":-12678},{"at":"2026-09-25T03:45:00+00:00","load":36409,"nucleaire":39138,"gaz":1957,"eolien":3100,"solaire":0,"hydraulique":2919,"bioenergies":1018,"charbon":0,"fioul":37,"ech_physiques":-11404},{"at":"2026-09-25T04:45:00+00:00","load":40844,"nucleaire":38994,"gaz":3360,"eolien":3142,"solaire":0,"hydraulique":4540,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-10223},{"at":"2026-09-25T05:45:00+00:00","load":44279,"nucleaire":39191,"gaz":3375,"eolien":3310,"solaire":236,"hydraulique":6806,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-10068},{"at":"2026-09-25T06:45:00+00:00","load":45702,"nucleaire":38110,"gaz":3399,"eolien":3368,"solaire":2687,"hydraulique":6449,"bioenergies":994,"charbon":0,"fioul":36,"ech_physiques":-9449},{"at":"2026-09-25T07:45:00+00:00","load":46235,"nucleaire":38047,"gaz":1361,"eolien":2345,"solaire":8074,"hydraulique":4052,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-8541},{"at":"2026-09-25T08:45:00+00:00","load":47507,"nucleaire":37250,"gaz":539,"eolien":1466,"solaire":13840,"hydraulique":2809,"bioenergies":1000,"charbon":0,"fioul":37,"ech_physiques":-8012},{"at":"2026-09-25T09:45:00+00:00","load":48343,"nucleaire":36080,"gaz":296,"eolien":1247,"solaire":17650,"hydraulique":2430,"bioenergies":988,"charbon":0,"fioul":37,"ech_physiques":-8545},{"at":"2026-09-25T10:45:00+00:00","load":48983,"nucleaire":35948,"gaz":292,"eolien":1326,"solaire":19651,"hydraulique":2298,"bioenergies":990,"charbon":0,"fioul":37,"ech_physiques":-9136},{"at":"2026-09-25T11:45:00+00:00","load":46770,"nucleaire":33906,"gaz":288,"eolien":1330,"solaire":19928,"hydraulique":2217,"bioenergies":990,"charbon":0,"fioul":37,"ech_physiques":-9183},{"at":"2026-09-25T12:45:00+00:00","load":47278,"nucleaire":34156,"gaz":323,"eolien":1421,"solaire":18953,"hydraulique":2011,"bioenergies":985,"charbon":0,"fioul":37,"ech_physiques":-8345},{"at":"2026-09-25T13:45:00+00:00","load":46873,"nucleaire":34660,"gaz":428,"eolien":1676,"solaire":17688,"hydraulique":2059,"bioenergies":986,"charbon":0,"fioul":153,"ech_physiques":-8511},{"at":"2026-09-25T14:45:00+00:00","load":46186,"nucleaire":35765,"gaz":999,"eolien":1909,"solaire":14394,"hydraulique":2576,"bioenergies":986,"charbon":0,"fioul":37,"ech_physiques":-8714},{"at":"2026-09-25T15:45:00+00:00","load":46662,"nucleaire":36175,"gaz":2179,"eolien":2464,"solaire":9092,"hydraulique":5213,"bioenergies":994,"charbon":0,"fioul":380,"ech_physiques":-9852},{"at":"2026-09-25T16:45:00+00:00","load":47715,"nucleaire":36346,"gaz":4367,"eolien":2540,"solaire":3261,"hydraulique":8852,"bioenergies":995,"charbon":0,"fioul":701,"ech_physiques":-9462},{"at":"2026-09-25T17:45:00+00:00","load":47537,"nucleaire":36374,"gaz":4504,"eolien":2582,"solaire":376,"hydraulique":8522,"bioenergies":997,"charbon":0,"fioul":718,"ech_physiques":-6625},{"at":"2026-09-25T18:45:00+00:00","load":45955,"nucleaire":35550,"gaz":4592,"eolien":2793,"solaire":188,"hydraulique":8560,"bioenergies":993,"charbon":0,"fioul":735,"ech_physiques":-7684},{"at":"2026-09-25T19:45:00+00:00","load":43206,"nucleaire":35320,"gaz":4553,"eolien":3590,"solaire":0,"hydraulique":6970,"bioenergies":1003,"charbon":0,"fioul":740,"ech_physiques":-8992},{"at":"2026-09-25T20:45:00+00:00","load":44175,"nucleaire":34542,"gaz":4490,"eolien":3979,"solaire":0,"hydraulique":6584,"bioenergies":1014,"charbon":0,"fioul":501,"ech_physiques":-6587},{"at":"2026-09-25T21:45:00+00:00","load":42041,"nucleaire":33914,"gaz":4298,"eolien":3894,"solaire":0,"hydraulique":5295,"bioenergies":1017,"charbon":0,"fioul":37,"ech_physiques":-6127},{"at":"2026-09-25T22:45:00+00:00","load":38630,"nucleaire":33841,"gaz":3980,"eolien":3494,"solaire":0,"hydraulique":5088,"bioenergies":1012,"charbon":0,"fioul":36,"ech_physiques":-8933},{"at":"2026-09-25T23:45:00+00:00","load":37425,"nucleaire":33742,"gaz":3991,"eolien":3197,"solaire":0,"hydraulique":3346,"bioenergies":1026,"charbon":0,"fioul":36,"ech_physiques":-7890},{"at":"2026-09-26T00:45:00+00:00","load":35188,"nucleaire":33833,"gaz":3835,"eolien":3168,"solaire":0,"hydraulique":2791,"bioenergies":1013,"charbon":0,"fioul":36,"ech_physiques":-9314},{"at":"2026-09-26T01:45:00+00:00","load":33413,"nucleaire":33919,"gaz":3494,"eolien":3242,"solaire":0,"hydraulique":2414,"bioenergies":1010,"charbon":0,"fioul":36,"ech_physiques":-10432},{"at":"2026-09-26T02:45:00+00:00","load":32636,"nucleaire":33898,"gaz":3541,"eolien":2921,"solaire":0,"hydraulique":2343,"bioenergies":1013,"charbon":0,"fioul":37,"ech_physiques":-10867},{"at":"2026-09-26T03:45:00+00:00","load":32878,"nucleaire":33854,"gaz":3582,"eolien":2634,"solaire":0,"hydraulique":2463,"bioenergies":1009,"charbon":0,"fioul":36,"ech_physiques":-10644},{"at":"2026-09-26T04:45:00+00:00","load":34212,"nucleaire":33897,"gaz":3740,"eolien":2637,"solaire":0,"hydraulique":3192,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-10252},{"at":"2026-09-26T05:45:00+00:00","load":35422,"nucleaire":33946,"gaz":3610,"eolien":2750,"solaire":214,"hydraulique":3485,"bioenergies":1008,"charbon":0,"fioul":37,"ech_physiques":-9716},{"at":"2026-09-26T06:45:00+00:00","load":37748,"nucleaire":33694,"gaz":2287,"eolien":2872,"solaire":2027,"hydraulique":3339,"bioenergies":1008,"charbon":0,"fioul":33,"ech_physiques":-7295},{"at":"2026-09-26T07:45:00+00:00","load":39991,"nucleaire":33326,"gaz":661,"eolien":2413,"solaire":5721,"hydraulique":2602,"bioenergies":1005,"charbon":0,"fioul":33,"ech_physiques":-5502},{"at":"2026-09-26T08:45:00+00:00","load":41100,"nucleaire":32568,"gaz":553,"eolien":2209,"solaire":10109,"hydraulique":2094,"bioenergies":1005,"charbon":0,"fioul":33,"ech_physiques":-5284},{"at":"2026-09-26T09:45:00+00:00","load":42951,"nucleaire":31740,"gaz":278,"eolien":1927,"solaire":13153,"hydraulique":1882,"bioenergies":1008,"charbon":0,"fioul":33,"ech_physiques":-4610},{"at":"2026-09-26T10:45:00+00:00","load":43852,"nucleaire":28980,"gaz":274,"eolien":1630,"solaire":15141,"hydraulique":1869,"bioenergies":998,"charbon":0,"fioul":33,"ech_physiques":-2469},{"at":"2026-09-26T11:45:00+00:00","load":41333,"nucleaire":28690,"gaz":285,"eolien":1470,"solaire":16669,"hydraulique":1934,"bioenergies":1011,"charbon":0,"fioul":33,"ech_physiques":-5824},{"at":"2026-09-26T12:45:00+00:00","load":41280,"nucleaire":29515,"gaz":283,"eolien":1350,"solaire":16670,"hydraulique":1950,"bioenergies":1009,"charbon":0,"fioul":32,"ech_physiques":-6787},{"at":"2026-09-26T13:45:00+00:00","load":40458,"nucleaire":31056,"gaz":285,"eolien":1278,"solaire":16181,"hydraulique":2114,"bioenergies":1013,"charbon":0,"fioul":32,"ech_physiques":-9172},{"at":"2026-09-26T14:45:00+00:00","load":39865,"nucleaire":32357,"gaz":297,"eolien":1297,"solaire":13272,"hydraulique":2722,"bioenergies":971,"charbon":0,"fioul":33,"ech_physiques":-9317},{"at":"2026-09-26T15:45:00+00:00","load":40877,"nucleaire":33448,"gaz":2263,"eolien":1417,"solaire":8488,"hydraulique":3133,"bioenergies":1012,"charbon":0,"fioul":33,"ech_physiques":-8898},{"at":"2026-09-26T16:45:00+00:00","load":42110,"nucleaire":33525,"gaz":3636,"eolien":1547,"solaire":3033,"hydraulique":6232,"bioenergies":1013,"charbon":0,"fioul":35,"ech_physiques":-6903},{"at":"2026-09-26T17:45:00+00:00","load":42916,"nucleaire":33606,"gaz":3912,"eolien":1617,"solaire":356,"hydraulique":7065,"bioenergies":1013,"charbon":0,"fioul":35,"ech_physiques":-4692},{"at":"2026-09-26T18:45:00+00:00","load":41295,"nucleaire":33712,"gaz":3944,"eolien":1936,"solaire":186,"hydraulique":6333,"bioenergies":1014,"charbon":0,"fioul":34,"ech_physiques":-6213},{"at":"2026-09-26T19:45:00+00:00","load":39282,"nucleaire":33676,"gaz":3940,"eolien":2298,"solaire":0,"hydraulique":4832,"bioenergies":1004,"charbon":0,"fioul":36,"ech_physiques":-6753},{"at":"2026-09-26T20:45:00+00:00","load":40644,"nucleaire":33674,"gaz":3807,"eolien":2552,"solaire":0,"hydraulique":4380,"bioenergies":1016,"charbon":0,"fioul":35,"ech_physiques":-4804},{"at":"2026-09-26T21:45:00+00:00","load":39625,"nucleaire":33883,"gaz":3537,"eolien":2446,"solaire":0,"hydraulique":3401,"bioenergies":1015,"charbon":0,"fioul":37,"ech_physiques":-4657},{"at":"2026-09-26T22:45:00+00:00","load":36722,"nucleaire":34343,"gaz":3291,"eolien":2425,"solaire":0,"hydraulique":3663,"bioenergies":1015,"charbon":0,"fioul":37,"ech_physiques":-7614},{"at":"2026-09-26T23:45:00+00:00","load":35954,"nucleaire":34442,"gaz":2462,"eolien":2256,"solaire":0,"hydraulique":3038,"bioenergies":1018,"charbon":0,"fioul":37,"ech_physiques":-6911},{"at":"2026-09-27T00:45:00+00:00","load":33265,"nucleaire":34795,"gaz":226,"eolien":2163,"solaire":0,"hydraulique":2824,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-6708},{"at":"2026-09-27T01:45:00+00:00","load":31603,"nucleaire":34556,"gaz":232,"eolien":2372,"solaire":0,"hydraulique":3193,"bioenergies":1015,"charbon":0,"fioul":36,"ech_physiques":-8700},{"at":"2026-09-27T02:45:00+00:00","load":30806,"nucleaire":34090,"gaz":239,"eolien":2400,"solaire":0,"hydraulique":2598,"bioenergies":1012,"charbon":0,"fioul":37,"ech_physiques":-8477},{"at":"2026-09-27T03:45:00+00:00","load":31146,"nucleaire":34130,"gaz":232,"eolien":2663,"solaire":0,"hydraulique":2083,"bioenergies":1017,"charbon":0,"fioul":37,"ech_physiques":-8312},{"at":"2026-09-27T04:45:00+00:00","load":32117,"nucleaire":34092,"gaz":244,"eolien":3016,"solaire":0,"hydraulique":2078,"bioenergies":1014,"charbon":0,"fioul":37,"ech_physiques":-7680},{"at":"2026-09-27T05:45:00+00:00","load":32303,"nucleaire":33997,"gaz":244,"eolien":3313,"solaire":195,"hydraulique":2183,"bioenergies":1017,"charbon":0,"fioul":37,"ech_physiques":-8005},{"at":"2026-09-27T06:45:00+00:00","load":33915,"nucleaire":33485,"gaz":243,"eolien":3594,"solaire":2171,"hydraulique":2069,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-7225},{"at":"2026-09-27T07:45:00+00:00","load":35634,"nucleaire":32562,"gaz":488,"eolien":3373,"solaire":6409,"hydraulique":1657,"bioenergies":995,"charbon":0,"fioul":37,"ech_physiques":-7545},{"at":"2026-09-27T08:45:00+00:00","load":38023,"nucleaire":27590,"gaz":507,"eolien":2793,"solaire":11476,"hydraulique":1525,"bioenergies":988,"charbon":0,"fioul":37,"ech_physiques":-4159},{"at":"2026-09-27T09:45:00+00:00","load":40176,"nucleaire":25712,"gaz":492,"eolien":3093,"solaire":15064,"hydraulique":1571,"bioenergies":992,"charbon":0,"fioul":37,"ech_physiques":-4786},{"at":"2026-09-27T10:45:00+00:00","load":41374,"nucleaire":25711,"gaz":472,"eolien":2413,"solaire":12945,"hydraulique":1555,"bioenergies":1010,"charbon":0,"fioul":37,"ech_physiques":-441},{"at":"2026-09-27T11:45:00+00:00","load":38297,"nucleaire":26118,"gaz":264,"eolien":1359,"solaire":10811,"hydraulique":1574,"bioenergies":997,"charbon":0,"fioul":37,"ech_physiques":-46},{"at":"2026-09-27T12:45:00+00:00","load":39565,"nucleaire":25860,"gaz":255,"eolien":2081,"solaire":11073,"hydraulique":1811,"bioenergies":1006,"charbon":0,"fioul":36,"ech_physiques":12},{"at":"2026-09-27T13:45:00+00:00","load":38753,"nucleaire":26121,"gaz":255,"eolien":4147,"solaire":14165,"hydraulique":1909,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-5920},{"at":"2026-09-27T14:45:00+00:00","load":38955,"nucleaire":29315,"gaz":726,"eolien":4150,"solaire":11078,"hydraulique":2306,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-8015},{"at":"2026-09-27T15:45:00+00:00","load":40041,"nucleaire":32362,"gaz":1170,"eolien":3432,"solaire":6355,"hydraulique":2978,"bioenergies":1009,"charbon":0,"fioul":37,"ech_physiques":-6980},{"at":"2026-09-27T16:45:00+00:00","load":42493,"nucleaire":32492,"gaz":2651,"eolien":2553,"solaire":2119,"hydraulique":5413,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-3805},{"at":"2026-09-27T17:45:00+00:00","load":44171,"nucleaire":32692,"gaz":2764,"eolien":2178,"solaire":335,"hydraulique":5737,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-575},{"at":"2026-09-27T18:45:00+00:00","load":42401,"nucleaire":32753,"gaz":2878,"eolien":2334,"solaire":195,"hydraulique":4426,"bioenergies":1012,"charbon":0,"fioul":37,"ech_physiques":-1176},{"at":"2026-09-27T19:45:00+00:00","load":40182,"nucleaire":32793,"gaz":2480,"eolien":2493,"solaire":0,"hydraulique":3704,"bioenergies":1004,"charbon":0,"fioul":37,"ech_physiques":-2315},{"at":"2026-09-27T20:45:00+00:00","load":41264,"nucleaire":32819,"gaz":2490,"eolien":2599,"solaire":0,"hydraulique":3410,"bioenergies":1002,"charbon":0,"fioul":36,"ech_physiques":-1051},{"at":"2026-09-27T21:45:00+00:00","load":39849,"nucleaire":32879,"gaz":2105,"eolien":2731,"solaire":0,"hydraulique":2845,"bioenergies":998,"charbon":0,"fioul":37,"ech_physiques":-1732},{"at":"2026-09-27T22:45:00+00:00","load":37022,"nucleaire":33024,"gaz":1221,"eolien":2711,"solaire":0,"hydraulique":2314,"bioenergies":999,"charbon":0,"fioul":37,"ech_physiques":-2312},{"at":"2026-09-27T23:45:00+00:00","load":36178,"nucleaire":33200,"gaz":1293,"eolien":2519,"solaire":0,"hydraulique":2399,"bioenergies":998,"charbon":0,"fioul":37,"ech_physiques":-3653},{"at":"2026-09-28T00:45:00+00:00","load":33960,"nucleaire":33520,"gaz":1310,"eolien":2221,"solaire":0,"hydraulique":2096,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-5810},{"at":"2026-09-28T01:45:00+00:00","load":32739,"nucleaire":33903,"gaz":1371,"eolien":2397,"solaire":0,"hydraulique":2068,"bioenergies":993,"charbon":0,"fioul":37,"ech_physiques":-7483},{"at":"2026-09-28T02:45:00+00:00","load":32640,"nucleaire":33875,"gaz":1347,"eolien":2800,"solaire":0,"hydraulique":2257,"bioenergies":996,"charbon":0,"fioul":37,"ech_physiques":-8405},{"at":"2026-09-28T03:45:00+00:00","load":35340,"nucleaire":34546,"gaz":3283,"eolien":3044,"solaire":0,"hydraulique":2549,"bioenergies":1000,"charbon":0,"fioul":37,"ech_physiques":-9066},{"at":"2026-09-28T04:45:00+00:00","load":40092,"nucleaire":34561,"gaz":3932,"eolien":2806,"solaire":0,"hydraulique":5019,"bioenergies":993,"charbon":0,"fioul":37,"ech_physiques":-7269},{"at":"2026-09-28T05:45:00+00:00","load":43563,"nucleaire":34554,"gaz":3983,"eolien":2990,"solaire":219,"hydraulique":6577,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-6121},{"at":"2026-09-28T06:45:00+00:00","load":45360,"nucleaire":34552,"gaz":3957,"eolien":2924,"solaire":1741,"hydraulique":5036,"bioenergies":978,"charbon":0,"fioul":37,"ech_physiques":-3993},{"at":"2026-09-28T07:45:00+00:00","load":46475,"nucleaire":34444,"gaz":3733,"eolien":2890,"solaire":4470,"hydraulique":4194,"bioenergies":987,"charbon":0,"fioul":36,"ech_physiques":-4259},{"at":"2026-09-28T08:45:00+00:00","load":47676,"nucleaire":34383,"gaz":3161,"eolien":2658,"solaire":8032,"hydraulique":2934,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-4026},{"at":"2026-09-28T09:45:00+00:00","load":48383,"nucleaire":34417,"gaz":1682,"eolien":2192,"solaire":11138,"hydraulique":2470,"bioenergies":995,"charbon":0,"fioul":37,"ech_physiques":-3828},{"at":"2026-09-28T10:45:00+00:00","load":48896,"nucleaire":33336,"gaz":1219,"eolien":2313,"solaire":12755,"hydraulique":2280,"bioenergies":992,"charbon":0,"fioul":37,"ech_physiques":-3126},{"at":"2026-09-28T11:45:00+00:00","load":47528,"nucleaire":33306,"gaz":1314,"eolien":2200,"solaire":13617,"hydraulique":2307,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-5020},{"at":"2026-09-28T12:45:00+00:00","load":48738,"nucleaire":33582,"gaz":1384,"eolien":2280,"solaire":13074,"hydraulique":2424,"bioenergies":996,"charbon":0,"fioul":37,"ech_physiques":-4338},{"at":"2026-09-28T13:45:00+00:00","load":47708,"nucleaire":33894,"gaz":1806,"eolien":2219,"solaire":11568,"hydraulique":2670,"bioenergies":980,"charbon":0,"fioul":37,"ech_physiques":-5186},{"at":"2026-09-28T14:30:00+00:00","load":46379,"nucleaire":34043,"gaz":3074,"eolien":2321,"solaire":9409,"hydraulique":3530,"bioenergies":980,"charbon":0,"fioul":36,"ech_physiques":-6999}]}
+</script>
   <script>
     let snapshot = JSON.parse(document.getElementById('snapshot-data').textContent);
+    let powerHistory = JSON.parse(document.getElementById('power-history-data').textContent);
+    let powerSpan = 7;
+    let powerMeasure = 'load';
     let metrics = Array.isArray(snapshot.metrics) ? snapshot.metrics : [];
     let byId = Object.fromEntries(metrics.map(item => [item.id, item]));
     const sectors = {oil: 'Pétrole · cotations séparées des mesures physiques', gas: 'Gaz · France, Europe, GNL et États-Unis',
@@ -10756,6 +10784,105 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
           timeZone:'Europe/Paris'}).format(stamp) + ' · Paris';
     }
 
+    const powerMeasures = [
+      ['load', 'Demande', row => row.load],
+      ['residual', 'Résiduelle calculée', row => Number.isFinite(row.eolien) && Number.isFinite(row.solaire) ?
+        row.load - row.eolien - row.solaire : null],
+      ['wind_solar', 'Éolien + solaire', row => Number.isFinite(row.eolien) && Number.isFinite(row.solaire) ?
+        row.eolien + row.solaire : null],
+      ['gaz', 'Gaz électrique', row => row.gaz],
+      ['ech_physiques', 'Échanges nets', row => row.ech_physiques]
+    ];
+
+    function renderPowerHistory() {
+      const chart = document.getElementById('power-history-chart');
+      const meta = document.getElementById('power-history-meta');
+      const reading = document.getElementById('power-history-reading');
+      const span = document.getElementById('power-span');
+      const series = document.getElementById('power-series');
+      chart.replaceChildren(); span.replaceChildren(); series.replaceChildren();
+      for (const [days, label] of [[1,'24 h'],[7,'7 j'],[30,'30 j'],[365,'1 an']]) {
+        const button = line(label, 'button'); button.type = 'button';
+        button.setAttribute('aria-pressed', String(powerSpan === days));
+        button.addEventListener('click', () => { powerSpan = days; renderPowerHistory(); });
+        span.append(button);
+      }
+      for (const [key, label] of powerMeasures) {
+        const button = line(label, 'button'); button.type = 'button';
+        button.setAttribute('aria-pressed', String(powerMeasure === key));
+        button.addEventListener('click', () => { powerMeasure = key; renderPowerHistory(); });
+        series.append(button);
+      }
+      const historic = Array.isArray(powerHistory?.points) && powerHistory.points.length ?
+        powerHistory.points : snapshot.history?.power_fr || [];
+      const ordered = historic.filter(row => row && Number.isFinite(row.load) && Number.isFinite(Date.parse(row.at)))
+        .sort((a,b) => Date.parse(a.at) - Date.parse(b.at));
+      if (ordered.length < 3) {
+        chart.append(line('Historique RTE en attente : la prochaine collecte construira les séries.', 'span', 'empty'));
+        meta.textContent = ''; reading.textContent = ''; return;
+      }
+      const last = Date.parse(ordered[ordered.length - 1].at);
+      const start = last - powerSpan * 86400000;
+      const read = powerMeasures.find(([key]) => key === powerMeasure)[2];
+      const selected = ordered.filter(row => Date.parse(row.at) >= start)
+        .map(row => ({at:Date.parse(row.at), value:read(row)}))
+        .filter(row => Number.isFinite(row.value));
+      if (selected.length < 2) {
+        chart.append(line('Pas assez de mesures pour cette série.', 'span', 'empty'));
+        meta.textContent = 'Dernière observation : ' + parisTime(ordered[ordered.length-1].at);
+        reading.textContent = ''; return;
+      }
+      const values = selected.map(row => row.value);
+      let min = Math.min(...values), max = Math.max(...values);
+      const padding = Math.max(500, (max - min) * .1);
+      min -= padding; max += padding;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox','0 0 720 235'); svg.setAttribute('preserveAspectRatio','none');
+      svg.setAttribute('role','img');
+      svg.setAttribute('aria-label', powerMeasures.find(([key]) => key === powerMeasure)[1] +
+        ' en MW sur ' + powerSpan + ' jour(s), selon les observations disponibles');
+      const add = (tag, attrs) => {
+        const node = document.createElementNS('http://www.w3.org/2000/svg',tag);
+        for (const [key,value] of Object.entries(attrs)) node.setAttribute(key,String(value));
+        svg.append(node); return node;
+      };
+      const x = stamp => 56 + 651 * (stamp - selected[0].at) /
+        Math.max(1, selected[selected.length-1].at - selected[0].at);
+      const y = value => 198 - 166 * (value-min) / (max-min);
+      for (let i=0;i<=4;i++) {
+        const level = min + (max-min)*i/4, ordinate = y(level);
+        add('line',{x1:56,x2:707,y1:ordinate,y2:ordinate});
+        add('text',{x:2,y:ordinate-4}).textContent = number(level,0);
+      }
+      if (min < 0 && max > 0) add('line',{x1:56,x2:707,y1:y(0),y2:y(0),class:'zero'});
+      const stride = Math.max(1, Math.ceil(selected.length/700));
+      const sampled = selected.filter((_,i) => i%stride===0 || i===selected.length-1);
+      let segment = [], segments = [];
+      for (let i=0;i<sampled.length;i++) {
+        if (i && sampled[i].at-sampled[i-1].at > Math.max(2.5, stride*2.5)*3600000) {
+          if (segment.length>1) segments.push(segment);
+          segment = [];
+        }
+        segment.push(x(sampled[i].at).toFixed(1)+','+y(sampled[i].value).toFixed(1));
+      }
+      if (segment.length>1) segments.push(segment);
+      for (const points of segments) add('polyline',{points:points.join(' ')});
+      for (const [stamp, anchor] of [[selected[0].at,56],[selected[selected.length-1].at,602]])
+        add('text',{x:anchor,y:222}).textContent = parisTime(stamp).replace(' · Paris','');
+      chart.append(svg);
+      const duration = Math.max(1, (last - Date.parse(ordered[0].at))/86400000);
+      const expected = Math.max(1, Math.round((selected[selected.length-1].at-selected[0].at)/3600000)+1);
+      const coverage = Math.min(100,Math.round(selected.length/expected*100));
+      meta.textContent = 'RTE · observé provisoire · ' + selected.length + ' relevés · couverture ' +
+        coverage + '% entre les premières et dernières mesures affichées · historique accumulé : ' +
+        number(duration,1) + ' j / 365 j · dernier relevé : ' + parisTime(ordered[ordered.length-1].at);
+      const recent = selected[selected.length-1];
+      reading.textContent = 'Dernière mesure : ' + number(recent.value,0) + ' MW. ' +
+        (powerMeasure === 'residual' ? 'Une résiduelle plus élevée peut augmenter le besoin de moyens pilotables ; aucun effet de prix instantané ne se déduit de ce seul chiffre.' :
+         powerMeasure === 'ech_physiques' ? 'Solde négatif = exportations nettes ; positif = importations nettes. Ce flux ne donne pas le prix de marché.' :
+         'Ce niveau physique est un repère observé, sans prévision automatique du prix.');
+    }
+
     function renderPower() {
       const grid = document.getElementById('power-grid');
       const points = Array.isArray(snapshot.history?.power_fr) ? snapshot.history.power_fr : [];
@@ -10907,7 +11034,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       const curve = document.getElementById('power-curve');
       curve.replaceChildren(line('Collecte RTE en attente.','span'));
       for (const fn of [renderStatus,renderWatch,renderAgenda,renderMini,renderReleases,
-                        renderStories,renderSector,renderPower]) {
+                        renderStories,renderSector,renderPower,renderPowerHistory]) {
         try { fn(); } catch (error) { console.error('Panneau indisponible :', fn.name, error); }
       }
     }
@@ -10928,6 +11055,14 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         }
         snapshot = next; metrics = next.metrics;
         byId = Object.fromEntries(metrics.map(item => [item.id,item]));
+        try {
+          const powerResponse = await fetch('https://raw.githubusercontent.com/TheoTaillandier/Test2/main/data/power_fr.json?t=' + Date.now(), {cache:'no-store'});
+          if (powerResponse.ok) {
+            const power = await powerResponse.json();
+            if (power.schema === 1 && Array.isArray(power.points) && power.points.length &&
+                Date.parse(power.last_at) >= Date.parse(powerHistory.last_at || 0)) powerHistory = power;
+          }
+        } catch (error) { console.warn('Historique Power non synchronisé :', error); }
         refreshPanels();
         button.textContent = 'Données synchronisées';
       } catch (error) {
