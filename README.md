@@ -2,7 +2,7 @@
 
 Tableau de bord personnel des matières premières. Dans l'onglet **Code**, ouvrir [`index.html`](index.html), cliquer sur **Raw** ou **Download raw file**, enregistrer le fichier en `.html`, puis l'ouvrir dans un navigateur. Le code HTML complet figure aussi ci-dessous.
 
-Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA : elles demandent Internet et sont indicatives, distinctes du contrat ICE et de Henry Hub physique. Le spot officiel EIA est montré séparément avec sa date. Les autres chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml). Le bouton **Actualiser les données** récupère la dernière publication GitHub même depuis un HTML téléchargé ; hors connexion, le fichier garde son instantané daté. L'onglet **Power FR** affiche RTE et, avec une clé ENTSO-E, les prévisions de demande France et DE-LU. [Méthodologie, unités et limites](methodology.md).
+Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA : elles demandent Internet et sont indicatives, distinctes du contrat ICE et de Henry Hub physique. Le spot officiel EIA est montré séparément avec sa date. Les autres chiffres officiels sont collectés par [la tâche planifiée](.github/workflows/update-data.yml). Le bouton **Actualiser les données** récupère la dernière publication GitHub même depuis un HTML téléchargé ; hors connexion, le fichier garde son instantané daté. L'onglet **Power FR** montre les prix day-ahead France/DE-LU, les observations RTE, une lecture des écarts et les prévisions de demande ENTSO-E. [Méthodologie, unités et limites](methodology.md).
 
 ## Sources & automatisation
 
@@ -17,6 +17,7 @@ Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA
 - RTE éCO2mix national temps réel : [dataset officiel](https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/) actualisé à la source au quart d'heure ; consommation, nucléaire, gaz, vent, solaire, hydraulique, bioénergies et échanges physiques. Export = solde négatif ; import = positif. Le cockpit collecte les dernières pages toutes les deux heures et conserve le dernier relevé de chaque heure dans `data/power_fr.json` sur 365 jours glissants. L'historique s'accumule depuis la première collecte, il n'invente pas une année déjà acquise. Il est aussi embarqué dans le HTML téléchargé. Demande résiduelle = consommation − éolien − solaire (calcul indicatif, **pas une prévision du prix**). Aucun compte requis.
 - ENTSO-E : prévision *day-ahead* de demande (A65/A01, Article 6.1.b, données [CC BY 4.0](https://transparencyplatform.zendesk.com/hc/en-us/articles/40921911218961-Legal-Terms-and-Conditions)), France et Allemagne/Luxembourg ; affichage du pic prévu pour les prochaines 24 heures. Pour activer : créer un compte sur https://transparency.entsoe.eu/, demander l'accès API à `transparency@entsoe.eu` (objet `RESTful API access` et adresse enregistrée dans le corps), puis générer le jeton dans « My Account ». Enregistrer le jeton **uniquement** comme secret GitHub Actions `ENTSOE_API_TOKEN` via Settings → Secrets and variables → Actions → New repository secret ; relancer l'action. Ne jamais le coller dans le HTML, un fichier GitHub ou une conversation. Sans clé, RTE Power fonctionne déjà.
 - Prix day-ahead France et DE-LU : API Fraunhofer ISE Energy-Charts. Le collecteur exige explicitement la mention de licence CC BY 4.0 dans chaque réponse et une unité EUR/MWh ; sinon il refuse la publication. L'attribution exacte déclarée par la réponse (actuellement Bundesnetzagentur / SMARD) accompagne les chiffres. `data/power_prices.json` conserve un historique glissant d'un an à partir des points réellement collectés. Le prix porte sur la **livraison** de chaque quart d'heure ou heure, il a été fixé la veille ; ce n'est pas un cours intraday en direct. Source et transformation sont affichées.
+- Interface Power : le navigateur vérifie les prix day-ahead France/DE-LU sur Energy-Charts à l'ouverture et toutes les 30 minutes tant que le site est visible. Quand l'onglet Power est ouvert, il récupère les dernières observations RTE sur l'API publique ODRE toutes les 15 minutes, en respectant le quota de la source. Il valide la licence, les unités et les dates des prix ; si le réseau ou CORS refuse l'accès, il affiche l'instantané embarqué ou publié sur GitHub avec sa date. Les écarts de prix et facteurs physiques sont des calculs descriptifs, pas une preuve de causalité.
 - Intraday continu France : [page de marché EPEX](https://www.epexspot.com/en/market-results) et [RTE](https://www.rte-france.com/en/data-publications/eco2mix/market-data) en accès direct. ENTSO-E 12.1.d rend obligatoire le day-ahead et l'intraday facultatif. RTE interdit la récupération des prix affichés dans éCO2mix et EPEX vend son flux de données ; le site ne fabrique donc pas un spread day-ahead/intraday. Les données de prix Fraunhofer sont attribuées conformément à la licence déclarée dans l'API.
 - Calendrier natif : sorties EIA pétrole et gaz, USDA WASDE et STEO ; les exceptions 2026 connues sont incluses. Au-delà des dates vérifiées, le tableau l'indique sans inventer d'horaire.
 - Marchés : cinq tuiles de cotations en séance TradingView/OANDA (Brent, WTI, gaz US, cuivre, or), plus un graphique et un tableau. Instruments OTC indicatifs ; ils ne remplacent ni les futures ICE/NYMEX ni le spot EIA daté. Le gaz US OANDA n'est pas une cotation Henry Hub physique. Les widgets nécessitent Internet et le fournisseur peut limiter la diffusion. Aluminium, cacao et café sont accessibles via leurs pages de marché ; leurs prix ne sont pas intégrés sans droits vérifiés.
@@ -26,7 +27,7 @@ Les cotations en séance Brent, WTI et gaz US sont des widgets TradingView/OANDA
 
 Unités : M bbl = millions de barils ; M bbl/j = millions de barils par jour ; Bcf = milliards de pieds cubes ; TWh = térawattheures ; GWh/j = gigawattheures par jour ; 10³ m³ GNL = milliers de mètres cubes de GNL liquide ; M bu = millions de boisseaux ; Mt = millions de tonnes. Stocks, prix et flux ne sont jamais additionnés.
 
-Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les fichiers publics. Le fichier HTML contient un instantané et s'ouvre directement après téléchargement. Il essaie aussi de synchroniser `data/snapshot.json` depuis GitHub à l'ouverture et via le bouton manuel, sous réserve du réseau et des règles du navigateur ; sinon la date de l'instantané reste visible. Les tâches GitHub planifiées peuvent être retardées ou désactivées après une longue période sans activité ; dans ce cas, l'onglet Actions permet la relance manuelle.
+Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les fichiers publics. Le fichier HTML contient un instantané et s'ouvre directement après téléchargement. Il synchronise `data/snapshot.json` depuis GitHub à l'ouverture et via le bouton manuel, et tente les deux API publiques directement sur Power ; tout accès dépend du réseau et des règles du navigateur. Les tâches GitHub planifiées peuvent être retardées ou désactivées après une longue période sans activité ; dans ce cas, l'onglet Actions permet la relance manuelle.
 
 ## Code complet
 
@@ -40,27 +41,27 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
   <style>
     :root {
       color-scheme: dark;
-      --bg: #08110f;
-      --surface: #101d18;
-      --surface-2: #172820;
-      --border: #2a4336;
-      --text: #f0f5f1;
-      --muted: #a4b9ab;
-      --accent: #78dda8;
-      --warm: #f1c984;
-      --red: #f29a90;
+      --bg: #090f17;
+      --surface: #121d27;
+      --surface-2: #1b2a35;
+      --border: #30414e;
+      --text: #f1f6f7;
+      --muted: #a9bbc5;
+      --accent: #71dfc2;
+      --warm: #facb80;
+      --red: #f58e91;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.48 system-ui, -apple-system, Segoe UI, sans-serif; }
+    body { margin: 0; background: radial-gradient(ellipse 80% 500px at 70% -200px,#193a45 0%,transparent 75%),var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
     button { font: inherit; cursor: pointer; }
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
-    .header { min-height: 62px; padding: 8px 18px; display: flex; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
+    .header { min-height: 68px; padding: 9px clamp(16px,2.5vw,38px); display: flex; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); background:#0d1720f5; }
     .brand strong { font-size: 17px; letter-spacing: -.025em; }
     .brand span { color: var(--muted); font-size: 11px; margin-left: 9px; }
     .nav { display: flex; gap: 5px; }
     .nav button, .filters button { border: 1px solid transparent; background: transparent; color: var(--muted); border-radius: 6px; padding: 8px 14px; }
-    .nav button[aria-selected="true"], .filters button.active { background: #1b3629; border-color: var(--border); color: var(--text); }
+    .nav button[aria-selected="true"], .filters button.active { background: #21423e; border-color: #397e70; color: var(--text); }
     .page[hidden] { display: none !important; }
     .ticker { display: flex; gap: 8px; align-items: center; min-height: 65px; overflow-x: auto; padding: 8px 14px; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
     .ticker a { flex: 0 0 auto; border: 1px solid var(--border); border-radius: 7px; min-width: 145px; padding: 5px 10px; color: var(--text); }
@@ -72,7 +73,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     .live-tile .widget { height:72px; }
     .live-tile a { font-size:10px; padding:0 5px; }
     .live-caption { padding:0 14px 7px; color:var(--muted); font-size:10px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; min-height: 0; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 13px; overflow: hidden; min-height: 0; box-shadow:0 12px 35px #040a101c; }
     .bar { min-height: 46px; padding: 8px 13px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
     .bar h2 { margin: 0; font-size: 13px; }
     .bar small { font-size: 10px; color: var(--muted); }
@@ -131,14 +132,22 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     .agenda-row p { margin: 2px 0 0; color: var(--muted); font-size: 10px; }
     .market-context { padding: 0 12px 18px; }
     .market-context h2 { font-size: 13px; margin: 4px 0 9px; }
+    .market-power-pulse { display:flex; align-items:center; gap:22px; padding:13px 19px; margin:5px 12px 0; background:linear-gradient(110deg,#173735,#14242d 65%); border-color:#3d716e; }
+    .market-power-pulse h2 { font-size:18px; margin:4px 0; }
+    .market-power-pulse p { color:var(--muted); font-size:11px; margin:3px 0 0; }
+    .market-power-stats { display:flex; gap:22px; margin-left:auto; }
+    .market-power-stats div { min-width:135px; }
+    .market-power-stats small { display:block; color:var(--muted); font-size:10px; }
+    .market-power-stats strong { font-size:19px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .market-power-pulse a { white-space:nowrap; font-weight:700; }
     .mini-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
     .mini { padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; }
     .mini small, .metric small { display: block; color: var(--muted); font-size: 10px; }
     .mini strong { display: block; font-size: 18px; margin: 4px 0 1px; }
     .mini span { color: var(--warm); font-size: 10px; }
-    .workspace { max-width: 1460px; margin: auto; padding: 18px; }
+    .workspace { max-width: 1460px; margin: auto; padding: clamp(16px,2.4vw,34px); }
     .page-intro { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 15px; }
-    .page-intro h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -.025em; }
+    .page-intro h1 { font-size: clamp(24px,2.6vw,38px); margin: 0 0 4px; letter-spacing: -.04em; line-height:1.14; }
     .page-intro p { color: var(--muted); margin: 0; }
     .stamp { border: 1px solid var(--border); background: var(--surface-2); border-radius: 6px; padding: 7px 10px; color: var(--muted); font-size: 10px; white-space: nowrap; }
     .source-status { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 15px; }
@@ -228,6 +237,61 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     .power-forecast div { background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:10px; }
     .power-forecast small, .power-forecast span { display:block; color:var(--muted); font-size:10px; }
     .power-forecast strong { display:block; font-size:18px; margin:3px 0; }
+    .eyebrow { color:var(--accent); font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+    .power-intro { align-items:center; margin:3px 0 19px; }
+    .power-intro p { font-size:13px; margin-top:8px; }
+    .power-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+    .power-actions button { color:var(--text); background:var(--surface-2); font-size:12px; }
+    .power-actions button:hover { border-color:var(--accent); }
+    .power-head { margin-bottom:14px; }
+    .power-head .badge { font-size:11px; padding:6px 11px; }
+    .power-lead { display:grid; grid-template-columns:minmax(280px,.43fr) minmax(0,1fr); gap:12px; align-items:stretch; }
+    .power-hero { padding:22px 24px; background:linear-gradient(140deg,#153d42,#13302f 50%,#14232e); border-color:#40877e; position:relative; }
+    .power-hero:after { content:''; position:absolute; width:170px; height:170px; border:1px solid #71dfc230; border-radius:50%; right:-60px; top:-70px; pointer-events:none; }
+    .power-hero strong { display:block; font-size:clamp(36px,4.3vw,60px); font-variant-numeric:tabular-nums; line-height:1.08; margin:20px 0 0; letter-spacing:-.055em; }
+    .power-unit { color:var(--accent); font-weight:700; font-size:15px; }
+    .power-hero-time { margin-top:15px; color:var(--text); font-weight:600; font-size:12px; }
+    .power-hero-delta { margin-top:7px; color:#c8dcda; font-size:11px; }
+    .power-lead .price-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:0; }
+    .power-lead .price-grid article { border:1px solid var(--border); border-radius:13px; background:var(--surface); padding:17px 19px; min-height:116px; }
+    .power-lead .price-grid small { color:var(--muted); font-size:11px; }
+    .power-lead .price-grid strong { color:var(--text); font-size:clamp(19px,2.1vw,27px); font-variant-numeric:tabular-nums; letter-spacing:-.035em; }
+    .power-lead .price-grid span { color:var(--muted); font-size:11px; }
+    .power-brief { margin:12px 0; padding:19px 22px; border-color:#487765; background:linear-gradient(100deg,#18372f,#172b31 72%); }
+    .power-section-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+    .power-section-header h2 { margin:5px 0 0; font-size:18px; letter-spacing:-.02em; }
+    .power-brief p { font-size:17px; color:var(--text); margin:13px 0 6px; line-height:1.5; }
+    .power-brief-sub { color:#bed2cf; font-size:12px; }
+    .power-alerts { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:12px; }
+    .power-alert { padding:13px 15px; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:9px; }
+    .power-alert.warm { border-left-color:var(--warm); }
+    .power-alert small,.power-alert span { display:block; color:var(--muted); font-size:11px; }
+    .power-alert strong { display:block; margin:3px 0; font-size:14px; }
+    .power-analysis-layout { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(315px,.85fr); gap:12px; align-items:stretch; }
+    .power-analysis-layout .power-history-panel { margin:0; padding:20px; }
+    .power-analysis-layout .power-history-panel p { font-size:12px; }
+    .power-analysis-layout .power-price-chart { height:255px; margin:8px 0 0; }
+    .power-analysis-layout .power-price-chart svg { height:255px; }
+    .power-legend-inline { color:var(--muted); white-space:nowrap; font-size:11px; margin-top:7px; }
+    .power-legend-inline i { display:inline-block; width:15px; height:3px; margin:0 5px 3px 12px; background:var(--accent); }
+    .power-legend-inline i:nth-of-type(2) { background:var(--warm); }
+    .power-hours { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin:13px 0; }
+    .power-hours article { background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; }
+    .power-hours small,.power-hours span { display:block; color:var(--muted); font-size:10px; }
+    .power-hours strong { font-variant-numeric:tabular-nums; font-size:15px; display:block; margin:2px 0; }
+    .power-source { border-top:1px solid var(--border); padding-top:9px; overflow-wrap:anywhere; }
+    .power-insights { display:grid; gap:12px; grid-template-rows:auto auto; }
+    .power-insight-card { padding:19px; }
+    .power-insight-card h2 { margin:5px 0 10px; font-size:18px; }
+    .power-insight-card p { margin:8px 0 12px; color:var(--muted); font-size:12px; }
+    .power-driver { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; border-top:1px solid var(--border); padding:11px 0; }
+    .power-driver small { color:var(--muted); font-size:11px; }
+    .power-driver strong { font-size:15px; font-variant-numeric:tabular-nums; }
+    .power-driver span { grid-column:1/-1; font-size:11px; color:var(--muted); }
+    .power-intraday-empty { padding:11px; border:1px solid #997247; border-radius:7px; color:var(--warm)!important; background:#4b3a252a; font-weight:700; }
+    .power-chapter { font-size:17px; letter-spacing:-.02em; margin:23px 0 7px; }
+    .power-grid { margin-top:9px; }
+    .power-card { border-top:2px solid #3e8277; }
     .empty { padding: 20px; color: var(--muted); }
     .footer { max-width: 1460px; margin: auto; padding: 10px 18px 24px; font-size: 10px; color: var(--muted); }
     @media (max-width: 1050px) {
@@ -240,6 +304,9 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       .physical-side { grid-template-columns: 1fr 1fr; }
       .power-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .power-layout { grid-template-columns:1fr; }
+      .power-analysis-layout { grid-template-columns:1fr; }
+      .power-insights { grid-template-columns:1fr 1fr; }
+      .power-alerts { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .chart { min-height:0; }
       .chart-duo { grid-template-columns:1fr; }
     }
@@ -259,9 +326,20 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       .page-intro { display: block; }
       .stamp { display: inline-block; margin-top: 10px; }
       .physical-side { grid-template-columns: 1fr; }
-      .power-grid, .power-bottom, .price-grid { grid-template-columns:1fr; }
+      .power-grid, .power-bottom { grid-template-columns:1fr; }
+      .power-lead { grid-template-columns:1fr; }
+      .power-lead .price-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .power-lead .price-grid article { padding:12px; min-height:110px; }
+      .power-lead .price-grid strong { font-size:20px; }
+      .power-hours { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .power-insights { grid-template-columns:1fr; }
+      .power-alerts { grid-template-columns:1fr; }
+      .power-brief p { font-size:15px; }
+      .power-section-header { flex-wrap:wrap; }
       .power-forecast { grid-template-columns:1fr; }
       .price-links,.signal-grid { grid-template-columns:1fr; }
+      .market-power-pulse { flex-wrap:wrap; gap:10px; }
+      .market-power-stats { margin-left:0; width:100%; justify-content:space-between; }
     }
   </style>
 </head>
@@ -278,6 +356,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
   <section class="page" id="markets">
     <div class="live-strip" id="live-strip" aria-label="Cotations en séance"></div>
     <div class="live-caption">Cotation indicative OANDA via TradingView, actualisée par le fournisseur en séance. Ce n’est pas le contrat Brent ICE. Vérifier l’heure et le délai chez le fournisseur avant toute décision.</div>
+    <div class="card market-power-pulse"><div><div class="eyebrow">POWER FR · REPÈRE DE MARCHÉ</div><h2>Électricité française</h2><p id="market-power-note">Prix day-ahead en attente.</p></div><div class="market-power-stats"><div><small>Livraison en cours</small><strong id="market-power-now">—</strong></div><div><small>Demain · moyenne</small><strong id="market-power-tomorrow">—</strong></div></div><a href="#power" data-open="power">Analyser ↗</a></div>
     <main class="market-grid">
       <section class="card chart">
         <div class="bar"><h2 id="market-chart-title">Brent · indicatif OANDA</h2><a id="market-chart-link" href="https://www.tradingview.com/symbols/BCOUSD/?exchange=OANDA" target="_blank" rel="noopener noreferrer">Ouvrir ↗</a></div>
@@ -327,37 +406,41 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
 
   <section class="page" id="power" hidden>
     <main class="workspace">
-      <div class="page-intro"><div><h1>Power · France</h1><p>Demande, mix et échanges physiques RTE ; prévisions J-1 ENTSO-E avec clé.</p></div><span class="stamp" id="power-updated">Instantané en attente</span></div>
-      <div class="power-head"><span class="badge" id="power-rte-status">RTE : collecte en attente</span><span class="badge" id="power-entsoe-status">ENTSO-E : clé en attente</span><span class="badge">Observations ≠ prix de marché</span></div>
+      <div class="page-intro power-intro"><div><div class="eyebrow">POWER INTELLIGENCE · FRANCE</div><h1>Le marché électrique, en clair.</h1><p>Prix de livraison, écarts européens et signaux physiques. Chaque chiffre porte sa source et sa date.</p></div><div class="power-actions"><span class="stamp" id="power-updated">Instantané en attente</span><button type="button" class="stamp" id="power-refresh">Rafraîchir ↻</button></div></div>
+      <div class="power-head"><span class="badge" id="power-price-status">Prix : vérification en cours</span><span class="badge" id="power-rte-status">RTE : collecte en attente</span><span class="badge" id="power-entsoe-status">ENTSO-E : collecte en attente</span></div>
+      <section class="power-lead" aria-label="Tableau de bord des prix">
+        <div class="card power-hero"><div class="eyebrow">FRANCE · DAY-AHEAD · CRÉNEAU LIVRÉ</div><strong id="power-now-value">—</strong><div class="power-unit">€/MWh</div><div id="power-now-delivery" class="power-hero-time">Période de livraison en attente</div><div id="power-now-delta" class="power-hero-delta">Prix fixé lors de l’enchère de la veille.</div></div>
+        <div class="price-grid" id="power-price-grid"></div>
+      </section>
+      <section class="card power-brief"><div class="power-section-header"><div><div class="eyebrow">SYNTHÈSE</div><h2>Ce qui change sur le marché</h2></div><span class="badge">Calculé à partir des publications</span></div><p id="power-market-takeaway">Lecture des prix en cours…</p><div id="power-market-evidence" class="power-brief-sub"></div></section>
+      <div class="power-alerts" id="power-alert-list" aria-label="Repères de marché calculés"></div>
+      <div class="power-analysis-layout">
+        <section class="card power-history-panel" id="power-prices-panel">
+          <div class="power-section-header"><div><div class="eyebrow">MARCHÉ DE GROS</div><h2>France vs DE-LU · enchère day-ahead</h2></div><span class="power-legend-inline"><i></i> France <i></i> DE-LU</span></div>
+          <p>Chaque point est le prix fixé la veille pour un créneau de livraison. L’échelle est commune aux deux marchés.</p>
+          <div class="power-controls" id="power-price-span" aria-label="Période des prix"></div>
+          <div class="power-price-chart" id="power-price-chart"><span class="empty">Collecte des prix en attente.</span></div>
+          <div class="power-meta" id="power-price-meta"></div>
+          <div id="power-price-hours" class="power-hours"></div>
+          <p class="power-source"><a href="https://www.energy-charts.info/charts/price_spot_market/chart.htm?c=FR" target="_blank" rel="noopener noreferrer">Fraunhofer ISE Energy-Charts ↗</a> · <span id="power-price-license">Licence vérifiée dans la réponse source.</span> Graphique et indicateurs recalculés ici.</p>
+        </section>
+        <aside class="power-insights">
+          <section class="card power-insight-card"><div class="eyebrow">LECTURE DES FACTEURS</div><h2>Pourquoi surveiller ces prix ?</h2><p>Les écarts ci-dessous sont des observations physiques. Ils éclairent le marché sans attribuer à eux seuls une variation de prix.</p><div id="power-driver-list"></div><p id="power-price-context"></p></section>
+          <section class="card power-insight-card"><div class="eyebrow">AUTRE MARCHÉ</div><h2>Intraday continu · France</h2><p class="power-intraday-empty">Prix ID1 / ID3 indisponible dans le cockpit</p><p>EPEX publie des indices intraday pour des produits de livraison précis. Une série continue réutilisable n’est pas fournie par notre flux ouvert. Le prix d’équilibrage RTE ne mesure pas ces transactions.</p><a href="https://www.epexspot.com/en/market-results" target="_blank" rel="noopener noreferrer">Consulter les résultats EPEX ↗</a></section>
+        </aside>
+      </div>
+      <section class="card power-history-panel"><div class="power-section-header"><div><div class="eyebrow">TRANSPARENCE</div><h2>Comment lire les variations</h2></div></div><p id="power-price-reading"></p><p>Une hausse du prix day-ahead de demain reflète l’enchère pour demain. Les mesures RTE ci-dessous décrivent des heures déjà écoulées ; les comparer permet de formuler des hypothèses, pas de prouver la cause d’un prix futur.</p></section>
+      <h2 class="power-chapter">Le système physique · observations RTE</h2>
       <div class="power-grid" id="power-grid"></div>
       <div class="power-layout">
-        <section class="card"><h2>Demande et demande résiduelle · 24 h</h2><p>Résiduelle indicative = consommation − production éolienne − solaire ; un indicateur de tension physique, pas une prévision de prix.</p><div id="power-curve" class="empty">Collecte RTE en attente.</div><div class="power-legend" id="power-axis"></div></section>
-        <section class="card"><h2>Production française · dernière observation</h2><p>Puissance par filière, en MW. Les parts portent sur la production affichée, pas sur la consommation.</p><div id="power-mix" class="empty">Collecte RTE en attente.</div><small id="power-mix-time" class="detail"></small></section>
+        <section class="card"><h2>Demande et résiduelle · 24 h</h2><p>Résiduelle indicative = consommation − éolien − solaire. Une valeur plus élevée peut solliciter des moyens pilotables.</p><div id="power-curve" class="empty">Collecte RTE en attente.</div><div class="power-legend" id="power-axis"></div></section>
+        <section class="card"><h2>Production française · dernière observation</h2><p>Puissance par filière en MW. L’échelle des barres montre la part de la production affichée.</p><div id="power-mix" class="empty">Collecte RTE en attente.</div><small id="power-mix-time" class="detail"></small></section>
       </div>
-      <section class="card power-history-panel">
-        <h2>Historique physique · RTE</h2>
-        <p>Observations horaires conservées au fil des collectes. Le choix « 1 an » montre uniquement la période réellement disponible ; les valeurs absentes ne sont pas reconstruites.</p>
-        <div class="power-controls" id="power-span" aria-label="Période du graphique"></div>
-        <div class="power-controls" id="power-series" aria-label="Mesure du graphique"></div>
-        <div class="power-history-chart" id="power-history-chart"><span class="empty">Historique RTE en attente.</span></div>
-        <div class="power-meta" id="power-history-meta"></div>
-        <p id="power-history-reading"></p>
-      </section>
-      <section class="card power-history-panel" id="power-prices-panel">
-        <h2>Prix Power · enchère day-ahead France / DE-LU</h2>
-        <p>Prix fixés la veille pour chaque période de livraison en €/MWh. France et Allemagne/Luxembourg partagent une échelle et une heure de livraison ; le graphique ne représente pas les transactions intraday en cours.</p>
-        <div class="price-grid" id="power-price-grid"></div>
-        <div class="power-controls" id="power-price-span" aria-label="Période des prix"></div>
-        <div class="power-price-chart" id="power-price-chart"><span class="empty">Collecte des prix en attente.</span></div>
-        <div class="power-meta" id="power-price-meta"></div>
-        <p id="power-price-reading"></p>
-        <p id="power-price-context"></p>
-        <p><a href="https://www.energy-charts.info/charts/price_spot_market/chart.htm?c=FR" target="_blank" rel="noopener noreferrer">Fraunhofer ISE Energy-Charts ↗</a> · <span id="power-price-license">Licence vérifiée dans la réponse source.</span> Graphiques et indicateurs recalculés ici.</p>
-      </section>
+      <section class="card power-history-panel"><div class="power-section-header"><div><div class="eyebrow">HISTORIQUE PHYSIQUE</div><h2>RTE · demande, gaz, renouvelables et échanges</h2></div></div><p>Observations horaires accumulées sans compléter les trous. « 1 an » affiche la période réellement collectée.</p><div class="power-controls" id="power-span" aria-label="Période du graphique"></div><div class="power-controls" id="power-series" aria-label="Mesure du graphique"></div><div class="power-history-chart" id="power-history-chart"><span class="empty">Historique RTE en attente.</span></div><div class="power-meta" id="power-history-meta"></div><p id="power-history-reading"></p></section>
       <div class="power-bottom">
         <section class="card"><h2>Pour surveiller le gaz et les échanges</h2><p id="power-readout">Le gaz électrique, l'éolien, le solaire et le solde d'import/export seront affichés après la première collecte RTE.</p><p>Un solde RTE négatif signifie une exportation nette ; positif, une importation nette. Les données sont des télémesures complétées d'estimations.</p><a href="https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/" target="_blank" rel="noopener noreferrer">Source RTE éCO2mix ↗</a></section>
         <section class="card"><h2>Demande anticipée · France et DE-LU</h2><p>Point haut prévu dans les prochaines 24 h, prévision day-ahead ENTSO-E sous licence CC BY 4.0. Chaque marché a sa taille : comparer la trajectoire, pas les niveaux bruts.</p><div class="power-forecast" id="power-forecast"></div><p id="power-forecast-note"></p><a href="https://transparency.entsoe.eu/" target="_blank" rel="noopener noreferrer">Transparence ENTSO-E ↗</a></section>
-        <section class="card"><h2>Intraday continu · France</h2><p>Le day-ahead ci-dessus est une enchère close la veille. Le marché intraday continu échange ensuite jusqu'à l'approche de la livraison. ENTSO-E rend le day-ahead obligatoire, mais l'intraday n'y est publié que volontairement ; nous n'avons pas de série française continue vérifiée et redistribuable. Le prix d'équilibrage RTE est encore un autre mécanisme.</p><p>Un spread day-ahead/intraday demande les deux prix pour la même période de livraison.</p><a href="https://www.epexspot.com/en/market-results" target="_blank" rel="noopener noreferrer">Résultats intraday EPEX ↗</a> · <a href="https://www.rte-france.com/en/data-publications/eco2mix/market-data" target="_blank" rel="noopener noreferrer">Marché RTE ↗</a></section>
+        <section class="card"><h2>Références de marché</h2><p>Prix day-ahead : enchère de la veille. Intraday continu : échanges ultérieurs du même créneau, avec indices ID1 / ID3. Prix d’équilibrage : règlement d’un mécanisme différent. Un spread exige des valeurs comparables et datées.</p><a href="https://www.epexspot.com/en/indices" target="_blank" rel="noopener noreferrer">Définitions EPEX ↗</a> · <a href="https://transparency.entsoe.eu/" target="_blank" rel="noopener noreferrer">Transparence ENTSO-E ↗</a></section>
         <section class="card"><h2>Méthode et qualité des mesures</h2><p><b>Observé provisoire</b> : RTE éCO2mix, dernier relevé de chaque heure UTC. <b>Calculé</b> : demande résiduelle = consommation − éolien − solaire ; ce calcul ne représente pas le dispatch réel d'une centrale ni un prix. Les trous de collecte restent visibles dans la courbe.</p><p>La couverture réelle, la date de mesure et l'heure de collecte sont affichées. Le fichier HTML embarque l'historique ; « Actualiser les données » le synchronise depuis GitHub si le réseau le permet.</p><p>Les jetons ENTSO-E et GIE restent dans les secrets GitHub.</p></section>
       </div>
     </main>
@@ -369,13 +452,6 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
   <script id="snapshot-data" type="application/json">
 {
   "calendar": [
-    {
-      "at": "2026-10-01T14:30:00+00:00",
-      "context": "Variation et écart à la moyenne cinq ans",
-      "day_only": false,
-      "title": "EIA · stockage gaz US",
-      "url": "https://ir.eia.gov/ngs/schedule.html"
-    },
     {
       "at": "2026-10-06T04:00:00+00:00",
       "context": "Date vérifiée ; horaire officiel non précisé",
@@ -587,9 +663,13 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "url": "https://ir.eia.gov/ngs/schedule.html"
     }
   ],
-  "generated_at": "2026-10-01T22:41:55+00:00",
+  "generated_at": "2026-10-02T09:52:39+00:00",
   "history": {
     "gas_eu": [
+      {
+        "date": "2025-02-08",
+        "value": 48.92
+      },
       {
         "date": "2025-02-09",
         "value": 48.38
@@ -2985,13 +3065,13 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       {
         "date": "2026-09-30",
         "value": 71.5
-      },
-      {
-        "date": "2026-10-01",
-        "value": 71.63
       }
     ],
     "gas_fr": [
+      {
+        "date": "2025-02-08",
+        "value": 30.29
+      },
       {
         "date": "2025-02-09",
         "value": 29.85
@@ -5387,13 +5467,13 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       {
         "date": "2026-09-30",
         "value": 83.77
-      },
-      {
-        "date": "2026-10-01",
-        "value": 84.03
       }
     ],
     "lng_eu_sendout": [
+      {
+        "date": "2026-09-17",
+        "value": 3661.0
+      },
       {
         "date": "2026-09-18",
         "value": 3873.1
@@ -5445,13 +5525,13 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       {
         "date": "2026-09-30",
         "value": 3560.6
-      },
-      {
-        "date": "2026-10-01",
-        "value": 3560.6
       }
     ],
     "lng_fr_sendout": [
+      {
+        "date": "2026-09-17",
+        "value": 920.0
+      },
       {
         "date": "2026-09-18",
         "value": 1052.8
@@ -5502,10 +5582,6 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       },
       {
         "date": "2026-09-30",
-        "value": 862.1
-      },
-      {
-        "date": "2026-10-01",
         "value": 862.1
       }
     ],
@@ -5617,10 +5693,6 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     ],
     "oil_prices": {
       "brent": [
-        {
-          "date": "2025-09-26",
-          "value": 71.15
-        },
         {
           "date": "2025-09-29",
           "value": 69.0
@@ -6640,10 +6712,6 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       ],
       "wti": [
         {
-          "date": "2025-09-26",
-          "value": 66.5
-        },
-        {
           "date": "2025-09-29",
           "value": 64.27
         },
@@ -7647,771 +7715,6 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "power_fr": [
       {
-        "at": "2026-09-30T22:30:00+00:00",
-        "bioenergies": 981,
-        "charbon": 0,
-        "ech_physiques": -2493,
-        "eolien": 5116,
-        "fioul": 36,
-        "gaz": 2915,
-        "hydraulique": 3319,
-        "load": 40718,
-        "nucleaire": 31308,
-        "pompage": -353,
-        "prevision_j": 41100,
-        "prevision_j1": 41100,
-        "solaire": 0,
-        "taux_co2": 40
-      },
-      {
-        "at": "2026-09-30T22:45:00+00:00",
-        "bioenergies": 984,
-        "charbon": 0,
-        "ech_physiques": -3221,
-        "eolien": 5033,
-        "fioul": 37,
-        "gaz": 2419,
-        "hydraulique": 3364,
-        "load": 39553,
-        "nucleaire": 31302,
-        "pompage": -355,
-        "prevision_j": 40300,
-        "prevision_j1": 40300,
-        "solaire": 0,
-        "taux_co2": 36
-      },
-      {
-        "at": "2026-09-30T23:00:00+00:00",
-        "bioenergies": 982,
-        "charbon": 0,
-        "ech_physiques": -3568,
-        "eolien": 4856,
-        "fioul": 37,
-        "gaz": 2425,
-        "hydraulique": 3447,
-        "load": 39033,
-        "nucleaire": 31322,
-        "pompage": -363,
-        "prevision_j": 39500,
-        "prevision_j1": 39500,
-        "solaire": 0,
-        "taux_co2": 36
-      },
-      {
-        "at": "2026-09-30T23:15:00+00:00",
-        "bioenergies": 982,
-        "charbon": 0,
-        "ech_physiques": -2870,
-        "eolien": 4479,
-        "fioul": 36,
-        "gaz": 2525,
-        "hydraulique": 3471,
-        "load": 39240,
-        "nucleaire": 31314,
-        "pompage": -688,
-        "prevision_j": 39250,
-        "prevision_j1": 39250,
-        "solaire": 0,
-        "taux_co2": 37
-      },
-      {
-        "at": "2026-09-30T23:30:00+00:00",
-        "bioenergies": 984,
-        "charbon": 0,
-        "ech_physiques": -3176,
-        "eolien": 4405,
-        "fioul": 37,
-        "gaz": 2443,
-        "hydraulique": 3427,
-        "load": 38738,
-        "nucleaire": 31336,
-        "pompage": -688,
-        "prevision_j": 39000,
-        "prevision_j1": 39000,
-        "solaire": 0,
-        "taux_co2": 37
-      },
-      {
-        "at": "2026-09-30T23:45:00+00:00",
-        "bioenergies": 985,
-        "charbon": 0,
-        "ech_physiques": -3052,
-        "eolien": 4094,
-        "fioul": 37,
-        "gaz": 2489,
-        "hydraulique": 3457,
-        "load": 38528,
-        "nucleaire": 31348,
-        "pompage": -849,
-        "prevision_j": 38650,
-        "prevision_j1": 38650,
-        "solaire": 0,
-        "taux_co2": 37
-      },
-      {
-        "at": "2026-10-01T00:00:00+00:00",
-        "bioenergies": 985,
-        "charbon": 0,
-        "ech_physiques": -3366,
-        "eolien": 3729,
-        "fioul": 36,
-        "gaz": 2565,
-        "hydraulique": 3416,
-        "load": 37839,
-        "nucleaire": 31356,
-        "pompage": -849,
-        "prevision_j": 38300,
-        "prevision_j1": 38300,
-        "solaire": 0,
-        "taux_co2": 38
-      },
-      {
-        "at": "2026-10-01T00:15:00+00:00",
-        "bioenergies": 984,
-        "charbon": 0,
-        "ech_physiques": -3868,
-        "eolien": 3683,
-        "fioul": 37,
-        "gaz": 2719,
-        "hydraulique": 3421,
-        "load": 37313,
-        "nucleaire": 31339,
-        "pompage": -1012,
-        "prevision_j": 37500,
-        "prevision_j1": 37500,
-        "solaire": 0,
-        "taux_co2": 40
-      },
-      {
-        "at": "2026-10-01T00:30:00+00:00",
-        "bioenergies": 986,
-        "charbon": 0,
-        "ech_physiques": -4773,
-        "eolien": 3570,
-        "fioul": 37,
-        "gaz": 3060,
-        "hydraulique": 3267,
-        "load": 36490,
-        "nucleaire": 31365,
-        "pompage": -1009,
-        "prevision_j": 36700,
-        "prevision_j1": 36700,
-        "solaire": 0,
-        "taux_co2": 43
-      },
-      {
-        "at": "2026-10-01T00:45:00+00:00",
-        "bioenergies": 987,
-        "charbon": 0,
-        "ech_physiques": -4981,
-        "eolien": 3539,
-        "fioul": 36,
-        "gaz": 3172,
-        "hydraulique": 2917,
-        "load": 35811,
-        "nucleaire": 31374,
-        "pompage": -1243,
-        "prevision_j": 36050,
-        "prevision_j1": 36050,
-        "solaire": 0,
-        "taux_co2": 44
-      },
-      {
-        "at": "2026-10-01T01:00:00+00:00",
-        "bioenergies": 987,
-        "charbon": 0,
-        "ech_physiques": -5449,
-        "eolien": 3651,
-        "fioul": 37,
-        "gaz": 3150,
-        "hydraulique": 2890,
-        "load": 35221,
-        "nucleaire": 31378,
-        "pompage": -1242,
-        "prevision_j": 35400,
-        "prevision_j1": 35400,
-        "solaire": 0,
-        "taux_co2": 44
-      },
-      {
-        "at": "2026-10-01T01:15:00+00:00",
-        "bioenergies": 982,
-        "charbon": 0,
-        "ech_physiques": -6058,
-        "eolien": 3608,
-        "fioul": 37,
-        "gaz": 3202,
-        "hydraulique": 2852,
-        "load": 34701,
-        "nucleaire": 31365,
-        "pompage": -1243,
-        "prevision_j": 35050,
-        "prevision_j1": 35050,
-        "solaire": 0,
-        "taux_co2": 45
-      },
-      {
-        "at": "2026-10-01T01:30:00+00:00",
-        "bioenergies": 987,
-        "charbon": 0,
-        "ech_physiques": -6234,
-        "eolien": 3740,
-        "fioul": 37,
-        "gaz": 3237,
-        "hydraulique": 2828,
-        "load": 34656,
-        "nucleaire": 31377,
-        "pompage": -1240,
-        "prevision_j": 34700,
-        "prevision_j1": 34700,
-        "solaire": 0,
-        "taux_co2": 45
-      },
-      {
-        "at": "2026-10-01T01:45:00+00:00",
-        "bioenergies": 991,
-        "charbon": 0,
-        "ech_physiques": -6183,
-        "eolien": 3760,
-        "fioul": 37,
-        "gaz": 3227,
-        "hydraulique": 2739,
-        "load": 34452,
-        "nucleaire": 31419,
-        "pompage": -1398,
-        "prevision_j": 34450,
-        "prevision_j1": 34450,
-        "solaire": 0,
-        "taux_co2": 45
-      },
-      {
-        "at": "2026-10-01T02:00:00+00:00",
-        "bioenergies": 987,
-        "charbon": 0,
-        "ech_physiques": -6280,
-        "eolien": 3791,
-        "fioul": 37,
-        "gaz": 3218,
-        "hydraulique": 2684,
-        "load": 34312,
-        "nucleaire": 31383,
-        "pompage": -1403,
-        "prevision_j": 34200,
-        "prevision_j1": 34200,
-        "solaire": 0,
-        "taux_co2": 45
-      },
-      {
-        "at": "2026-10-01T02:15:00+00:00",
-        "bioenergies": 988,
-        "charbon": 0,
-        "ech_physiques": -6311,
-        "eolien": 3948,
-        "fioul": 37,
-        "gaz": 3174,
-        "hydraulique": 2647,
-        "load": 34350,
-        "nucleaire": 31396,
-        "pompage": -1395,
-        "prevision_j": 34100,
-        "prevision_j1": 34100,
-        "solaire": 0,
-        "taux_co2": 44
-      },
-      {
-        "at": "2026-10-01T02:30:00+00:00",
-        "bioenergies": 995,
-        "charbon": 0,
-        "ech_physiques": -6645,
-        "eolien": 4157,
-        "fioul": 36,
-        "gaz": 3201,
-        "hydraulique": 2651,
-        "load": 34355,
-        "nucleaire": 31411,
-        "pompage": -1397,
-        "prevision_j": 34000,
-        "prevision_j1": 34000,
-        "solaire": 0,
-        "taux_co2": 44
-      },
-      {
-        "at": "2026-10-01T02:45:00+00:00",
-        "bioenergies": 988,
-        "charbon": 0,
-        "ech_physiques": -6583,
-        "eolien": 4190,
-        "fioul": 36,
-        "gaz": 3231,
-        "hydraulique": 2695,
-        "load": 34487,
-        "nucleaire": 31404,
-        "pompage": -1394,
-        "prevision_j": 34150,
-        "prevision_j1": 34150,
-        "solaire": 0,
-        "taux_co2": 45
-      },
-      {
-        "at": "2026-10-01T03:00:00+00:00",
-        "bioenergies": 985,
-        "charbon": 0,
-        "ech_physiques": -6253,
-        "eolien": 3961,
-        "fioul": 37,
-        "gaz": 3229,
-        "hydraulique": 2693,
-        "load": 34603,
-        "nucleaire": 31410,
-        "pompage": -1394,
-        "prevision_j": 34300,
-        "prevision_j1": 34300,
-        "solaire": 0,
-        "taux_co2": 45
-      },
-      {
-        "at": "2026-10-01T03:15:00+00:00",
-        "bioenergies": 986,
-        "charbon": 0,
-        "ech_physiques": -5826,
-        "eolien": 3759,
-        "fioul": 37,
-        "gaz": 3231,
-        "hydraulique": 2724,
-        "load": 35361,
-        "nucleaire": 31394,
-        "pompage": -881,
-        "prevision_j": 35200,
-        "prevision_j1": 35200,
-        "solaire": 0,
-        "taux_co2": 45
-      },
-      {
-        "at": "2026-10-01T03:30:00+00:00",
-        "bioenergies": 987,
-        "charbon": 0,
-        "ech_physiques": -5550,
-        "eolien": 3667,
-        "fioul": 37,
-        "gaz": 3224,
-        "hydraulique": 2714,
-        "load": 35782,
-        "nucleaire": 31404,
-        "pompage": -651,
-        "prevision_j": 36100,
-        "prevision_j1": 36100,
-        "solaire": 0,
-        "taux_co2": 45
-      },
-      {
-        "at": "2026-10-01T03:45:00+00:00",
-        "bioenergies": 987,
-        "charbon": 0,
-        "ech_physiques": -5173,
-        "eolien": 3813,
-        "fioul": 37,
-        "gaz": 3263,
-        "hydraulique": 2890,
-        "load": 36392,
-        "nucleaire": 31397,
-        "pompage": -651,
-        "prevision_j": 36950,
-        "prevision_j1": 36950,
-        "solaire": 0,
-        "taux_co2": 45
-      },
-      {
-        "at": "2026-10-01T04:00:00+00:00",
-        "bioenergies": 987,
-        "charbon": 0,
-        "ech_physiques": -4693,
-        "eolien": 3808,
-        "fioul": 37,
-        "gaz": 3536,
-        "hydraulique": 3134,
-        "load": 37392,
-        "nucleaire": 31390,
-        "pompage": -652,
-        "prevision_j": 37800,
-        "prevision_j1": 37800,
-        "solaire": 0,
-        "taux_co2": 47
-      },
-      {
-        "at": "2026-10-01T04:15:00+00:00",
-        "bioenergies": 985,
-        "charbon": 0,
-        "ech_physiques": -4565,
-        "eolien": 3667,
-        "fioul": 37,
-        "gaz": 3877,
-        "hydraulique": 3796,
-        "load": 38560,
-        "nucleaire": 31441,
-        "pompage": -648,
-        "prevision_j": 38800,
-        "prevision_j1": 38800,
-        "solaire": 0,
-        "taux_co2": 50
-      },
-      {
-        "at": "2026-10-01T04:30:00+00:00",
-        "bioenergies": 987,
-        "charbon": 0,
-        "ech_physiques": -3832,
-        "eolien": 3635,
-        "fioul": 37,
-        "gaz": 3929,
-        "hydraulique": 4010,
-        "load": 39567,
-        "nucleaire": 31435,
-        "pompage": -649,
-        "prevision_j": 39800,
-        "prevision_j1": 39800,
-        "solaire": 0,
-        "taux_co2": 50
-      },
-      {
-        "at": "2026-10-01T04:45:00+00:00",
-        "bioenergies": 987,
-        "charbon": 0,
-        "ech_physiques": -3225,
-        "eolien": 3538,
-        "fioul": 37,
-        "gaz": 3993,
-        "hydraulique": 4135,
-        "load": 40760,
-        "nucleaire": 31441,
-        "pompage": -162,
-        "prevision_j": 41250,
-        "prevision_j1": 41250,
-        "solaire": 0,
-        "taux_co2": 50
-      },
-      {
-        "at": "2026-10-01T05:00:00+00:00",
-        "bioenergies": 986,
-        "charbon": 0,
-        "ech_physiques": -2653,
-        "eolien": 3460,
-        "fioul": 36,
-        "gaz": 4127,
-        "hydraulique": 4331,
-        "load": 41737,
-        "nucleaire": 31443,
-        "pompage": 0,
-        "prevision_j": 42700,
-        "prevision_j1": 42700,
-        "solaire": 0,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T05:15:00+00:00",
-        "bioenergies": 983,
-        "charbon": 0,
-        "ech_physiques": -1224,
-        "eolien": 3458,
-        "fioul": 36,
-        "gaz": 4120,
-        "hydraulique": 4635,
-        "load": 43511,
-        "nucleaire": 31436,
-        "pompage": -1,
-        "prevision_j": 43600,
-        "prevision_j1": 43600,
-        "solaire": 0,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T05:30:00+00:00",
-        "bioenergies": 983,
-        "charbon": 0,
-        "ech_physiques": -658,
-        "eolien": 3391,
-        "fioul": 37,
-        "gaz": 4139,
-        "hydraulique": 4753,
-        "load": 44350,
-        "nucleaire": 31423,
-        "pompage": 0,
-        "prevision_j": 44500,
-        "prevision_j1": 44500,
-        "solaire": 181,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T05:45:00+00:00",
-        "bioenergies": 980,
-        "charbon": 0,
-        "ech_physiques": -329,
-        "eolien": 3320,
-        "fioul": 36,
-        "gaz": 4141,
-        "hydraulique": 4628,
-        "load": 44712,
-        "nucleaire": 31416,
-        "pompage": 0,
-        "prevision_j": 45050,
-        "prevision_j1": 45050,
-        "solaire": 183,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T06:00:00+00:00",
-        "bioenergies": 979,
-        "charbon": 0,
-        "ech_physiques": 741,
-        "eolien": 3228,
-        "fioul": 37,
-        "gaz": 4128,
-        "hydraulique": 4642,
-        "load": 45503,
-        "nucleaire": 31370,
-        "pompage": 0,
-        "prevision_j": 45600,
-        "prevision_j1": 45600,
-        "solaire": 279,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T06:15:00+00:00",
-        "bioenergies": 982,
-        "charbon": 0,
-        "ech_physiques": 572,
-        "eolien": 3184,
-        "fioul": 36,
-        "gaz": 4191,
-        "hydraulique": 4920,
-        "load": 46045,
-        "nucleaire": 31351,
-        "pompage": -1,
-        "prevision_j": 46050,
-        "prevision_j1": 46050,
-        "solaire": 471,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T06:30:00+00:00",
-        "bioenergies": 979,
-        "charbon": 0,
-        "ech_physiques": 763,
-        "eolien": 3135,
-        "fioul": 36,
-        "gaz": 4204,
-        "hydraulique": 4773,
-        "load": 46272,
-        "nucleaire": 31321,
-        "pompage": 0,
-        "prevision_j": 46500,
-        "prevision_j1": 46500,
-        "solaire": 717,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T06:45:00+00:00",
-        "bioenergies": 981,
-        "charbon": 0,
-        "ech_physiques": 1401,
-        "eolien": 3027,
-        "fioul": 36,
-        "gaz": 4209,
-        "hydraulique": 4705,
-        "load": 46881,
-        "nucleaire": 31146,
-        "pompage": 0,
-        "prevision_j": 46500,
-        "prevision_j1": 46500,
-        "solaire": 1041,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T07:00:00+00:00",
-        "bioenergies": 980,
-        "charbon": 0,
-        "ech_physiques": 1688,
-        "eolien": 3032,
-        "fioul": 36,
-        "gaz": 4210,
-        "hydraulique": 4597,
-        "load": 46958,
-        "nucleaire": 31003,
-        "pompage": 0,
-        "prevision_j": 46500,
-        "prevision_j1": 46500,
-        "solaire": 1394,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T07:15:00+00:00",
-        "bioenergies": 982,
-        "charbon": 0,
-        "ech_physiques": 2026,
-        "eolien": 2813,
-        "fioul": 36,
-        "gaz": 4194,
-        "hydraulique": 4267,
-        "load": 47347,
-        "nucleaire": 30957,
-        "pompage": -1,
-        "prevision_j": 46700,
-        "prevision_j1": 46700,
-        "solaire": 1971,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T07:30:00+00:00",
-        "bioenergies": 982,
-        "charbon": 0,
-        "ech_physiques": 2071,
-        "eolien": 2583,
-        "fioul": 36,
-        "gaz": 4262,
-        "hydraulique": 4371,
-        "load": 47918,
-        "nucleaire": 30837,
-        "pompage": -1,
-        "prevision_j": 46900,
-        "prevision_j1": 46900,
-        "solaire": 2762,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T07:45:00+00:00",
-        "bioenergies": 981,
-        "charbon": 0,
-        "ech_physiques": 1149,
-        "eolien": 2411,
-        "fioul": 36,
-        "gaz": 4350,
-        "hydraulique": 4694,
-        "load": 47833,
-        "nucleaire": 30734,
-        "pompage": -1,
-        "prevision_j": 47100,
-        "prevision_j1": 47100,
-        "solaire": 3470,
-        "taux_co2": 51
-      },
-      {
-        "at": "2026-10-01T08:00:00+00:00",
-        "bioenergies": 980,
-        "charbon": 0,
-        "ech_physiques": 1061,
-        "eolien": 2325,
-        "fioul": 36,
-        "gaz": 4262,
-        "hydraulique": 4426,
-        "load": 47970,
-        "nucleaire": 30687,
-        "pompage": -1,
-        "prevision_j": 47300,
-        "prevision_j1": 47300,
-        "solaire": 4190,
-        "taux_co2": 50
-      },
-      {
-        "at": "2026-10-01T08:15:00+00:00",
-        "bioenergies": 979,
-        "charbon": 0,
-        "ech_physiques": 944,
-        "eolien": 2213,
-        "fioul": 35,
-        "gaz": 4263,
-        "hydraulique": 3926,
-        "load": 48159,
-        "nucleaire": 30669,
-        "pompage": -1,
-        "prevision_j": 47550,
-        "prevision_j1": 47550,
-        "solaire": 5078,
-        "taux_co2": 50
-      },
-      {
-        "at": "2026-10-01T08:30:00+00:00",
-        "bioenergies": 978,
-        "charbon": 0,
-        "ech_physiques": 441,
-        "eolien": 2210,
-        "fioul": 37,
-        "gaz": 4256,
-        "hydraulique": 3725,
-        "load": 47972,
-        "nucleaire": 30689,
-        "pompage": -1,
-        "prevision_j": 47800,
-        "prevision_j1": 47800,
-        "solaire": 5645,
-        "taux_co2": 49
-      },
-      {
-        "at": "2026-10-01T08:45:00+00:00",
-        "bioenergies": 981,
-        "charbon": 0,
-        "ech_physiques": 354,
-        "eolien": 2217,
-        "fioul": 36,
-        "gaz": 4201,
-        "hydraulique": 3524,
-        "load": 48446,
-        "nucleaire": 30691,
-        "pompage": 0,
-        "prevision_j": 47850,
-        "prevision_j1": 47850,
-        "solaire": 6448,
-        "taux_co2": 48
-      },
-      {
-        "at": "2026-10-01T09:00:00+00:00",
-        "bioenergies": 980,
-        "charbon": 0,
-        "ech_physiques": 204,
-        "eolien": 2238,
-        "fioul": 36,
-        "gaz": 3892,
-        "hydraulique": 3386,
-        "load": 48479,
-        "nucleaire": 30709,
-        "pompage": -7,
-        "prevision_j": 47900,
-        "prevision_j1": 47900,
-        "solaire": 7042,
-        "taux_co2": 45
-      },
-      {
-        "at": "2026-10-01T09:15:00+00:00",
-        "bioenergies": 982,
-        "charbon": 0,
-        "ech_physiques": 629,
-        "eolien": 2265,
-        "fioul": 36,
-        "gaz": 3536,
-        "hydraulique": 3108,
-        "load": 48921,
-        "nucleaire": 30717,
-        "pompage": -40,
-        "prevision_j": 47900,
-        "prevision_j1": 47900,
-        "solaire": 7715,
-        "taux_co2": 42
-      },
-      {
-        "at": "2026-10-01T09:30:00+00:00",
-        "bioenergies": 982,
-        "charbon": 0,
-        "ech_physiques": 560,
-        "eolien": 2099,
-        "fioul": 35,
-        "gaz": 3236,
-        "hydraulique": 2993,
-        "load": 48738,
-        "nucleaire": 30732,
-        "pompage": -48,
-        "prevision_j": 47900,
-        "prevision_j1": 47900,
-        "solaire": 8228,
-        "taux_co2": 39
-      },
-      {
         "at": "2026-10-01T09:45:00+00:00",
         "bioenergies": 980,
         "charbon": 0,
@@ -9277,6 +8580,771 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         "prevision_j1": 40350,
         "solaire": 0,
         "taux_co2": 48
+      },
+      {
+        "at": "2026-10-01T22:30:00+00:00",
+        "bioenergies": 989,
+        "charbon": 0,
+        "ech_physiques": -937,
+        "eolien": 1593,
+        "fioul": 35,
+        "gaz": 3558,
+        "hydraulique": 4466,
+        "load": 40466,
+        "nucleaire": 30822,
+        "pompage": -56,
+        "prevision_j": 39600,
+        "prevision_j1": 39600,
+        "solaire": 0,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-01T22:45:00+00:00",
+        "bioenergies": 989,
+        "charbon": 0,
+        "ech_physiques": -1853,
+        "eolien": 1564,
+        "fioul": 35,
+        "gaz": 3470,
+        "hydraulique": 4255,
+        "load": 39313,
+        "nucleaire": 30914,
+        "pompage": -56,
+        "prevision_j": 38850,
+        "prevision_j1": 38850,
+        "solaire": 0,
+        "taux_co2": 48
+      },
+      {
+        "at": "2026-10-01T23:00:00+00:00",
+        "bioenergies": 992,
+        "charbon": 0,
+        "ech_physiques": -2355,
+        "eolien": 1554,
+        "fioul": 36,
+        "gaz": 3494,
+        "hydraulique": 4229,
+        "load": 38836,
+        "nucleaire": 30956,
+        "pompage": -58,
+        "prevision_j": 38100,
+        "prevision_j1": 38100,
+        "solaire": 0,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-01T23:15:00+00:00",
+        "bioenergies": 989,
+        "charbon": 0,
+        "ech_physiques": -1916,
+        "eolien": 1569,
+        "fioul": 35,
+        "gaz": 3613,
+        "hydraulique": 4080,
+        "load": 39031,
+        "nucleaire": 30946,
+        "pompage": -235,
+        "prevision_j": 38400,
+        "prevision_j1": 38400,
+        "solaire": 0,
+        "taux_co2": 50
+      },
+      {
+        "at": "2026-10-01T23:30:00+00:00",
+        "bioenergies": 992,
+        "charbon": 0,
+        "ech_physiques": -2482,
+        "eolien": 1561,
+        "fioul": 37,
+        "gaz": 3588,
+        "hydraulique": 4041,
+        "load": 38469,
+        "nucleaire": 30982,
+        "pompage": -245,
+        "prevision_j": 38700,
+        "prevision_j1": 38700,
+        "solaire": 0,
+        "taux_co2": 50
+      },
+      {
+        "at": "2026-10-01T23:45:00+00:00",
+        "bioenergies": 988,
+        "charbon": 0,
+        "ech_physiques": -2252,
+        "eolien": 1531,
+        "fioul": 36,
+        "gaz": 3601,
+        "hydraulique": 3931,
+        "load": 38480,
+        "nucleaire": 31056,
+        "pompage": -408,
+        "prevision_j": 37950,
+        "prevision_j1": 37950,
+        "solaire": 0,
+        "taux_co2": 50
+      },
+      {
+        "at": "2026-10-02T00:00:00+00:00",
+        "bioenergies": 990,
+        "charbon": 0,
+        "ech_physiques": -3038,
+        "eolien": 1490,
+        "fioul": 36,
+        "gaz": 3571,
+        "hydraulique": 3877,
+        "load": 37622,
+        "nucleaire": 31112,
+        "pompage": -408,
+        "prevision_j": 37200,
+        "prevision_j1": 37200,
+        "solaire": 0,
+        "taux_co2": 50
+      },
+      {
+        "at": "2026-10-02T00:15:00+00:00",
+        "bioenergies": 993,
+        "charbon": 0,
+        "ech_physiques": -2972,
+        "eolien": 1453,
+        "fioul": 37,
+        "gaz": 3515,
+        "hydraulique": 3436,
+        "load": 37387,
+        "nucleaire": 31136,
+        "pompage": -172,
+        "prevision_j": 36550,
+        "prevision_j1": 36550,
+        "solaire": 0,
+        "taux_co2": 50
+      },
+      {
+        "at": "2026-10-02T00:30:00+00:00",
+        "bioenergies": 992,
+        "charbon": 0,
+        "ech_physiques": -3249,
+        "eolien": 1442,
+        "fioul": 37,
+        "gaz": 3500,
+        "hydraulique": 3174,
+        "load": 36567,
+        "nucleaire": 30914,
+        "pompage": -190,
+        "prevision_j": 35900,
+        "prevision_j1": 35900,
+        "solaire": 0,
+        "taux_co2": 50
+      },
+      {
+        "at": "2026-10-02T00:45:00+00:00",
+        "bioenergies": 987,
+        "charbon": 0,
+        "ech_physiques": -3239,
+        "eolien": 1411,
+        "fioul": 37,
+        "gaz": 3544,
+        "hydraulique": 3036,
+        "load": 35829,
+        "nucleaire": 30648,
+        "pompage": -524,
+        "prevision_j": 35600,
+        "prevision_j1": 35400,
+        "solaire": 0,
+        "taux_co2": 51
+      },
+      {
+        "at": "2026-10-02T01:00:00+00:00",
+        "bioenergies": 988,
+        "charbon": 0,
+        "ech_physiques": -4036,
+        "eolien": 1359,
+        "fioul": 37,
+        "gaz": 3598,
+        "hydraulique": 2995,
+        "load": 35347,
+        "nucleaire": 31060,
+        "pompage": -524,
+        "prevision_j": 35300,
+        "prevision_j1": 34900,
+        "solaire": 0,
+        "taux_co2": 51
+      },
+      {
+        "at": "2026-10-02T01:15:00+00:00",
+        "bioenergies": 984,
+        "charbon": 0,
+        "ech_physiques": -4505,
+        "eolien": 1356,
+        "fioul": 37,
+        "gaz": 3620,
+        "hydraulique": 3001,
+        "load": 35200,
+        "nucleaire": 31292,
+        "pompage": -522,
+        "prevision_j": 34950,
+        "prevision_j1": 34550,
+        "solaire": 0,
+        "taux_co2": 51
+      },
+      {
+        "at": "2026-10-02T01:30:00+00:00",
+        "bioenergies": 986,
+        "charbon": 0,
+        "ech_physiques": -4526,
+        "eolien": 1341,
+        "fioul": 36,
+        "gaz": 3635,
+        "hydraulique": 2992,
+        "load": 34762,
+        "nucleaire": 30977,
+        "pompage": -585,
+        "prevision_j": 34600,
+        "prevision_j1": 34200,
+        "solaire": 0,
+        "taux_co2": 52
+      },
+      {
+        "at": "2026-10-02T01:45:00+00:00",
+        "bioenergies": 993,
+        "charbon": 0,
+        "ech_physiques": -4823,
+        "eolien": 1335,
+        "fioul": 37,
+        "gaz": 3637,
+        "hydraulique": 3002,
+        "load": 34462,
+        "nucleaire": 30987,
+        "pompage": -588,
+        "prevision_j": 34500,
+        "prevision_j1": 34050,
+        "solaire": 0,
+        "taux_co2": 52
+      },
+      {
+        "at": "2026-10-02T02:00:00+00:00",
+        "bioenergies": 990,
+        "charbon": 0,
+        "ech_physiques": -5004,
+        "eolien": 1356,
+        "fioul": 37,
+        "gaz": 3658,
+        "hydraulique": 2981,
+        "load": 34405,
+        "nucleaire": 31020,
+        "pompage": -588,
+        "prevision_j": 34400,
+        "prevision_j1": 33900,
+        "solaire": 0,
+        "taux_co2": 52
+      },
+      {
+        "at": "2026-10-02T02:15:00+00:00",
+        "bioenergies": 994,
+        "charbon": 0,
+        "ech_physiques": -4747,
+        "eolien": 1370,
+        "fioul": 37,
+        "gaz": 3579,
+        "hydraulique": 2907,
+        "load": 34321,
+        "nucleaire": 31089,
+        "pompage": -585,
+        "prevision_j": 34200,
+        "prevision_j1": 33750,
+        "solaire": 0,
+        "taux_co2": 51
+      },
+      {
+        "at": "2026-10-02T02:30:00+00:00",
+        "bioenergies": 989,
+        "charbon": 0,
+        "ech_physiques": -4987,
+        "eolien": 1409,
+        "fioul": 37,
+        "gaz": 3567,
+        "hydraulique": 2905,
+        "load": 34219,
+        "nucleaire": 31114,
+        "pompage": -585,
+        "prevision_j": 34000,
+        "prevision_j1": 33600,
+        "solaire": 0,
+        "taux_co2": 51
+      },
+      {
+        "at": "2026-10-02T02:45:00+00:00",
+        "bioenergies": 992,
+        "charbon": 0,
+        "ech_physiques": -4612,
+        "eolien": 1422,
+        "fioul": 37,
+        "gaz": 3527,
+        "hydraulique": 2946,
+        "load": 34534,
+        "nucleaire": 31117,
+        "pompage": -584,
+        "prevision_j": 34350,
+        "prevision_j1": 34000,
+        "solaire": 0,
+        "taux_co2": 51
+      },
+      {
+        "at": "2026-10-02T03:00:00+00:00",
+        "bioenergies": 992,
+        "charbon": 0,
+        "ech_physiques": -4594,
+        "eolien": 1485,
+        "fioul": 36,
+        "gaz": 3539,
+        "hydraulique": 2962,
+        "load": 34709,
+        "nucleaire": 31149,
+        "pompage": -584,
+        "prevision_j": 34700,
+        "prevision_j1": 34400,
+        "solaire": 0,
+        "taux_co2": 50
+      },
+      {
+        "at": "2026-10-02T03:15:00+00:00",
+        "bioenergies": 993,
+        "charbon": 0,
+        "ech_physiques": -5095,
+        "eolien": 1501,
+        "fioul": 37,
+        "gaz": 3653,
+        "hydraulique": 3282,
+        "load": 35166,
+        "nucleaire": 31178,
+        "pompage": -168,
+        "prevision_j": 35200,
+        "prevision_j1": 34950,
+        "solaire": 0,
+        "taux_co2": 51
+      },
+      {
+        "at": "2026-10-02T03:30:00+00:00",
+        "bioenergies": 996,
+        "charbon": 0,
+        "ech_physiques": -4783,
+        "eolien": 1580,
+        "fioul": 37,
+        "gaz": 3684,
+        "hydraulique": 3419,
+        "load": 35712,
+        "nucleaire": 31196,
+        "pompage": -168,
+        "prevision_j": 35700,
+        "prevision_j1": 35500,
+        "solaire": 0,
+        "taux_co2": 51
+      },
+      {
+        "at": "2026-10-02T03:45:00+00:00",
+        "bioenergies": 986,
+        "charbon": 0,
+        "ech_physiques": -4574,
+        "eolien": 1608,
+        "fioul": 37,
+        "gaz": 3776,
+        "hydraulique": 3590,
+        "load": 36477,
+        "nucleaire": 31264,
+        "pompage": -168,
+        "prevision_j": 36650,
+        "prevision_j1": 36500,
+        "solaire": 0,
+        "taux_co2": 52
+      },
+      {
+        "at": "2026-10-02T04:00:00+00:00",
+        "bioenergies": 987,
+        "charbon": 0,
+        "ech_physiques": -4128,
+        "eolien": 1616,
+        "fioul": 37,
+        "gaz": 3784,
+        "hydraulique": 3657,
+        "load": 37071,
+        "nucleaire": 31312,
+        "pompage": -168,
+        "prevision_j": 37600,
+        "prevision_j1": 37500,
+        "solaire": 0,
+        "taux_co2": 52
+      },
+      {
+        "at": "2026-10-02T04:15:00+00:00",
+        "bioenergies": 988,
+        "charbon": 0,
+        "ech_physiques": -2928,
+        "eolien": 1665,
+        "fioul": 37,
+        "gaz": 3810,
+        "hydraulique": 4010,
+        "load": 38550,
+        "nucleaire": 30912,
+        "pompage": 0,
+        "prevision_j": 38750,
+        "prevision_j1": 38650,
+        "solaire": 0,
+        "taux_co2": 52
+      },
+      {
+        "at": "2026-10-02T04:30:00+00:00",
+        "bioenergies": 989,
+        "charbon": 0,
+        "ech_physiques": -3182,
+        "eolien": 1711,
+        "fioul": 37,
+        "gaz": 3891,
+        "hydraulique": 5071,
+        "load": 39580,
+        "nucleaire": 30939,
+        "pompage": -1,
+        "prevision_j": 39900,
+        "prevision_j1": 39800,
+        "solaire": 0,
+        "taux_co2": 51
+      },
+      {
+        "at": "2026-10-02T04:45:00+00:00",
+        "bioenergies": 992,
+        "charbon": 0,
+        "ech_physiques": -3664,
+        "eolien": 1750,
+        "fioul": 37,
+        "gaz": 3931,
+        "hydraulique": 6638,
+        "load": 40563,
+        "nucleaire": 30871,
+        "pompage": 0,
+        "prevision_j": 41200,
+        "prevision_j1": 41150,
+        "solaire": 0,
+        "taux_co2": 50
+      },
+      {
+        "at": "2026-10-02T05:00:00+00:00",
+        "bioenergies": 988,
+        "charbon": 0,
+        "ech_physiques": -2406,
+        "eolien": 1774,
+        "fioul": 37,
+        "gaz": 3919,
+        "hydraulique": 6750,
+        "load": 41913,
+        "nucleaire": 30836,
+        "pompage": 0,
+        "prevision_j": 42500,
+        "prevision_j1": 42500,
+        "solaire": 0,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-02T05:15:00+00:00",
+        "bioenergies": 992,
+        "charbon": 0,
+        "ech_physiques": -1782,
+        "eolien": 1919,
+        "fioul": 37,
+        "gaz": 3940,
+        "hydraulique": 7266,
+        "load": 43394,
+        "nucleaire": 30851,
+        "pompage": 0,
+        "prevision_j": 43350,
+        "prevision_j1": 43400,
+        "solaire": 0,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-02T05:30:00+00:00",
+        "bioenergies": 990,
+        "charbon": 0,
+        "ech_physiques": -1782,
+        "eolien": 1949,
+        "fioul": 37,
+        "gaz": 3980,
+        "hydraulique": 7516,
+        "load": 44081,
+        "nucleaire": 30840,
+        "pompage": 0,
+        "prevision_j": 44200,
+        "prevision_j1": 44300,
+        "solaire": 166,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-02T05:45:00+00:00",
+        "bioenergies": 990,
+        "charbon": 0,
+        "ech_physiques": -1677,
+        "eolien": 1975,
+        "fioul": 37,
+        "gaz": 4051,
+        "hydraulique": 7629,
+        "load": 44435,
+        "nucleaire": 30854,
+        "pompage": 0,
+        "prevision_j": 44750,
+        "prevision_j1": 44900,
+        "solaire": 175,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-02T06:00:00+00:00",
+        "bioenergies": 994,
+        "charbon": 0,
+        "ech_physiques": -876,
+        "eolien": 2007,
+        "fioul": 37,
+        "gaz": 4058,
+        "hydraulique": 7462,
+        "load": 45200,
+        "nucleaire": 30861,
+        "pompage": 0,
+        "prevision_j": 45300,
+        "prevision_j1": 45500,
+        "solaire": 253,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-02T06:15:00+00:00",
+        "bioenergies": 989,
+        "charbon": 0,
+        "ech_physiques": -892,
+        "eolien": 2058,
+        "fioul": 37,
+        "gaz": 4062,
+        "hydraulique": 7800,
+        "load": 45817,
+        "nucleaire": 30879,
+        "pompage": 0,
+        "prevision_j": 45650,
+        "prevision_j1": 45850,
+        "solaire": 526,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-02T06:30:00+00:00",
+        "bioenergies": 983,
+        "charbon": 0,
+        "ech_physiques": -188,
+        "eolien": 2095,
+        "fioul": 36,
+        "gaz": 4065,
+        "hydraulique": 6990,
+        "load": 46113,
+        "nucleaire": 30841,
+        "pompage": 0,
+        "prevision_j": 46000,
+        "prevision_j1": 46200,
+        "solaire": 947,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-02T06:45:00+00:00",
+        "bioenergies": 991,
+        "charbon": 0,
+        "ech_physiques": -199,
+        "eolien": 2081,
+        "fioul": 36,
+        "gaz": 4065,
+        "hydraulique": 6434,
+        "load": 46108,
+        "nucleaire": 30856,
+        "pompage": 0,
+        "prevision_j": 46250,
+        "prevision_j1": 46450,
+        "solaire": 1524,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-02T07:00:00+00:00",
+        "bioenergies": 979,
+        "charbon": 0,
+        "ech_physiques": -32,
+        "eolien": 2111,
+        "fioul": 36,
+        "gaz": 4064,
+        "hydraulique": 6034,
+        "load": 46370,
+        "nucleaire": 30843,
+        "pompage": 0,
+        "prevision_j": 46500,
+        "prevision_j1": 46700,
+        "solaire": 2341,
+        "taux_co2": 49
+      },
+      {
+        "at": "2026-10-02T07:15:00+00:00",
+        "bioenergies": 977,
+        "charbon": 0,
+        "ech_physiques": -755,
+        "eolien": 2091,
+        "fioul": 36,
+        "gaz": 4049,
+        "hydraulique": 5846,
+        "load": 46484,
+        "nucleaire": 30824,
+        "pompage": 0,
+        "prevision_j": 46700,
+        "prevision_j1": 46900,
+        "solaire": 3213,
+        "taux_co2": 48
+      },
+      {
+        "at": "2026-10-02T07:30:00+00:00",
+        "bioenergies": 981,
+        "charbon": 0,
+        "ech_physiques": -314,
+        "eolien": 2025,
+        "fioul": 36,
+        "gaz": 4047,
+        "hydraulique": 5663,
+        "load": 46436,
+        "nucleaire": 29904,
+        "pompage": 0,
+        "prevision_j": 46900,
+        "prevision_j1": 47100,
+        "solaire": 4215,
+        "taux_co2": 48
+      },
+      {
+        "at": "2026-10-02T07:45:00+00:00",
+        "bioenergies": 985,
+        "charbon": 0,
+        "ech_physiques": -70,
+        "eolien": 1924,
+        "fioul": 36,
+        "gaz": 3848,
+        "hydraulique": 4661,
+        "load": 46376,
+        "nucleaire": 29911,
+        "pompage": 0,
+        "prevision_j": 46950,
+        "prevision_j1": 47150,
+        "solaire": 5283,
+        "taux_co2": 46
+      },
+      {
+        "at": "2026-10-02T08:00:00+00:00",
+        "bioenergies": 987,
+        "charbon": 0,
+        "ech_physiques": -1075,
+        "eolien": 1795,
+        "fioul": 36,
+        "gaz": 3873,
+        "hydraulique": 4480,
+        "load": 46371,
+        "nucleaire": 29869,
+        "pompage": 0,
+        "prevision_j": 47000,
+        "prevision_j1": 47200,
+        "solaire": 6521,
+        "taux_co2": 46
+      },
+      {
+        "at": "2026-10-02T08:15:00+00:00",
+        "bioenergies": 986,
+        "charbon": 0,
+        "ech_physiques": -1742,
+        "eolien": 1590,
+        "fioul": 36,
+        "gaz": 3963,
+        "hydraulique": 4366,
+        "load": 46742,
+        "nucleaire": 29885,
+        "pompage": -1,
+        "prevision_j": 47100,
+        "prevision_j1": 47300,
+        "solaire": 7718,
+        "taux_co2": 46
+      },
+      {
+        "at": "2026-10-02T08:30:00+00:00",
+        "bioenergies": 983,
+        "charbon": 0,
+        "ech_physiques": -2526,
+        "eolien": 1384,
+        "fioul": 37,
+        "gaz": 3990,
+        "hydraulique": 4102,
+        "load": 46549,
+        "nucleaire": 29861,
+        "pompage": -1,
+        "prevision_j": 47200,
+        "prevision_j1": 47400,
+        "solaire": 8781,
+        "taux_co2": 45
+      },
+      {
+        "at": "2026-10-02T08:45:00+00:00",
+        "bioenergies": 985,
+        "charbon": 0,
+        "ech_physiques": -3241,
+        "eolien": 1229,
+        "fioul": 36,
+        "gaz": 3912,
+        "hydraulique": 4050,
+        "load": 46629,
+        "nucleaire": 29880,
+        "pompage": -1,
+        "prevision_j": 47200,
+        "prevision_j1": 47400,
+        "solaire": 9825,
+        "taux_co2": 44
+      },
+      {
+        "at": "2026-10-02T09:00:00+00:00",
+        "bioenergies": 982,
+        "charbon": 0,
+        "ech_physiques": -4019,
+        "eolien": 1128,
+        "fioul": 37,
+        "gaz": 3682,
+        "hydraulique": 3717,
+        "load": 46273,
+        "nucleaire": 29931,
+        "pompage": 0,
+        "prevision_j": 47200,
+        "prevision_j1": 47400,
+        "solaire": 10868,
+        "taux_co2": 42
+      },
+      {
+        "at": "2026-10-02T09:15:00+00:00",
+        "bioenergies": 984,
+        "charbon": 0,
+        "ech_physiques": -3017,
+        "eolien": 1108,
+        "fioul": 37,
+        "gaz": 3482,
+        "hydraulique": 2906,
+        "load": 46810,
+        "nucleaire": 29978,
+        "pompage": -180,
+        "prevision_j": 47250,
+        "prevision_j1": 47450,
+        "solaire": 11667,
+        "taux_co2": 40
+      },
+      {
+        "at": "2026-10-02T09:30:00+00:00",
+        "bioenergies": 985,
+        "charbon": 0,
+        "ech_physiques": -3278,
+        "eolien": 1153,
+        "fioul": 36,
+        "gaz": 3297,
+        "hydraulique": 2864,
+        "load": 46705,
+        "nucleaire": 30040,
+        "pompage": -530,
+        "prevision_j": 47300,
+        "prevision_j1": 47500,
+        "solaire": 12422,
+        "taux_co2": 38
       }
     ]
   },
@@ -9659,151 +9727,151 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "value": 3.18
     },
     {
-      "as_of": "2026-10-01",
-      "change": -1245,
+      "as_of": "2026-10-02",
+      "change": 156,
       "comparison": "vs ~1 h",
-      "detail": "Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_load",
       "label": "Demande France",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 41717
+      "value": 46705
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-10-02",
       "change": null,
       "comparison": "export si négatif · import si positif",
-      "detail": "Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_exchange",
       "label": "Solde des échanges physiques",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 399
+      "value": -3278
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-10-02",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_nucleaire",
       "label": "Nucléaire",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 30811
+      "value": 30040
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-10-02",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_gaz",
       "label": "Gaz électrique",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 3491
+      "value": 3297
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-10-02",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_eolien",
       "label": "Éolien",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 1583
+      "value": 1153
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-10-02",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_solaire",
       "label": "Solaire",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 0
+      "value": 12422
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-10-02",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_hydraulique",
       "label": "Hydraulique",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 4455
+      "value": 2864
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-10-02",
       "change": null,
       "comparison": "production observée",
-      "detail": "Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_bioenergies",
       "label": "Bioénergies",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 989
+      "value": 985
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-10-02",
       "change": null,
       "comparison": "demande − éolien − solaire",
-      "detail": "Calcul indicatif, sans jugement sur le prix ni l'appel au gaz. Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Calcul indicatif, sans jugement sur le prix ni l'appel au gaz. Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_residual",
       "label": "Demande résiduelle indicative",
       "sector": "power",
       "source": "Calcul sur RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 40134
+      "value": 33130
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-10-02",
       "change": null,
       "comparison": "production française",
-      "detail": "Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_carbon",
       "label": "Intensité CO₂ estimée",
       "sector": "power",
       "source": "RTE éCO2mix",
       "unit": "g/kWh",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 48
+      "value": 38
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-10-02",
       "change": null,
       "comparison": "réalisé − prévision réactualisée le jour même",
-      "detail": "Observation 2026-10-01T22:15:00+00:00 UTC",
+      "detail": "Observation 2026-10-02T09:30:00+00:00 UTC",
       "id": "power_load_gap",
       "label": "Écart à prévision de demande J",
       "sector": "power",
       "source": "Calcul sur RTE éCO2mix",
       "unit": "MW",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/",
-      "value": 1367
+      "value": -595
     },
     {
-      "as_of": "2026-10-01",
-      "change": 0.13,
+      "as_of": "2026-09-30",
+      "change": -0.04,
       "comparison": "points vs veille",
       "detail": "Estimé par les opérateurs",
       "id": "gas_eu",
@@ -9812,11 +9880,11 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "source": "GIE AGSI+",
       "unit": "%",
       "url": "https://agsi.gie.eu/",
-      "value": 71.63
+      "value": 71.5
     },
     {
-      "as_of": "2026-10-01",
-      "change": 1.426,
+      "as_of": "2026-09-30",
+      "change": -0.457,
       "comparison": "vs veille",
       "detail": "Estimé par les opérateurs",
       "id": "gas_eu_twh",
@@ -9825,10 +9893,10 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "source": "GIE AGSI+",
       "unit": "TWh",
       "url": "https://agsi.gie.eu/",
-      "value": 810.569
+      "value": 809.143
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-09-30",
       "change": null,
       "comparison": "positif = soutirage ; négatif = injection",
       "detail": "Estimé par les opérateurs",
@@ -9838,39 +9906,39 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "source": "GIE AGSI+",
       "unit": "GWh/j",
       "url": "https://agsi.gie.eu/",
-      "value": -1425.8
+      "value": -1483.8
     },
     {
-      "as_of": "2026-10-01",
-      "change": 0.26,
+      "as_of": "2026-09-30",
+      "change": 0.29,
       "comparison": "points vs veille",
-      "detail": "Estimé par les opérateurs",
+      "detail": "Déclaré par les opérateurs",
       "id": "gas_fr",
       "label": "Stockage gaz France · remplissage",
       "sector": "gas",
       "source": "GIE AGSI+",
       "unit": "%",
       "url": "https://agsi.gie.eu/",
-      "value": 84.03
+      "value": 83.77
     },
     {
-      "as_of": "2026-10-01",
-      "change": 0.33,
+      "as_of": "2026-09-30",
+      "change": 0.361,
       "comparison": "vs veille",
-      "detail": "Estimé par les opérateurs",
+      "detail": "Déclaré par les opérateurs",
       "id": "gas_fr_twh",
       "label": "Gaz stocké France",
       "sector": "gas",
       "source": "GIE AGSI+",
       "unit": "TWh",
       "url": "https://agsi.gie.eu/",
-      "value": 104.099
+      "value": 103.769
     },
     {
-      "as_of": "2026-10-01",
+      "as_of": "2026-09-30",
       "change": null,
       "comparison": "positif = soutirage ; négatif = injection",
-      "detail": "Estimé par les opérateurs",
+      "detail": "Déclaré par les opérateurs",
       "id": "gas_fr_net",
       "label": "Soutirage net France",
       "sector": "gas",
@@ -9880,8 +9948,8 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "value": -329.8
     },
     {
-      "as_of": "2026-10-01",
-      "change": 0.0,
+      "as_of": "2026-09-30",
+      "change": 25.24,
       "comparison": "vs veille",
       "detail": "Estimé par les opérateurs",
       "id": "lng_eu_inventory",
@@ -9893,8 +9961,8 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "value": 4010.87
     },
     {
-      "as_of": "2026-10-01",
-      "change": 0.0,
+      "as_of": "2026-09-30",
+      "change": 176.7,
       "comparison": "vs veille",
       "detail": "Estimé par les opérateurs",
       "id": "lng_eu_sendout",
@@ -9906,8 +9974,8 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "value": 3560.6
     },
     {
-      "as_of": "2026-10-01",
-      "change": 0.0,
+      "as_of": "2026-09-30",
+      "change": -32.68,
       "comparison": "vs veille",
       "detail": "Estimé par les opérateurs",
       "id": "lng_fr_inventory",
@@ -9919,8 +9987,8 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "value": 596.55
     },
     {
-      "as_of": "2026-10-01",
-      "change": 0.0,
+      "as_of": "2026-09-30",
+      "change": -21.2,
       "comparison": "vs veille",
       "detail": "Estimé par les opérateurs",
       "id": "lng_fr_sendout",
@@ -9948,14 +10016,14 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       "as_of": "2026-10-02",
       "change": null,
       "comparison": "prévision J-1, 24 h glissantes",
-      "detail": "Pic prévu à 2026-10-02T08:15:00+00:00 UTC",
+      "detail": "Pic prévu à 2026-10-02T10:00:00+00:00 UTC",
       "id": "power_forecast_de",
       "label": "Pic prévu 24 h · Allemagne/Luxembourg",
       "sector": "power",
       "source": "ENTSO-E · prévision J-1",
       "unit": "MW",
       "url": "https://transparency.entsoe.eu/",
-      "value": 61723
+      "value": 60202
     },
     {
       "as_of": "2026-09-28",
@@ -10026,62 +10094,62 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
   "schema": 3,
   "sources": {
     "alsi": {
-      "as_of": "2026-10-01",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "as_of": "2026-09-30",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://alsi.gie.eu/"
     },
     "alsi_fr": {
-      "as_of": "2026-10-01",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "as_of": "2026-09-30",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://alsi.gie.eu/"
     },
     "brent": {
       "as_of": "2026-09-29",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     },
     "crop_progress": {
       "as_of": "2026-09-28",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://esmis.nal.usda.gov/sites/default/release-files/796082/prog3926.txt"
     },
     "entsoe_de": {
-      "as_of": "2026-10-02T08:15:00+00:00",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "as_of": "2026-10-02T10:00:00+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://transparency.entsoe.eu/"
     },
     "entsoe_fr": {
       "as_of": "2026-10-02T11:00:00+00:00",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://transparency.entsoe.eu/"
     },
     "gas": {
       "as_of": "2026-09-25",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://ir.eia.gov/ngs/ngs.html"
     },
     "gie": {
-      "as_of": "2026-10-01",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "as_of": "2026-09-30",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://agsi.gie.eu/"
     },
     "gie_fr": {
-      "as_of": "2026-10-01",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "as_of": "2026-09-30",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://agsi.gie.eu/"
     },
     "henry": {
       "as_of": "2026-09-29",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/ng/NG_PRI_FUT_S1_D.htm"
     },
@@ -10092,7 +10160,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "news": {
       "as_of": "2026-09-30",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/rss/todayinenergy.xml"
     },
@@ -10104,33 +10172,33 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "oil": {
       "as_of": "2026-09-25",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_flows": {
       "as_of": "2026-09-25",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_history": {
       "as_of": "2026-09-25",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "published": "2026-09-30",
       "status": "ok",
       "url": "https://www.eia.gov/petroleum/supply/weekly/"
     },
     "oil_price_history": {
       "as_of": "2026-09-29",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "provenance": "EIA · miroir datasets/oil-prices",
       "status": "ok",
       "url": "https://github.com/datasets/oil-prices"
     },
     "power_price_de": {
       "as_of": "2026-10-02T21:45:00+00:00",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "licence": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de",
       "provenance": "Fraunhofer ISE Energy-Charts · day-ahead",
       "status": "ok",
@@ -10138,28 +10206,28 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
     },
     "power_price_fr": {
       "as_of": "2026-10-02T21:45:00+00:00",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "licence": "CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de",
       "provenance": "Fraunhofer ISE Energy-Charts · day-ahead",
       "status": "ok",
       "url": "https://www.energy-charts.info/charts/price_spot_market/chart.htm?c=FR"
     },
     "rte_power": {
-      "as_of": "2026-10-01T22:15:00+00:00",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "as_of": "2026-10-02T09:30:00+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/"
     },
     "wasde": {
       "as_of": "2026-09",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "message": "Dernière donnée conservée ; source indisponible.",
       "status": "error",
       "url": "https://www.usda.gov/oce/commodity/wasde/wasde0926.txt"
     },
     "wti": {
       "as_of": "2026-09-29",
-      "checked_at": "2026-10-01T22:41:55+00:00",
+      "checked_at": "2026-10-02T09:52:39+00:00",
       "status": "ok",
       "url": "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
     }
@@ -10225,10 +10293,10 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
 }
 </script>
   <script id="power-history-data" type="application/json">
-{"schema":1,"source":"RTE éCO2mix national temps réel","url":"https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/","quality":"observé provisoire · un relevé par heure UTC","generated_at":"2026-10-01T22:41:55+00:00","first_at":"2026-09-20T07:45:00+00:00","last_at":"2026-10-01T22:15:00+00:00","points":[{"at":"2026-09-20T07:45:00+00:00","load":36025,"nucleaire":29829,"gaz":500,"eolien":2997,"solaire":7923,"hydraulique":1416,"bioenergies":958,"charbon":0,"fioul":33,"ech_physiques":-5492},{"at":"2026-09-20T08:45:00+00:00","load":38871,"nucleaire":29547,"gaz":501,"eolien":2047,"solaire":9922,"hydraulique":1479,"bioenergies":963,"charbon":0,"fioul":35,"ech_physiques":-4670},{"at":"2026-09-20T09:45:00+00:00","load":40689,"nucleaire":28030,"gaz":500,"eolien":1418,"solaire":11731,"hydraulique":1322,"bioenergies":964,"charbon":0,"fioul":33,"ech_physiques":-1268},{"at":"2026-09-20T10:45:00+00:00","load":41846,"nucleaire":28134,"gaz":500,"eolien":1169,"solaire":11673,"hydraulique":1404,"bioenergies":967,"charbon":0,"fioul":33,"ech_physiques":-180},{"at":"2026-09-20T11:45:00+00:00","load":39522,"nucleaire":28324,"gaz":500,"eolien":1148,"solaire":12532,"hydraulique":1323,"bioenergies":970,"charbon":0,"fioul":33,"ech_physiques":-2692},{"at":"2026-09-20T12:45:00+00:00","load":39673,"nucleaire":28790,"gaz":496,"eolien":1150,"solaire":11886,"hydraulique":1260,"bioenergies":967,"charbon":0,"fioul":33,"ech_physiques":-2453},{"at":"2026-09-20T13:45:00+00:00","load":38997,"nucleaire":29659,"gaz":490,"eolien":1176,"solaire":10663,"hydraulique":1338,"bioenergies":967,"charbon":0,"fioul":33,"ech_physiques":-3117},{"at":"2026-09-20T14:45:00+00:00","load":38550,"nucleaire":29922,"gaz":499,"eolien":3321,"solaire":12748,"hydraulique":1861,"bioenergies":968,"charbon":0,"fioul":33,"ech_physiques":-8135},{"at":"2026-09-20T15:45:00+00:00","load":39191,"nucleaire":32201,"gaz":494,"eolien":3292,"solaire":7921,"hydraulique":2192,"bioenergies":961,"charbon":0,"fioul":33,"ech_physiques":-6448},{"at":"2026-09-20T16:45:00+00:00","load":41609,"nucleaire":35421,"gaz":1065,"eolien":2833,"solaire":3218,"hydraulique":3317,"bioenergies":962,"charbon":0,"fioul":34,"ech_physiques":-5214},{"at":"2026-09-20T17:45:00+00:00","load":43046,"nucleaire":35677,"gaz":1476,"eolien":2526,"solaire":538,"hydraulique":5257,"bioenergies":961,"charbon":0,"fioul":37,"ech_physiques":-3837},{"at":"2026-09-20T18:45:00+00:00","load":42371,"nucleaire":35876,"gaz":1496,"eolien":3034,"solaire":218,"hydraulique":5231,"bioenergies":958,"charbon":0,"fioul":35,"ech_physiques":-4801},{"at":"2026-09-20T19:45:00+00:00","load":39936,"nucleaire":36019,"gaz":1501,"eolien":3215,"solaire":0,"hydraulique":3738,"bioenergies":962,"charbon":0,"fioul":35,"ech_physiques":-5423},{"at":"2026-09-20T20:45:00+00:00","load":40364,"nucleaire":36062,"gaz":1544,"eolien":3302,"solaire":0,"hydraulique":4301,"bioenergies":958,"charbon":0,"fioul":35,"ech_physiques":-5378},{"at":"2026-09-20T21:45:00+00:00","load":40445,"nucleaire":37084,"gaz":1626,"eolien":3026,"solaire":0,"hydraulique":3226,"bioenergies":965,"charbon":0,"fioul":35,"ech_physiques":-5522},{"at":"2026-09-20T22:45:00+00:00","load":36809,"nucleaire":37165,"gaz":805,"eolien":2888,"solaire":0,"hydraulique":3217,"bioenergies":967,"charbon":0,"fioul":34,"ech_physiques":-8279},{"at":"2026-09-20T23:45:00+00:00","load":36085,"nucleaire":37180,"gaz":472,"eolien":2925,"solaire":0,"hydraulique":2744,"bioenergies":970,"charbon":0,"fioul":33,"ech_physiques":-8204},{"at":"2026-09-21T00:45:00+00:00","load":33681,"nucleaire":37177,"gaz":485,"eolien":2833,"solaire":0,"hydraulique":2387,"bioenergies":977,"charbon":0,"fioul":35,"ech_physiques":-9920},{"at":"2026-09-21T01:45:00+00:00","load":32352,"nucleaire":37063,"gaz":490,"eolien":2748,"solaire":0,"hydraulique":2247,"bioenergies":973,"charbon":0,"fioul":33,"ech_physiques":-10292},{"at":"2026-09-21T02:45:00+00:00","load":32402,"nucleaire":37190,"gaz":669,"eolien":2690,"solaire":0,"hydraulique":2320,"bioenergies":970,"charbon":0,"fioul":35,"ech_physiques":-11014},{"at":"2026-09-21T03:45:00+00:00","load":35055,"nucleaire":37181,"gaz":1161,"eolien":2449,"solaire":0,"hydraulique":3254,"bioenergies":967,"charbon":0,"fioul":37,"ech_physiques":-9823},{"at":"2026-09-21T04:45:00+00:00","load":39329,"nucleaire":37337,"gaz":2124,"eolien":2342,"solaire":0,"hydraulique":5292,"bioenergies":961,"charbon":0,"fioul":37,"ech_physiques":-8807},{"at":"2026-09-21T05:45:00+00:00","load":43271,"nucleaire":37355,"gaz":3121,"eolien":2397,"solaire":308,"hydraulique":7593,"bioenergies":968,"charbon":0,"fioul":328,"ech_physiques":-9217},{"at":"2026-09-21T06:45:00+00:00","load":44945,"nucleaire":37327,"gaz":3242,"eolien":2420,"solaire":2625,"hydraulique":6133,"bioenergies":968,"charbon":0,"fioul":352,"ech_physiques":-8395},{"at":"2026-09-21T07:45:00+00:00","load":45824,"nucleaire":37233,"gaz":1722,"eolien":1886,"solaire":7401,"hydraulique":4058,"bioenergies":960,"charbon":0,"fioul":37,"ech_physiques":-7454},{"at":"2026-09-21T08:45:00+00:00","load":46549,"nucleaire":37109,"gaz":783,"eolien":1711,"solaire":12802,"hydraulique":2941,"bioenergies":954,"charbon":0,"fioul":37,"ech_physiques":-8394},{"at":"2026-09-21T09:45:00+00:00","load":47199,"nucleaire":36506,"gaz":546,"eolien":1926,"solaire":16583,"hydraulique":2307,"bioenergies":951,"charbon":0,"fioul":36,"ech_physiques":-9798},{"at":"2026-09-21T10:45:00+00:00","load":47489,"nucleaire":34252,"gaz":317,"eolien":2091,"solaire":18601,"hydraulique":2136,"bioenergies":953,"charbon":0,"fioul":37,"ech_physiques":-8913},{"at":"2026-09-21T11:45:00+00:00","load":46132,"nucleaire":34065,"gaz":344,"eolien":2181,"solaire":19160,"hydraulique":2182,"bioenergies":963,"charbon":0,"fioul":37,"ech_physiques":-10590},{"at":"2026-09-21T12:45:00+00:00","load":46737,"nucleaire":33888,"gaz":396,"eolien":2350,"solaire":18198,"hydraulique":2008,"bioenergies":956,"charbon":0,"fioul":37,"ech_physiques":-9050},{"at":"2026-09-21T13:45:00+00:00","load":45306,"nucleaire":34095,"gaz":436,"eolien":2363,"solaire":16845,"hydraulique":1912,"bioenergies":957,"charbon":0,"fioul":36,"ech_physiques":-9548},{"at":"2026-09-21T14:45:00+00:00","load":44917,"nucleaire":35071,"gaz":454,"eolien":2746,"solaire":13709,"hydraulique":2826,"bioenergies":957,"charbon":0,"fioul":36,"ech_physiques":-9507},{"at":"2026-09-21T15:45:00+00:00","load":45056,"nucleaire":36422,"gaz":1591,"eolien":3244,"solaire":8907,"hydraulique":4058,"bioenergies":956,"charbon":0,"fioul":35,"ech_physiques":-10337},{"at":"2026-09-21T16:45:00+00:00","load":47409,"nucleaire":36425,"gaz":3480,"eolien":3655,"solaire":3658,"hydraulique":7569,"bioenergies":959,"charbon":0,"fioul":35,"ech_physiques":-8555},{"at":"2026-09-21T17:45:00+00:00","load":48103,"nucleaire":36371,"gaz":3693,"eolien":3185,"solaire":511,"hydraulique":7716,"bioenergies":956,"charbon":0,"fioul":35,"ech_physiques":-4407},{"at":"2026-09-21T18:45:00+00:00","load":45774,"nucleaire":36321,"gaz":3833,"eolien":3775,"solaire":200,"hydraulique":7623,"bioenergies":956,"charbon":0,"fioul":35,"ech_physiques":-7334},{"at":"2026-09-21T19:45:00+00:00","load":42691,"nucleaire":36812,"gaz":4124,"eolien":4337,"solaire":0,"hydraulique":6996,"bioenergies":959,"charbon":0,"fioul":36,"ech_physiques":-10296},{"at":"2026-09-21T20:45:00+00:00","load":43441,"nucleaire":37196,"gaz":3795,"eolien":4179,"solaire":0,"hydraulique":5451,"bioenergies":958,"charbon":0,"fioul":36,"ech_physiques":-8171},{"at":"2026-09-21T21:45:00+00:00","load":41864,"nucleaire":37296,"gaz":2861,"eolien":4355,"solaire":0,"hydraulique":3767,"bioenergies":962,"charbon":0,"fioul":36,"ech_physiques":-7280},{"at":"2026-09-21T22:45:00+00:00","load":38810,"nucleaire":37315,"gaz":3006,"eolien":4384,"solaire":0,"hydraulique":3451,"bioenergies":958,"charbon":0,"fioul":35,"ech_physiques":-10386},{"at":"2026-09-21T23:45:00+00:00","load":37667,"nucleaire":37369,"gaz":2029,"eolien":4136,"solaire":0,"hydraulique":3211,"bioenergies":964,"charbon":0,"fioul":37,"ech_physiques":-9903},{"at":"2026-09-22T00:45:00+00:00","load":35453,"nucleaire":37416,"gaz":1854,"eolien":4095,"solaire":0,"hydraulique":2846,"bioenergies":959,"charbon":0,"fioul":36,"ech_physiques":-11669},{"at":"2026-09-22T01:45:00+00:00","load":33906,"nucleaire":37353,"gaz":1920,"eolien":3980,"solaire":0,"hydraulique":2924,"bioenergies":942,"charbon":0,"fioul":37,"ech_physiques":-12962},{"at":"2026-09-22T02:45:00+00:00","load":33816,"nucleaire":37515,"gaz":1882,"eolien":3831,"solaire":0,"hydraulique":3044,"bioenergies":945,"charbon":0,"fioul":37,"ech_physiques":-13386},{"at":"2026-09-22T03:45:00+00:00","load":35811,"nucleaire":37554,"gaz":2235,"eolien":3913,"solaire":0,"hydraulique":3647,"bioenergies":947,"charbon":0,"fioul":37,"ech_physiques":-12473},{"at":"2026-09-22T04:45:00+00:00","load":40670,"nucleaire":37556,"gaz":3140,"eolien":3892,"solaire":0,"hydraulique":5623,"bioenergies":942,"charbon":0,"fioul":37,"ech_physiques":-10525},{"at":"2026-09-22T05:45:00+00:00","load":43892,"nucleaire":37581,"gaz":3819,"eolien":3777,"solaire":277,"hydraulique":7845,"bioenergies":940,"charbon":0,"fioul":37,"ech_physiques":-10696},{"at":"2026-09-22T06:45:00+00:00","load":45214,"nucleaire":37549,"gaz":3835,"eolien":3449,"solaire":3026,"hydraulique":6808,"bioenergies":964,"charbon":0,"fioul":36,"ech_physiques":-10803},{"at":"2026-09-22T07:45:00+00:00","load":45921,"nucleaire":37335,"gaz":1798,"eolien":2342,"solaire":8634,"hydraulique":3517,"bioenergies":948,"charbon":0,"fioul":37,"ech_physiques":-8654},{"at":"2026-09-22T08:45:00+00:00","load":46856,"nucleaire":37322,"gaz":506,"eolien":2145,"solaire":14396,"hydraulique":2786,"bioenergies":969,"charbon":0,"fioul":36,"ech_physiques":-9837},{"at":"2026-09-22T09:45:00+00:00","load":47886,"nucleaire":36314,"gaz":285,"eolien":2673,"solaire":18090,"hydraulique":2517,"bioenergies":967,"charbon":0,"fioul":37,"ech_physiques":-10964},{"at":"2026-09-22T10:45:00+00:00","load":48257,"nucleaire":34436,"gaz":284,"eolien":2694,"solaire":19975,"hydraulique":2460,"bioenergies":966,"charbon":0,"fioul":37,"ech_physiques":-10497},{"at":"2026-09-22T11:45:00+00:00","load":46257,"nucleaire":33481,"gaz":282,"eolien":2665,"solaire":20335,"hydraulique":2359,"bioenergies":973,"charbon":0,"fioul":36,"ech_physiques":-11828},{"at":"2026-09-22T12:45:00+00:00","load":46727,"nucleaire":33673,"gaz":287,"eolien":2674,"solaire":19372,"hydraulique":2409,"bioenergies":963,"charbon":0,"fioul":36,"ech_physiques":-10649},{"at":"2026-09-22T13:45:00+00:00","load":46218,"nucleaire":34155,"gaz":281,"eolien":2890,"solaire":18232,"hydraulique":2351,"bioenergies":969,"charbon":0,"fioul":36,"ech_physiques":-10616},{"at":"2026-09-22T14:45:00+00:00","load":45165,"nucleaire":34815,"gaz":438,"eolien":3271,"solaire":15056,"hydraulique":2803,"bioenergies":966,"charbon":0,"fioul":35,"ech_physiques":-10572},{"at":"2026-09-22T15:45:00+00:00","load":45292,"nucleaire":36992,"gaz":1241,"eolien":3743,"solaire":9895,"hydraulique":3710,"bioenergies":971,"charbon":0,"fioul":35,"ech_physiques":-11078},{"at":"2026-09-22T16:45:00+00:00","load":47766,"nucleaire":37417,"gaz":4038,"eolien":3918,"solaire":3978,"hydraulique":7994,"bioenergies":969,"charbon":0,"fioul":906,"ech_physiques":-11820},{"at":"2026-09-22T17:45:00+00:00","load":48151,"nucleaire":37464,"gaz":4280,"eolien":3955,"solaire":494,"hydraulique":8527,"bioenergies":973,"charbon":0,"fioul":920,"ech_physiques":-8463},{"at":"2026-09-22T18:45:00+00:00","load":46077,"nucleaire":37548,"gaz":4397,"eolien":5081,"solaire":190,"hydraulique":7143,"bioenergies":974,"charbon":0,"fioul":683,"ech_physiques":-9865},{"at":"2026-09-22T19:45:00+00:00","load":42530,"nucleaire":37606,"gaz":3933,"eolien":6127,"solaire":0,"hydraulique":5981,"bioenergies":977,"charbon":0,"fioul":161,"ech_physiques":-12212},{"at":"2026-09-22T20:45:00+00:00","load":43536,"nucleaire":37643,"gaz":3645,"eolien":6606,"solaire":0,"hydraulique":6906,"bioenergies":975,"charbon":0,"fioul":33,"ech_physiques":-12278},{"at":"2026-09-22T21:45:00+00:00","load":41579,"nucleaire":38369,"gaz":3623,"eolien":6307,"solaire":0,"hydraulique":4975,"bioenergies":979,"charbon":0,"fioul":33,"ech_physiques":-12705},{"at":"2026-09-22T22:45:00+00:00","load":38570,"nucleaire":38378,"gaz":2994,"eolien":5686,"solaire":0,"hydraulique":4046,"bioenergies":979,"charbon":0,"fioul":34,"ech_physiques":-13602},{"at":"2026-09-22T23:45:00+00:00","load":38069,"nucleaire":38407,"gaz":1616,"eolien":5285,"solaire":0,"hydraulique":3838,"bioenergies":974,"charbon":0,"fioul":36,"ech_physiques":-12043},{"at":"2026-09-23T00:45:00+00:00","load":35455,"nucleaire":38343,"gaz":1356,"eolien":4717,"solaire":0,"hydraulique":3417,"bioenergies":977,"charbon":0,"fioul":37,"ech_physiques":-13078},{"at":"2026-09-23T01:45:00+00:00","load":34011,"nucleaire":38474,"gaz":1626,"eolien":3799,"solaire":0,"hydraulique":3303,"bioenergies":975,"charbon":0,"fioul":37,"ech_physiques":-13875},{"at":"2026-09-23T02:45:00+00:00","load":34140,"nucleaire":38528,"gaz":1474,"eolien":3014,"solaire":0,"hydraulique":3685,"bioenergies":979,"charbon":0,"fioul":37,"ech_physiques":-13275},{"at":"2026-09-23T03:45:00+00:00","load":36016,"nucleaire":38563,"gaz":2426,"eolien":2537,"solaire":0,"hydraulique":3489,"bioenergies":994,"charbon":0,"fioul":37,"ech_physiques":-12037},{"at":"2026-09-23T04:45:00+00:00","load":40459,"nucleaire":38583,"gaz":3667,"eolien":2195,"solaire":0,"hydraulique":5351,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-10435},{"at":"2026-09-23T05:45:00+00:00","load":43656,"nucleaire":38544,"gaz":3853,"eolien":2018,"solaire":274,"hydraulique":7197,"bioenergies":997,"charbon":0,"fioul":37,"ech_physiques":-9616},{"at":"2026-09-23T06:45:00+00:00","load":45625,"nucleaire":38563,"gaz":3487,"eolien":1847,"solaire":3043,"hydraulique":5813,"bioenergies":1003,"charbon":0,"fioul":37,"ech_physiques":-8204},{"at":"2026-09-23T07:45:00+00:00","load":46280,"nucleaire":38535,"gaz":2419,"eolien":1134,"solaire":8521,"hydraulique":3438,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-8773},{"at":"2026-09-23T08:45:00+00:00","load":46899,"nucleaire":37905,"gaz":1337,"eolien":858,"solaire":14066,"hydraulique":2444,"bioenergies":1001,"charbon":0,"fioul":37,"ech_physiques":-9564},{"at":"2026-09-23T09:45:00+00:00","load":48382,"nucleaire":37708,"gaz":736,"eolien":756,"solaire":17818,"hydraulique":2288,"bioenergies":1001,"charbon":0,"fioul":37,"ech_physiques":-10311},{"at":"2026-09-23T10:45:00+00:00","load":48871,"nucleaire":36783,"gaz":532,"eolien":916,"solaire":19568,"hydraulique":2204,"bioenergies":1004,"charbon":0,"fioul":36,"ech_physiques":-10224},{"at":"2026-09-23T11:45:00+00:00","load":47556,"nucleaire":35788,"gaz":488,"eolien":988,"solaire":19881,"hydraulique":2107,"bioenergies":1007,"charbon":0,"fioul":36,"ech_physiques":-10415},{"at":"2026-09-23T12:45:00+00:00","load":47942,"nucleaire":36556,"gaz":352,"eolien":1039,"solaire":18799,"hydraulique":1993,"bioenergies":1007,"charbon":0,"fioul":35,"ech_physiques":-10078},{"at":"2026-09-23T13:45:00+00:00","load":47720,"nucleaire":36656,"gaz":462,"eolien":1333,"solaire":17845,"hydraulique":2385,"bioenergies":1002,"charbon":0,"fioul":35,"ech_physiques":-10245},{"at":"2026-09-23T14:45:00+00:00","load":46616,"nucleaire":36587,"gaz":704,"eolien":1883,"solaire":14631,"hydraulique":3477,"bioenergies":1007,"charbon":0,"fioul":35,"ech_physiques":-9714},{"at":"2026-09-23T15:45:00+00:00","load":47107,"nucleaire":37562,"gaz":1693,"eolien":1689,"solaire":9497,"hydraulique":4946,"bioenergies":1002,"charbon":0,"fioul":35,"ech_physiques":-9441},{"at":"2026-09-23T16:45:00+00:00","load":48955,"nucleaire":37737,"gaz":3809,"eolien":1793,"solaire":3639,"hydraulique":7986,"bioenergies":1009,"charbon":0,"fioul":321,"ech_physiques":-7395},{"at":"2026-09-23T17:45:00+00:00","load":48747,"nucleaire":37787,"gaz":4256,"eolien":2104,"solaire":464,"hydraulique":8231,"bioenergies":1007,"charbon":0,"fioul":835,"ech_physiques":-5964},{"at":"2026-09-23T18:45:00+00:00","load":46721,"nucleaire":37830,"gaz":4324,"eolien":2635,"solaire":181,"hydraulique":7749,"bioenergies":1011,"charbon":0,"fioul":44,"ech_physiques":-7444},{"at":"2026-09-23T19:45:00+00:00","load":43540,"nucleaire":37925,"gaz":4143,"eolien":2861,"solaire":0,"hydraulique":5991,"bioenergies":1014,"charbon":0,"fioul":36,"ech_physiques":-8419},{"at":"2026-09-23T20:45:00+00:00","load":44019,"nucleaire":37754,"gaz":3739,"eolien":3008,"solaire":0,"hydraulique":4820,"bioenergies":1010,"charbon":0,"fioul":36,"ech_physiques":-6340},{"at":"2026-09-23T21:45:00+00:00","load":42785,"nucleaire":37077,"gaz":2772,"eolien":3015,"solaire":0,"hydraulique":4208,"bioenergies":1009,"charbon":0,"fioul":36,"ech_physiques":-5322},{"at":"2026-09-23T22:45:00+00:00","load":39596,"nucleaire":37007,"gaz":1864,"eolien":2882,"solaire":0,"hydraulique":4974,"bioenergies":1014,"charbon":0,"fioul":36,"ech_physiques":-8155},{"at":"2026-09-23T23:45:00+00:00","load":38515,"nucleaire":36990,"gaz":1405,"eolien":2916,"solaire":0,"hydraulique":3473,"bioenergies":1019,"charbon":0,"fioul":35,"ech_physiques":-7296},{"at":"2026-09-24T00:45:00+00:00","load":35896,"nucleaire":37014,"gaz":755,"eolien":2804,"solaire":0,"hydraulique":3572,"bioenergies":1017,"charbon":0,"fioul":33,"ech_physiques":-8491},{"at":"2026-09-24T01:45:00+00:00","load":34323,"nucleaire":37046,"gaz":770,"eolien":2608,"solaire":0,"hydraulique":3154,"bioenergies":1015,"charbon":0,"fioul":98,"ech_physiques":-9255},{"at":"2026-09-24T02:45:00+00:00","load":34486,"nucleaire":37102,"gaz":771,"eolien":2309,"solaire":0,"hydraulique":3057,"bioenergies":1003,"charbon":0,"fioul":100,"ech_physiques":-9221},{"at":"2026-09-24T03:45:00+00:00","load":36224,"nucleaire":37095,"gaz":2096,"eolien":1976,"solaire":0,"hydraulique":3299,"bioenergies":999,"charbon":0,"fioul":101,"ech_physiques":-8878},{"at":"2026-09-24T04:45:00+00:00","load":40794,"nucleaire":37123,"gaz":3455,"eolien":1837,"solaire":0,"hydraulique":4266,"bioenergies":999,"charbon":0,"fioul":37,"ech_physiques":-7212},{"at":"2026-09-24T05:45:00+00:00","load":44431,"nucleaire":37127,"gaz":3561,"eolien":1713,"solaire":244,"hydraulique":6792,"bioenergies":1011,"charbon":0,"fioul":36,"ech_physiques":-6402},{"at":"2026-09-24T06:45:00+00:00","load":45971,"nucleaire":37045,"gaz":3559,"eolien":1650,"solaire":2646,"hydraulique":6124,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-6425},{"at":"2026-09-24T07:45:00+00:00","load":46592,"nucleaire":36785,"gaz":3080,"eolien":1437,"solaire":6864,"hydraulique":3830,"bioenergies":1012,"charbon":0,"fioul":37,"ech_physiques":-6442},{"at":"2026-09-24T08:45:00+00:00","load":47584,"nucleaire":36688,"gaz":1119,"eolien":1008,"solaire":11675,"hydraulique":3055,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-6455},{"at":"2026-09-24T09:45:00+00:00","load":48081,"nucleaire":36609,"gaz":949,"eolien":742,"solaire":15059,"hydraulique":3419,"bioenergies":1003,"charbon":0,"fioul":36,"ech_physiques":-8173},{"at":"2026-09-24T10:45:00+00:00","load":48795,"nucleaire":36711,"gaz":1059,"eolien":696,"solaire":16915,"hydraulique":3314,"bioenergies":1002,"charbon":0,"fioul":36,"ech_physiques":-8711},{"at":"2026-09-24T11:45:00+00:00","load":48126,"nucleaire":36540,"gaz":390,"eolien":704,"solaire":17300,"hydraulique":2744,"bioenergies":1007,"charbon":0,"fioul":36,"ech_physiques":-8850},{"at":"2026-09-24T12:45:00+00:00","load":48432,"nucleaire":36500,"gaz":681,"eolien":664,"solaire":16316,"hydraulique":2922,"bioenergies":1007,"charbon":0,"fioul":35,"ech_physiques":-7910},{"at":"2026-09-24T13:45:00+00:00","load":47374,"nucleaire":36644,"gaz":978,"eolien":721,"solaire":14582,"hydraulique":3064,"bioenergies":991,"charbon":0,"fioul":35,"ech_physiques":-8126},{"at":"2026-09-24T14:45:00+00:00","load":46801,"nucleaire":36459,"gaz":1104,"eolien":798,"solaire":11859,"hydraulique":3641,"bioenergies":995,"charbon":0,"fioul":35,"ech_physiques":-6931},{"at":"2026-09-24T15:45:00+00:00","load":46573,"nucleaire":36702,"gaz":3428,"eolien":819,"solaire":7614,"hydraulique":4208,"bioenergies":998,"charbon":0,"fioul":35,"ech_physiques":-7375},{"at":"2026-09-24T16:45:00+00:00","load":48474,"nucleaire":36740,"gaz":3878,"eolien":894,"solaire":3060,"hydraulique":6978,"bioenergies":999,"charbon":0,"fioul":35,"ech_physiques":-4107},{"at":"2026-09-24T17:45:00+00:00","load":48724,"nucleaire":36804,"gaz":4345,"eolien":1266,"solaire":435,"hydraulique":8483,"bioenergies":998,"charbon":0,"fioul":35,"ech_physiques":-3963},{"at":"2026-09-24T18:45:00+00:00","load":46471,"nucleaire":36838,"gaz":4641,"eolien":1919,"solaire":189,"hydraulique":7927,"bioenergies":999,"charbon":0,"fioul":35,"ech_physiques":-6351},{"at":"2026-09-24T19:45:00+00:00","load":43271,"nucleaire":36969,"gaz":4617,"eolien":2830,"solaire":0,"hydraulique":6592,"bioenergies":1000,"charbon":0,"fioul":36,"ech_physiques":-8627},{"at":"2026-09-24T20:45:00+00:00","load":44149,"nucleaire":37565,"gaz":4659,"eolien":3394,"solaire":0,"hydraulique":5071,"bioenergies":995,"charbon":0,"fioul":36,"ech_physiques":-7552},{"at":"2026-09-24T21:45:00+00:00","load":42584,"nucleaire":37723,"gaz":3884,"eolien":3723,"solaire":0,"hydraulique":4341,"bioenergies":1008,"charbon":0,"fioul":35,"ech_physiques":-8111},{"at":"2026-09-24T22:45:00+00:00","load":39586,"nucleaire":37852,"gaz":3407,"eolien":3962,"solaire":0,"hydraulique":3615,"bioenergies":997,"charbon":0,"fioul":37,"ech_physiques":-9909},{"at":"2026-09-24T23:45:00+00:00","load":38413,"nucleaire":37866,"gaz":2400,"eolien":4000,"solaire":0,"hydraulique":3058,"bioenergies":1009,"charbon":0,"fioul":36,"ech_physiques":-9858},{"at":"2026-09-25T00:45:00+00:00","load":35758,"nucleaire":37979,"gaz":1597,"eolien":3649,"solaire":0,"hydraulique":2850,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-11075},{"at":"2026-09-25T01:45:00+00:00","load":34441,"nucleaire":38550,"gaz":1464,"eolien":3355,"solaire":0,"hydraulique":2756,"bioenergies":1008,"charbon":0,"fioul":36,"ech_physiques":-12356},{"at":"2026-09-25T02:45:00+00:00","load":34240,"nucleaire":39125,"gaz":1555,"eolien":3284,"solaire":0,"hydraulique":2797,"bioenergies":1008,"charbon":0,"fioul":37,"ech_physiques":-12678},{"at":"2026-09-25T03:45:00+00:00","load":36409,"nucleaire":39138,"gaz":1957,"eolien":3100,"solaire":0,"hydraulique":2919,"bioenergies":1018,"charbon":0,"fioul":37,"ech_physiques":-11404},{"at":"2026-09-25T04:45:00+00:00","load":40844,"nucleaire":38994,"gaz":3360,"eolien":3142,"solaire":0,"hydraulique":4540,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-10223},{"at":"2026-09-25T05:45:00+00:00","load":44279,"nucleaire":39191,"gaz":3375,"eolien":3310,"solaire":236,"hydraulique":6806,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-10068},{"at":"2026-09-25T06:45:00+00:00","load":45702,"nucleaire":38110,"gaz":3399,"eolien":3368,"solaire":2687,"hydraulique":6449,"bioenergies":994,"charbon":0,"fioul":36,"ech_physiques":-9449},{"at":"2026-09-25T07:45:00+00:00","load":46235,"nucleaire":38047,"gaz":1361,"eolien":2345,"solaire":8074,"hydraulique":4052,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-8541},{"at":"2026-09-25T08:45:00+00:00","load":47507,"nucleaire":37250,"gaz":539,"eolien":1466,"solaire":13840,"hydraulique":2809,"bioenergies":1000,"charbon":0,"fioul":37,"ech_physiques":-8012},{"at":"2026-09-25T09:45:00+00:00","load":48343,"nucleaire":36080,"gaz":296,"eolien":1247,"solaire":17650,"hydraulique":2430,"bioenergies":988,"charbon":0,"fioul":37,"ech_physiques":-8545},{"at":"2026-09-25T10:45:00+00:00","load":48983,"nucleaire":35948,"gaz":292,"eolien":1326,"solaire":19651,"hydraulique":2298,"bioenergies":990,"charbon":0,"fioul":37,"ech_physiques":-9136},{"at":"2026-09-25T11:45:00+00:00","load":46770,"nucleaire":33906,"gaz":288,"eolien":1330,"solaire":19928,"hydraulique":2217,"bioenergies":990,"charbon":0,"fioul":37,"ech_physiques":-9183},{"at":"2026-09-25T12:45:00+00:00","load":47278,"nucleaire":34156,"gaz":323,"eolien":1421,"solaire":18953,"hydraulique":2011,"bioenergies":985,"charbon":0,"fioul":37,"ech_physiques":-8345},{"at":"2026-09-25T13:45:00+00:00","load":46873,"nucleaire":34660,"gaz":428,"eolien":1676,"solaire":17688,"hydraulique":2059,"bioenergies":986,"charbon":0,"fioul":153,"ech_physiques":-8511},{"at":"2026-09-25T14:45:00+00:00","load":46186,"nucleaire":35765,"gaz":999,"eolien":1909,"solaire":14394,"hydraulique":2576,"bioenergies":986,"charbon":0,"fioul":37,"ech_physiques":-8714},{"at":"2026-09-25T15:45:00+00:00","load":46662,"nucleaire":36175,"gaz":2179,"eolien":2464,"solaire":9092,"hydraulique":5213,"bioenergies":994,"charbon":0,"fioul":380,"ech_physiques":-9852},{"at":"2026-09-25T16:45:00+00:00","load":47715,"nucleaire":36346,"gaz":4367,"eolien":2540,"solaire":3261,"hydraulique":8852,"bioenergies":995,"charbon":0,"fioul":701,"ech_physiques":-9462},{"at":"2026-09-25T17:45:00+00:00","load":47537,"nucleaire":36374,"gaz":4504,"eolien":2582,"solaire":376,"hydraulique":8522,"bioenergies":997,"charbon":0,"fioul":718,"ech_physiques":-6625},{"at":"2026-09-25T18:45:00+00:00","load":45955,"nucleaire":35550,"gaz":4592,"eolien":2793,"solaire":188,"hydraulique":8560,"bioenergies":993,"charbon":0,"fioul":735,"ech_physiques":-7684},{"at":"2026-09-25T19:45:00+00:00","load":43206,"nucleaire":35320,"gaz":4553,"eolien":3590,"solaire":0,"hydraulique":6970,"bioenergies":1003,"charbon":0,"fioul":740,"ech_physiques":-8992},{"at":"2026-09-25T20:45:00+00:00","load":44175,"nucleaire":34542,"gaz":4490,"eolien":3979,"solaire":0,"hydraulique":6584,"bioenergies":1014,"charbon":0,"fioul":501,"ech_physiques":-6587},{"at":"2026-09-25T21:45:00+00:00","load":42041,"nucleaire":33914,"gaz":4298,"eolien":3894,"solaire":0,"hydraulique":5295,"bioenergies":1017,"charbon":0,"fioul":37,"ech_physiques":-6127},{"at":"2026-09-25T22:45:00+00:00","load":38630,"nucleaire":33841,"gaz":3980,"eolien":3494,"solaire":0,"hydraulique":5088,"bioenergies":1012,"charbon":0,"fioul":36,"ech_physiques":-8933},{"at":"2026-09-25T23:45:00+00:00","load":37425,"nucleaire":33742,"gaz":3991,"eolien":3197,"solaire":0,"hydraulique":3346,"bioenergies":1026,"charbon":0,"fioul":36,"ech_physiques":-7890},{"at":"2026-09-26T00:45:00+00:00","load":35188,"nucleaire":33833,"gaz":3835,"eolien":3168,"solaire":0,"hydraulique":2791,"bioenergies":1013,"charbon":0,"fioul":36,"ech_physiques":-9314},{"at":"2026-09-26T01:45:00+00:00","load":33413,"nucleaire":33919,"gaz":3494,"eolien":3242,"solaire":0,"hydraulique":2414,"bioenergies":1010,"charbon":0,"fioul":36,"ech_physiques":-10432},{"at":"2026-09-26T02:45:00+00:00","load":32636,"nucleaire":33898,"gaz":3541,"eolien":2921,"solaire":0,"hydraulique":2343,"bioenergies":1013,"charbon":0,"fioul":37,"ech_physiques":-10867},{"at":"2026-09-26T03:45:00+00:00","load":32878,"nucleaire":33854,"gaz":3582,"eolien":2634,"solaire":0,"hydraulique":2463,"bioenergies":1009,"charbon":0,"fioul":36,"ech_physiques":-10644},{"at":"2026-09-26T04:45:00+00:00","load":34212,"nucleaire":33897,"gaz":3740,"eolien":2637,"solaire":0,"hydraulique":3192,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-10252},{"at":"2026-09-26T05:45:00+00:00","load":35422,"nucleaire":33946,"gaz":3610,"eolien":2750,"solaire":214,"hydraulique":3485,"bioenergies":1008,"charbon":0,"fioul":37,"ech_physiques":-9716},{"at":"2026-09-26T06:45:00+00:00","load":37748,"nucleaire":33694,"gaz":2287,"eolien":2872,"solaire":2027,"hydraulique":3339,"bioenergies":1008,"charbon":0,"fioul":33,"ech_physiques":-7295},{"at":"2026-09-26T07:45:00+00:00","load":39991,"nucleaire":33326,"gaz":661,"eolien":2413,"solaire":5721,"hydraulique":2602,"bioenergies":1005,"charbon":0,"fioul":33,"ech_physiques":-5502},{"at":"2026-09-26T08:45:00+00:00","load":41100,"nucleaire":32568,"gaz":553,"eolien":2209,"solaire":10109,"hydraulique":2094,"bioenergies":1005,"charbon":0,"fioul":33,"ech_physiques":-5284},{"at":"2026-09-26T09:45:00+00:00","load":42951,"nucleaire":31740,"gaz":278,"eolien":1927,"solaire":13153,"hydraulique":1882,"bioenergies":1008,"charbon":0,"fioul":33,"ech_physiques":-4610},{"at":"2026-09-26T10:45:00+00:00","load":43852,"nucleaire":28980,"gaz":274,"eolien":1630,"solaire":15141,"hydraulique":1869,"bioenergies":998,"charbon":0,"fioul":33,"ech_physiques":-2469},{"at":"2026-09-26T11:45:00+00:00","load":41333,"nucleaire":28690,"gaz":285,"eolien":1470,"solaire":16669,"hydraulique":1934,"bioenergies":1011,"charbon":0,"fioul":33,"ech_physiques":-5824},{"at":"2026-09-26T12:45:00+00:00","load":41280,"nucleaire":29515,"gaz":283,"eolien":1350,"solaire":16670,"hydraulique":1950,"bioenergies":1009,"charbon":0,"fioul":32,"ech_physiques":-6787},{"at":"2026-09-26T13:45:00+00:00","load":40458,"nucleaire":31056,"gaz":285,"eolien":1278,"solaire":16181,"hydraulique":2114,"bioenergies":1013,"charbon":0,"fioul":32,"ech_physiques":-9172},{"at":"2026-09-26T14:45:00+00:00","load":39865,"nucleaire":32357,"gaz":297,"eolien":1297,"solaire":13272,"hydraulique":2722,"bioenergies":971,"charbon":0,"fioul":33,"ech_physiques":-9317},{"at":"2026-09-26T15:45:00+00:00","load":40877,"nucleaire":33448,"gaz":2263,"eolien":1417,"solaire":8488,"hydraulique":3133,"bioenergies":1012,"charbon":0,"fioul":33,"ech_physiques":-8898},{"at":"2026-09-26T16:45:00+00:00","load":42110,"nucleaire":33525,"gaz":3636,"eolien":1547,"solaire":3033,"hydraulique":6232,"bioenergies":1013,"charbon":0,"fioul":35,"ech_physiques":-6903},{"at":"2026-09-26T17:45:00+00:00","load":42916,"nucleaire":33606,"gaz":3912,"eolien":1617,"solaire":356,"hydraulique":7065,"bioenergies":1013,"charbon":0,"fioul":35,"ech_physiques":-4692},{"at":"2026-09-26T18:45:00+00:00","load":41295,"nucleaire":33712,"gaz":3944,"eolien":1936,"solaire":186,"hydraulique":6333,"bioenergies":1014,"charbon":0,"fioul":34,"ech_physiques":-6213},{"at":"2026-09-26T19:45:00+00:00","load":39282,"nucleaire":33676,"gaz":3940,"eolien":2298,"solaire":0,"hydraulique":4832,"bioenergies":1004,"charbon":0,"fioul":36,"ech_physiques":-6753},{"at":"2026-09-26T20:45:00+00:00","load":40644,"nucleaire":33674,"gaz":3807,"eolien":2552,"solaire":0,"hydraulique":4380,"bioenergies":1016,"charbon":0,"fioul":35,"ech_physiques":-4804},{"at":"2026-09-26T21:45:00+00:00","load":39625,"nucleaire":33883,"gaz":3537,"eolien":2446,"solaire":0,"hydraulique":3401,"bioenergies":1015,"charbon":0,"fioul":37,"ech_physiques":-4657},{"at":"2026-09-26T22:45:00+00:00","load":36722,"nucleaire":34343,"gaz":3291,"eolien":2425,"solaire":0,"hydraulique":3663,"bioenergies":1015,"charbon":0,"fioul":37,"ech_physiques":-7614},{"at":"2026-09-26T23:45:00+00:00","load":35954,"nucleaire":34442,"gaz":2462,"eolien":2256,"solaire":0,"hydraulique":3038,"bioenergies":1018,"charbon":0,"fioul":37,"ech_physiques":-6911},{"at":"2026-09-27T00:45:00+00:00","load":33265,"nucleaire":34795,"gaz":226,"eolien":2163,"solaire":0,"hydraulique":2824,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-6708},{"at":"2026-09-27T01:45:00+00:00","load":31603,"nucleaire":34556,"gaz":232,"eolien":2372,"solaire":0,"hydraulique":3193,"bioenergies":1015,"charbon":0,"fioul":36,"ech_physiques":-8700},{"at":"2026-09-27T02:45:00+00:00","load":30806,"nucleaire":34090,"gaz":239,"eolien":2400,"solaire":0,"hydraulique":2598,"bioenergies":1012,"charbon":0,"fioul":37,"ech_physiques":-8477},{"at":"2026-09-27T03:45:00+00:00","load":31146,"nucleaire":34130,"gaz":232,"eolien":2663,"solaire":0,"hydraulique":2083,"bioenergies":1017,"charbon":0,"fioul":37,"ech_physiques":-8312},{"at":"2026-09-27T04:45:00+00:00","load":32117,"nucleaire":34092,"gaz":244,"eolien":3016,"solaire":0,"hydraulique":2078,"bioenergies":1014,"charbon":0,"fioul":37,"ech_physiques":-7680},{"at":"2026-09-27T05:45:00+00:00","load":32303,"nucleaire":33997,"gaz":244,"eolien":3313,"solaire":195,"hydraulique":2183,"bioenergies":1017,"charbon":0,"fioul":37,"ech_physiques":-8005},{"at":"2026-09-27T06:45:00+00:00","load":33915,"nucleaire":33485,"gaz":243,"eolien":3594,"solaire":2171,"hydraulique":2069,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-7225},{"at":"2026-09-27T07:45:00+00:00","load":35634,"nucleaire":32562,"gaz":488,"eolien":3373,"solaire":6409,"hydraulique":1657,"bioenergies":995,"charbon":0,"fioul":37,"ech_physiques":-7545},{"at":"2026-09-27T08:45:00+00:00","load":38023,"nucleaire":27590,"gaz":507,"eolien":2793,"solaire":11476,"hydraulique":1525,"bioenergies":988,"charbon":0,"fioul":37,"ech_physiques":-4159},{"at":"2026-09-27T09:45:00+00:00","load":40176,"nucleaire":25712,"gaz":492,"eolien":3093,"solaire":15064,"hydraulique":1571,"bioenergies":992,"charbon":0,"fioul":37,"ech_physiques":-4786},{"at":"2026-09-27T10:45:00+00:00","load":41374,"nucleaire":25711,"gaz":472,"eolien":2413,"solaire":12945,"hydraulique":1555,"bioenergies":1010,"charbon":0,"fioul":37,"ech_physiques":-441},{"at":"2026-09-27T11:45:00+00:00","load":38297,"nucleaire":26118,"gaz":264,"eolien":1359,"solaire":10811,"hydraulique":1574,"bioenergies":997,"charbon":0,"fioul":37,"ech_physiques":-46},{"at":"2026-09-27T12:45:00+00:00","load":39565,"nucleaire":25860,"gaz":255,"eolien":2081,"solaire":11073,"hydraulique":1811,"bioenergies":1006,"charbon":0,"fioul":36,"ech_physiques":12},{"at":"2026-09-27T13:45:00+00:00","load":38753,"nucleaire":26121,"gaz":255,"eolien":4147,"solaire":14165,"hydraulique":1909,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-5920},{"at":"2026-09-27T14:45:00+00:00","load":38955,"nucleaire":29315,"gaz":726,"eolien":4150,"solaire":11078,"hydraulique":2306,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-8015},{"at":"2026-09-27T15:45:00+00:00","load":40041,"nucleaire":32362,"gaz":1170,"eolien":3432,"solaire":6355,"hydraulique":2978,"bioenergies":1009,"charbon":0,"fioul":37,"ech_physiques":-6980},{"at":"2026-09-27T16:45:00+00:00","load":42493,"nucleaire":32492,"gaz":2651,"eolien":2553,"solaire":2119,"hydraulique":5413,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-3805},{"at":"2026-09-27T17:45:00+00:00","load":44171,"nucleaire":32692,"gaz":2764,"eolien":2178,"solaire":335,"hydraulique":5737,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-575},{"at":"2026-09-27T18:45:00+00:00","load":42401,"nucleaire":32753,"gaz":2878,"eolien":2334,"solaire":195,"hydraulique":4426,"bioenergies":1012,"charbon":0,"fioul":37,"ech_physiques":-1176},{"at":"2026-09-27T19:45:00+00:00","load":40182,"nucleaire":32793,"gaz":2480,"eolien":2493,"solaire":0,"hydraulique":3704,"bioenergies":1004,"charbon":0,"fioul":37,"ech_physiques":-2315},{"at":"2026-09-27T20:45:00+00:00","load":41264,"nucleaire":32819,"gaz":2490,"eolien":2599,"solaire":0,"hydraulique":3410,"bioenergies":1002,"charbon":0,"fioul":36,"ech_physiques":-1051},{"at":"2026-09-27T21:45:00+00:00","load":39849,"nucleaire":32879,"gaz":2105,"eolien":2731,"solaire":0,"hydraulique":2845,"bioenergies":998,"charbon":0,"fioul":37,"ech_physiques":-1732},{"at":"2026-09-27T22:45:00+00:00","load":37022,"nucleaire":33024,"gaz":1221,"eolien":2711,"solaire":0,"hydraulique":2314,"bioenergies":999,"charbon":0,"fioul":37,"ech_physiques":-2312},{"at":"2026-09-27T23:45:00+00:00","load":36178,"nucleaire":33200,"gaz":1293,"eolien":2519,"solaire":0,"hydraulique":2399,"bioenergies":998,"charbon":0,"fioul":37,"ech_physiques":-3653},{"at":"2026-09-28T00:45:00+00:00","load":33960,"nucleaire":33520,"gaz":1310,"eolien":2221,"solaire":0,"hydraulique":2096,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-5810},{"at":"2026-09-28T01:45:00+00:00","load":32739,"nucleaire":33903,"gaz":1371,"eolien":2397,"solaire":0,"hydraulique":2068,"bioenergies":993,"charbon":0,"fioul":37,"ech_physiques":-7483},{"at":"2026-09-28T02:45:00+00:00","load":32640,"nucleaire":33875,"gaz":1347,"eolien":2800,"solaire":0,"hydraulique":2257,"bioenergies":996,"charbon":0,"fioul":37,"ech_physiques":-8405},{"at":"2026-09-28T03:45:00+00:00","load":35340,"nucleaire":34546,"gaz":3283,"eolien":3044,"solaire":0,"hydraulique":2549,"bioenergies":1000,"charbon":0,"fioul":37,"ech_physiques":-9066},{"at":"2026-09-28T04:45:00+00:00","load":40092,"nucleaire":34561,"gaz":3932,"eolien":2806,"solaire":0,"hydraulique":5019,"bioenergies":993,"charbon":0,"fioul":37,"ech_physiques":-7269},{"at":"2026-09-28T05:45:00+00:00","load":43563,"nucleaire":34554,"gaz":3983,"eolien":2990,"solaire":219,"hydraulique":6577,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-6121},{"at":"2026-09-28T06:45:00+00:00","load":45360,"nucleaire":34552,"gaz":3957,"eolien":2924,"solaire":1741,"hydraulique":5036,"bioenergies":978,"charbon":0,"fioul":37,"ech_physiques":-3993},{"at":"2026-09-28T07:45:00+00:00","load":46475,"nucleaire":34444,"gaz":3733,"eolien":2890,"solaire":4470,"hydraulique":4194,"bioenergies":987,"charbon":0,"fioul":36,"ech_physiques":-4259},{"at":"2026-09-28T08:45:00+00:00","load":47676,"nucleaire":34383,"gaz":3161,"eolien":2658,"solaire":8032,"hydraulique":2934,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-4026},{"at":"2026-09-28T09:45:00+00:00","load":48383,"nucleaire":34417,"gaz":1682,"eolien":2192,"solaire":11138,"hydraulique":2470,"bioenergies":995,"charbon":0,"fioul":37,"ech_physiques":-3828},{"at":"2026-09-28T10:45:00+00:00","load":48896,"nucleaire":33336,"gaz":1219,"eolien":2313,"solaire":12755,"hydraulique":2280,"bioenergies":992,"charbon":0,"fioul":37,"ech_physiques":-3126},{"at":"2026-09-28T11:45:00+00:00","load":47528,"nucleaire":33306,"gaz":1314,"eolien":2200,"solaire":13617,"hydraulique":2307,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-5020},{"at":"2026-09-28T12:45:00+00:00","load":48738,"nucleaire":33582,"gaz":1384,"eolien":2280,"solaire":13074,"hydraulique":2424,"bioenergies":996,"charbon":0,"fioul":37,"ech_physiques":-4338},{"at":"2026-09-28T13:45:00+00:00","load":47708,"nucleaire":33894,"gaz":1806,"eolien":2219,"solaire":11568,"hydraulique":2670,"bioenergies":980,"charbon":0,"fioul":37,"ech_physiques":-5186},{"at":"2026-09-28T14:45:00+00:00","load":46249,"nucleaire":34230,"gaz":3222,"eolien":2352,"solaire":8759,"hydraulique":4143,"bioenergies":982,"charbon":0,"fioul":37,"ech_physiques":-7462},{"at":"2026-09-28T15:45:00+00:00","load":46003,"nucleaire":34394,"gaz":3374,"eolien":2398,"solaire":5255,"hydraulique":6864,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-7544},{"at":"2026-09-28T16:45:00+00:00","load":47932,"nucleaire":34387,"gaz":3616,"eolien":2571,"solaire":1839,"hydraulique":7932,"bioenergies":999,"charbon":0,"fioul":382,"ech_physiques":-4045},{"at":"2026-09-28T17:45:00+00:00","load":49212,"nucleaire":34830,"gaz":3635,"eolien":2714,"solaire":331,"hydraulique":7484,"bioenergies":1024,"charbon":0,"fioul":384,"ech_physiques":-1221},{"at":"2026-09-28T18:45:00+00:00","load":46153,"nucleaire":34882,"gaz":3761,"eolien":3429,"solaire":203,"hydraulique":7100,"bioenergies":1033,"charbon":0,"fioul":305,"ech_physiques":-4836},{"at":"2026-09-28T19:45:00+00:00","load":43136,"nucleaire":34904,"gaz":3988,"eolien":4172,"solaire":0,"hydraulique":5137,"bioenergies":1047,"charbon":0,"fioul":37,"ech_physiques":-6135},{"at":"2026-09-28T20:45:00+00:00","load":43753,"nucleaire":34904,"gaz":3862,"eolien":4407,"solaire":0,"hydraulique":4707,"bioenergies":1053,"charbon":0,"fioul":37,"ech_physiques":-5177},{"at":"2026-09-28T21:45:00+00:00","load":41880,"nucleaire":34928,"gaz":3324,"eolien":4592,"solaire":0,"hydraulique":3431,"bioenergies":1053,"charbon":0,"fioul":37,"ech_physiques":-5402},{"at":"2026-09-28T22:45:00+00:00","load":38813,"nucleaire":34487,"gaz":3079,"eolien":4718,"solaire":0,"hydraulique":2560,"bioenergies":1063,"charbon":0,"fioul":36,"ech_physiques":-7111},{"at":"2026-09-28T23:45:00+00:00","load":38156,"nucleaire":33879,"gaz":2850,"eolien":4852,"solaire":0,"hydraulique":2499,"bioenergies":1057,"charbon":0,"fioul":37,"ech_physiques":-7009},{"at":"2026-09-29T00:45:00+00:00","load":35592,"nucleaire":33915,"gaz":2528,"eolien":4817,"solaire":0,"hydraulique":2291,"bioenergies":1060,"charbon":0,"fioul":37,"ech_physiques":-9048},{"at":"2026-09-29T01:45:00+00:00","load":33973,"nucleaire":33951,"gaz":2232,"eolien":4980,"solaire":0,"hydraulique":2344,"bioenergies":1060,"charbon":0,"fioul":37,"ech_physiques":-10224},{"at":"2026-09-29T02:45:00+00:00","load":34068,"nucleaire":34162,"gaz":2222,"eolien":4755,"solaire":0,"hydraulique":2252,"bioenergies":1050,"charbon":0,"fioul":37,"ech_physiques":-9446},{"at":"2026-09-29T03:45:00+00:00","load":36122,"nucleaire":34306,"gaz":2321,"eolien":5419,"solaire":0,"hydraulique":2761,"bioenergies":1047,"charbon":0,"fioul":37,"ech_physiques":-9667},{"at":"2026-09-29T04:45:00+00:00","load":40550,"nucleaire":34274,"gaz":3357,"eolien":5647,"solaire":0,"hydraulique":3579,"bioenergies":1052,"charbon":0,"fioul":37,"ech_physiques":-7496},{"at":"2026-09-29T05:45:00+00:00","load":44456,"nucleaire":34232,"gaz":3713,"eolien":5950,"solaire":220,"hydraulique":5278,"bioenergies":1052,"charbon":0,"fioul":37,"ech_physiques":-6361},{"at":"2026-09-29T06:45:00+00:00","load":46338,"nucleaire":34289,"gaz":3613,"eolien":6276,"solaire":1689,"hydraulique":4139,"bioenergies":1063,"charbon":0,"fioul":37,"ech_physiques":-4781},{"at":"2026-09-29T07:45:00+00:00","load":46901,"nucleaire":34282,"gaz":3091,"eolien":6058,"solaire":4588,"hydraulique":2762,"bioenergies":1076,"charbon":0,"fioul":37,"ech_physiques":-4978},{"at":"2026-09-29T08:45:00+00:00","load":47902,"nucleaire":34193,"gaz":1526,"eolien":5891,"solaire":8438,"hydraulique":1955,"bioenergies":1091,"charbon":0,"fioul":37,"ech_physiques":-5188},{"at":"2026-09-29T09:45:00+00:00","load":48637,"nucleaire":33886,"gaz":683,"eolien":5853,"solaire":11598,"hydraulique":1583,"bioenergies":1100,"charbon":0,"fioul":37,"ech_physiques":-5706},{"at":"2026-09-29T10:45:00+00:00","load":49123,"nucleaire":33501,"gaz":251,"eolien":6375,"solaire":13887,"hydraulique":1627,"bioenergies":1102,"charbon":0,"fioul":36,"ech_physiques":-6808},{"at":"2026-09-29T11:45:00+00:00","load":48237,"nucleaire":32852,"gaz":267,"eolien":6793,"solaire":15172,"hydraulique":1577,"bioenergies":1095,"charbon":0,"fioul":37,"ech_physiques":-8677},{"at":"2026-09-29T12:45:00+00:00","load":48972,"nucleaire":32860,"gaz":264,"eolien":7534,"solaire":14200,"hydraulique":1743,"bioenergies":1101,"charbon":0,"fioul":37,"ech_physiques":-8243},{"at":"2026-09-29T13:45:00+00:00","load":47951,"nucleaire":33371,"gaz":505,"eolien":7978,"solaire":12939,"hydraulique":2173,"bioenergies":1101,"charbon":0,"fioul":36,"ech_physiques":-9627},{"at":"2026-09-29T14:45:00+00:00","load":47114,"nucleaire":33919,"gaz":1541,"eolien":7761,"solaire":9717,"hydraulique":2482,"bioenergies":1097,"charbon":0,"fioul":36,"ech_physiques":-8933},{"at":"2026-09-29T15:45:00+00:00","load":46439,"nucleaire":33908,"gaz":2653,"eolien":7760,"solaire":5506,"hydraulique":3189,"bioenergies":1111,"charbon":0,"fioul":36,"ech_physiques":-7724},{"at":"2026-09-29T16:45:00+00:00","load":48162,"nucleaire":34044,"gaz":3504,"eolien":6815,"solaire":1950,"hydraulique":5407,"bioenergies":1109,"charbon":0,"fioul":36,"ech_physiques":-5065},{"at":"2026-09-29T17:45:00+00:00","load":49347,"nucleaire":34027,"gaz":3607,"eolien":6534,"solaire":312,"hydraulique":6079,"bioenergies":1118,"charbon":0,"fioul":36,"ech_physiques":-2527},{"at":"2026-09-29T18:45:00+00:00","load":46140,"nucleaire":34069,"gaz":3618,"eolien":8008,"solaire":200,"hydraulique":4524,"bioenergies":1122,"charbon":0,"fioul":36,"ech_physiques":-5663},{"at":"2026-09-29T19:45:00+00:00","load":43359,"nucleaire":34134,"gaz":2944,"eolien":9795,"solaire":0,"hydraulique":2770,"bioenergies":1121,"charbon":0,"fioul":37,"ech_physiques":-7267},{"at":"2026-09-29T20:45:00+00:00","load":43884,"nucleaire":34130,"gaz":942,"eolien":10796,"solaire":0,"hydraulique":2461,"bioenergies":1118,"charbon":0,"fioul":35,"ech_physiques":-5457},{"at":"2026-09-29T21:45:00+00:00","load":43079,"nucleaire":33904,"gaz":901,"eolien":11494,"solaire":0,"hydraulique":2248,"bioenergies":1120,"charbon":0,"fioul":33,"ech_physiques":-6320},{"at":"2026-09-29T22:45:00+00:00","load":39672,"nucleaire":33686,"gaz":487,"eolien":11636,"solaire":0,"hydraulique":2628,"bioenergies":1117,"charbon":0,"fioul":33,"ech_physiques":-9042},{"at":"2026-09-29T23:45:00+00:00","load":38995,"nucleaire":33854,"gaz":670,"eolien":11857,"solaire":0,"hydraulique":2451,"bioenergies":1121,"charbon":0,"fioul":37,"ech_physiques":-9849},{"at":"2026-09-30T00:45:00+00:00","load":36311,"nucleaire":32031,"gaz":290,"eolien":11502,"solaire":0,"hydraulique":2099,"bioenergies":1126,"charbon":0,"fioul":37,"ech_physiques":-9391},{"at":"2026-09-30T01:45:00+00:00","load":35434,"nucleaire":31743,"gaz":282,"eolien":11985,"solaire":0,"hydraulique":2092,"bioenergies":1105,"charbon":0,"fioul":37,"ech_physiques":-10092},{"at":"2026-09-30T02:45:00+00:00","load":34427,"nucleaire":30888,"gaz":282,"eolien":11607,"solaire":0,"hydraulique":2065,"bioenergies":1103,"charbon":0,"fioul":37,"ech_physiques":-10076},{"at":"2026-09-30T03:45:00+00:00","load":36283,"nucleaire":31012,"gaz":574,"eolien":10247,"solaire":0,"hydraulique":2896,"bioenergies":1102,"charbon":0,"fioul":37,"ech_physiques":-9385},{"at":"2026-09-30T04:45:00+00:00","load":40755,"nucleaire":31746,"gaz":2890,"eolien":9339,"solaire":0,"hydraulique":3272,"bioenergies":1099,"charbon":0,"fioul":37,"ech_physiques":-7626},{"at":"2026-09-30T05:45:00+00:00","load":44481,"nucleaire":31743,"gaz":3262,"eolien":8199,"solaire":201,"hydraulique":3444,"bioenergies":1117,"charbon":0,"fioul":37,"ech_physiques":-3766},{"at":"2026-09-30T06:45:00+00:00","load":46754,"nucleaire":31749,"gaz":3115,"eolien":7470,"solaire":1412,"hydraulique":3003,"bioenergies":1147,"charbon":0,"fioul":37,"ech_physiques":-1152},{"at":"2026-09-30T07:45:00+00:00","load":48183,"nucleaire":31447,"gaz":2018,"eolien":6717,"solaire":3231,"hydraulique":3008,"bioenergies":1137,"charbon":0,"fioul":37,"ech_physiques":591},{"at":"2026-09-30T08:45:00+00:00","load":48447,"nucleaire":30198,"gaz":1669,"eolien":5626,"solaire":5478,"hydraulique":2748,"bioenergies":1125,"charbon":0,"fioul":37,"ech_physiques":1296},{"at":"2026-09-30T09:45:00+00:00","load":49465,"nucleaire":29693,"gaz":1953,"eolien":5248,"solaire":7152,"hydraulique":2606,"bioenergies":1118,"charbon":0,"fioul":920,"ech_physiques":792},{"at":"2026-09-30T10:45:00+00:00","load":50394,"nucleaire":29811,"gaz":1411,"eolien":5154,"solaire":8268,"hydraulique":2656,"bioenergies":1125,"charbon":0,"fioul":37,"ech_physiques":2385},{"at":"2026-09-30T11:45:00+00:00","load":48455,"nucleaire":29924,"gaz":1140,"eolien":4601,"solaire":8263,"hydraulique":2452,"bioenergies":1129,"charbon":0,"fioul":36,"ech_physiques":1364},{"at":"2026-09-30T12:45:00+00:00","load":49247,"nucleaire":29944,"gaz":2235,"eolien":4223,"solaire":7692,"hydraulique":2065,"bioenergies":1133,"charbon":0,"fioul":35,"ech_physiques":2191},{"at":"2026-09-30T13:45:00+00:00","load":48401,"nucleaire":30331,"gaz":1823,"eolien":4363,"solaire":6725,"hydraulique":2331,"bioenergies":1130,"charbon":0,"fioul":36,"ech_physiques":1616},{"at":"2026-09-30T14:45:00+00:00","load":47196,"nucleaire":30415,"gaz":2315,"eolien":4921,"solaire":4876,"hydraulique":3642,"bioenergies":1131,"charbon":0,"fioul":37,"ech_physiques":-328},{"at":"2026-09-30T15:45:00+00:00","load":46505,"nucleaire":30492,"gaz":3242,"eolien":5102,"solaire":2858,"hydraulique":5234,"bioenergies":1135,"charbon":0,"fioul":195,"ech_physiques":-2145},{"at":"2026-09-30T16:45:00+00:00","load":48322,"nucleaire":30771,"gaz":3875,"eolien":4920,"solaire":1272,"hydraulique":6254,"bioenergies":1133,"charbon":0,"fioul":907,"ech_physiques":-809},{"at":"2026-09-30T17:45:00+00:00","load":49793,"nucleaire":31133,"gaz":4089,"eolien":4713,"solaire":291,"hydraulique":6120,"bioenergies":1136,"charbon":0,"fioul":913,"ech_physiques":1404},{"at":"2026-09-30T18:45:00+00:00","load":46516,"nucleaire":31197,"gaz":3839,"eolien":4598,"solaire":195,"hydraulique":5427,"bioenergies":985,"charbon":0,"fioul":280,"ech_physiques":-30},{"at":"2026-09-30T19:45:00+00:00","load":43127,"nucleaire":31193,"gaz":3735,"eolien":4348,"solaire":0,"hydraulique":4350,"bioenergies":990,"charbon":0,"fioul":37,"ech_physiques":-1479},{"at":"2026-09-30T20:45:00+00:00","load":44415,"nucleaire":31286,"gaz":3742,"eolien":4690,"solaire":0,"hydraulique":3283,"bioenergies":989,"charbon":0,"fioul":37,"ech_physiques":512},{"at":"2026-09-30T21:45:00+00:00","load":42707,"nucleaire":31293,"gaz":3526,"eolien":4985,"solaire":0,"hydraulique":3098,"bioenergies":985,"charbon":0,"fioul":37,"ech_physiques":-1120},{"at":"2026-09-30T22:45:00+00:00","load":39553,"nucleaire":31302,"gaz":2419,"eolien":5033,"solaire":0,"hydraulique":3364,"bioenergies":984,"charbon":0,"fioul":37,"ech_physiques":-3221},{"at":"2026-09-30T23:45:00+00:00","load":38528,"nucleaire":31348,"gaz":2489,"eolien":4094,"solaire":0,"hydraulique":3457,"bioenergies":985,"charbon":0,"fioul":37,"ech_physiques":-3052},{"at":"2026-10-01T00:45:00+00:00","load":35811,"nucleaire":31374,"gaz":3172,"eolien":3539,"solaire":0,"hydraulique":2917,"bioenergies":987,"charbon":0,"fioul":36,"ech_physiques":-4981},{"at":"2026-10-01T01:45:00+00:00","load":34452,"nucleaire":31419,"gaz":3227,"eolien":3760,"solaire":0,"hydraulique":2739,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-6183},{"at":"2026-10-01T02:45:00+00:00","load":34487,"nucleaire":31404,"gaz":3231,"eolien":4190,"solaire":0,"hydraulique":2695,"bioenergies":988,"charbon":0,"fioul":36,"ech_physiques":-6583},{"at":"2026-10-01T03:45:00+00:00","load":36392,"nucleaire":31397,"gaz":3263,"eolien":3813,"solaire":0,"hydraulique":2890,"bioenergies":987,"charbon":0,"fioul":37,"ech_physiques":-5173},{"at":"2026-10-01T04:45:00+00:00","load":40760,"nucleaire":31441,"gaz":3993,"eolien":3538,"solaire":0,"hydraulique":4135,"bioenergies":987,"charbon":0,"fioul":37,"ech_physiques":-3225},{"at":"2026-10-01T05:45:00+00:00","load":44712,"nucleaire":31416,"gaz":4141,"eolien":3320,"solaire":183,"hydraulique":4628,"bioenergies":980,"charbon":0,"fioul":36,"ech_physiques":-329},{"at":"2026-10-01T06:45:00+00:00","load":46881,"nucleaire":31146,"gaz":4209,"eolien":3027,"solaire":1041,"hydraulique":4705,"bioenergies":981,"charbon":0,"fioul":36,"ech_physiques":1401},{"at":"2026-10-01T07:45:00+00:00","load":47833,"nucleaire":30734,"gaz":4350,"eolien":2411,"solaire":3470,"hydraulique":4694,"bioenergies":981,"charbon":0,"fioul":36,"ech_physiques":1149},{"at":"2026-10-01T08:45:00+00:00","load":48446,"nucleaire":30691,"gaz":4201,"eolien":2217,"solaire":6448,"hydraulique":3524,"bioenergies":981,"charbon":0,"fioul":36,"ech_physiques":354},{"at":"2026-10-01T09:45:00+00:00","load":49294,"nucleaire":30729,"gaz":2957,"eolien":2040,"solaire":8736,"hydraulique":2957,"bioenergies":980,"charbon":0,"fioul":33,"ech_physiques":936},{"at":"2026-10-01T10:45:00+00:00","load":49138,"nucleaire":30600,"gaz":2805,"eolien":2125,"solaire":10053,"hydraulique":2625,"bioenergies":988,"charbon":0,"fioul":37,"ech_physiques":269},{"at":"2026-10-01T11:45:00+00:00","load":47536,"nucleaire":30685,"gaz":2594,"eolien":2336,"solaire":10229,"hydraulique":2871,"bioenergies":988,"charbon":0,"fioul":37,"ech_physiques":-1687},{"at":"2026-10-01T12:45:00+00:00","load":47223,"nucleaire":30638,"gaz":2340,"eolien":2410,"solaire":9299,"hydraulique":3445,"bioenergies":994,"charbon":0,"fioul":37,"ech_physiques":-1576},{"at":"2026-10-01T13:45:00+00:00","load":46421,"nucleaire":30719,"gaz":2576,"eolien":2594,"solaire":9030,"hydraulique":3505,"bioenergies":987,"charbon":0,"fioul":36,"ech_physiques":-2944},{"at":"2026-10-01T14:45:00+00:00","load":45081,"nucleaire":30719,"gaz":3259,"eolien":2708,"solaire":7204,"hydraulique":4268,"bioenergies":990,"charbon":0,"fioul":36,"ech_physiques":-4126},{"at":"2026-10-01T15:45:00+00:00","load":45013,"nucleaire":30739,"gaz":3962,"eolien":2533,"solaire":4747,"hydraulique":7003,"bioenergies":988,"charbon":0,"fioul":36,"ech_physiques":-5204},{"at":"2026-10-01T16:45:00+00:00","load":47059,"nucleaire":30752,"gaz":4032,"eolien":1686,"solaire":1736,"hydraulique":8969,"bioenergies":994,"charbon":0,"fioul":711,"ech_physiques":-2228},{"at":"2026-10-01T17:45:00+00:00","load":48807,"nucleaire":30744,"gaz":4057,"eolien":1415,"solaire":253,"hydraulique":8974,"bioenergies":989,"charbon":0,"fioul":716,"ech_physiques":1368},{"at":"2026-10-01T18:45:00+00:00","load":45491,"nucleaire":30733,"gaz":4250,"eolien":1542,"solaire":0,"hydraulique":8096,"bioenergies":994,"charbon":0,"fioul":91,"ech_physiques":-201},{"at":"2026-10-01T19:45:00+00:00","load":42841,"nucleaire":30761,"gaz":4071,"eolien":1679,"solaire":0,"hydraulique":5959,"bioenergies":996,"charbon":0,"fioul":33,"ech_physiques":-426},{"at":"2026-10-01T20:45:00+00:00","load":43929,"nucleaire":30768,"gaz":4039,"eolien":1725,"solaire":0,"hydraulique":4897,"bioenergies":989,"charbon":0,"fioul":35,"ech_physiques":1528},{"at":"2026-10-01T21:45:00+00:00","load":42703,"nucleaire":30797,"gaz":3353,"eolien":1743,"solaire":0,"hydraulique":4174,"bioenergies":991,"charbon":0,"fioul":33,"ech_physiques":1508},{"at":"2026-10-01T22:15:00+00:00","load":41717,"nucleaire":30811,"gaz":3491,"eolien":1583,"solaire":0,"hydraulique":4455,"bioenergies":989,"charbon":0,"fioul":35,"ech_physiques":399}]}
+{"schema":1,"source":"RTE éCO2mix national temps réel","url":"https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/","quality":"observé provisoire · un relevé par heure UTC","generated_at":"2026-10-02T09:52:39+00:00","first_at":"2026-09-20T07:45:00+00:00","last_at":"2026-10-02T09:30:00+00:00","points":[{"at":"2026-09-20T07:45:00+00:00","load":36025,"nucleaire":29829,"gaz":500,"eolien":2997,"solaire":7923,"hydraulique":1416,"bioenergies":958,"charbon":0,"fioul":33,"ech_physiques":-5492},{"at":"2026-09-20T08:45:00+00:00","load":38871,"nucleaire":29547,"gaz":501,"eolien":2047,"solaire":9922,"hydraulique":1479,"bioenergies":963,"charbon":0,"fioul":35,"ech_physiques":-4670},{"at":"2026-09-20T09:45:00+00:00","load":40689,"nucleaire":28030,"gaz":500,"eolien":1418,"solaire":11731,"hydraulique":1322,"bioenergies":964,"charbon":0,"fioul":33,"ech_physiques":-1268},{"at":"2026-09-20T10:45:00+00:00","load":41846,"nucleaire":28134,"gaz":500,"eolien":1169,"solaire":11673,"hydraulique":1404,"bioenergies":967,"charbon":0,"fioul":33,"ech_physiques":-180},{"at":"2026-09-20T11:45:00+00:00","load":39522,"nucleaire":28324,"gaz":500,"eolien":1148,"solaire":12532,"hydraulique":1323,"bioenergies":970,"charbon":0,"fioul":33,"ech_physiques":-2692},{"at":"2026-09-20T12:45:00+00:00","load":39673,"nucleaire":28790,"gaz":496,"eolien":1150,"solaire":11886,"hydraulique":1260,"bioenergies":967,"charbon":0,"fioul":33,"ech_physiques":-2453},{"at":"2026-09-20T13:45:00+00:00","load":38997,"nucleaire":29659,"gaz":490,"eolien":1176,"solaire":10663,"hydraulique":1338,"bioenergies":967,"charbon":0,"fioul":33,"ech_physiques":-3117},{"at":"2026-09-20T14:45:00+00:00","load":38550,"nucleaire":29922,"gaz":499,"eolien":3321,"solaire":12748,"hydraulique":1861,"bioenergies":968,"charbon":0,"fioul":33,"ech_physiques":-8135},{"at":"2026-09-20T15:45:00+00:00","load":39191,"nucleaire":32201,"gaz":494,"eolien":3292,"solaire":7921,"hydraulique":2192,"bioenergies":961,"charbon":0,"fioul":33,"ech_physiques":-6448},{"at":"2026-09-20T16:45:00+00:00","load":41609,"nucleaire":35421,"gaz":1065,"eolien":2833,"solaire":3218,"hydraulique":3317,"bioenergies":962,"charbon":0,"fioul":34,"ech_physiques":-5214},{"at":"2026-09-20T17:45:00+00:00","load":43046,"nucleaire":35677,"gaz":1476,"eolien":2526,"solaire":538,"hydraulique":5257,"bioenergies":961,"charbon":0,"fioul":37,"ech_physiques":-3837},{"at":"2026-09-20T18:45:00+00:00","load":42371,"nucleaire":35876,"gaz":1496,"eolien":3034,"solaire":218,"hydraulique":5231,"bioenergies":958,"charbon":0,"fioul":35,"ech_physiques":-4801},{"at":"2026-09-20T19:45:00+00:00","load":39936,"nucleaire":36019,"gaz":1501,"eolien":3215,"solaire":0,"hydraulique":3738,"bioenergies":962,"charbon":0,"fioul":35,"ech_physiques":-5423},{"at":"2026-09-20T20:45:00+00:00","load":40364,"nucleaire":36062,"gaz":1544,"eolien":3302,"solaire":0,"hydraulique":4301,"bioenergies":958,"charbon":0,"fioul":35,"ech_physiques":-5378},{"at":"2026-09-20T21:45:00+00:00","load":40445,"nucleaire":37084,"gaz":1626,"eolien":3026,"solaire":0,"hydraulique":3226,"bioenergies":965,"charbon":0,"fioul":35,"ech_physiques":-5522},{"at":"2026-09-20T22:45:00+00:00","load":36809,"nucleaire":37165,"gaz":805,"eolien":2888,"solaire":0,"hydraulique":3217,"bioenergies":967,"charbon":0,"fioul":34,"ech_physiques":-8279},{"at":"2026-09-20T23:45:00+00:00","load":36085,"nucleaire":37180,"gaz":472,"eolien":2925,"solaire":0,"hydraulique":2744,"bioenergies":970,"charbon":0,"fioul":33,"ech_physiques":-8204},{"at":"2026-09-21T00:45:00+00:00","load":33681,"nucleaire":37177,"gaz":485,"eolien":2833,"solaire":0,"hydraulique":2387,"bioenergies":977,"charbon":0,"fioul":35,"ech_physiques":-9920},{"at":"2026-09-21T01:45:00+00:00","load":32352,"nucleaire":37063,"gaz":490,"eolien":2748,"solaire":0,"hydraulique":2247,"bioenergies":973,"charbon":0,"fioul":33,"ech_physiques":-10292},{"at":"2026-09-21T02:45:00+00:00","load":32402,"nucleaire":37190,"gaz":669,"eolien":2690,"solaire":0,"hydraulique":2320,"bioenergies":970,"charbon":0,"fioul":35,"ech_physiques":-11014},{"at":"2026-09-21T03:45:00+00:00","load":35055,"nucleaire":37181,"gaz":1161,"eolien":2449,"solaire":0,"hydraulique":3254,"bioenergies":967,"charbon":0,"fioul":37,"ech_physiques":-9823},{"at":"2026-09-21T04:45:00+00:00","load":39329,"nucleaire":37337,"gaz":2124,"eolien":2342,"solaire":0,"hydraulique":5292,"bioenergies":961,"charbon":0,"fioul":37,"ech_physiques":-8807},{"at":"2026-09-21T05:45:00+00:00","load":43271,"nucleaire":37355,"gaz":3121,"eolien":2397,"solaire":308,"hydraulique":7593,"bioenergies":968,"charbon":0,"fioul":328,"ech_physiques":-9217},{"at":"2026-09-21T06:45:00+00:00","load":44945,"nucleaire":37327,"gaz":3242,"eolien":2420,"solaire":2625,"hydraulique":6133,"bioenergies":968,"charbon":0,"fioul":352,"ech_physiques":-8395},{"at":"2026-09-21T07:45:00+00:00","load":45824,"nucleaire":37233,"gaz":1722,"eolien":1886,"solaire":7401,"hydraulique":4058,"bioenergies":960,"charbon":0,"fioul":37,"ech_physiques":-7454},{"at":"2026-09-21T08:45:00+00:00","load":46549,"nucleaire":37109,"gaz":783,"eolien":1711,"solaire":12802,"hydraulique":2941,"bioenergies":954,"charbon":0,"fioul":37,"ech_physiques":-8394},{"at":"2026-09-21T09:45:00+00:00","load":47199,"nucleaire":36506,"gaz":546,"eolien":1926,"solaire":16583,"hydraulique":2307,"bioenergies":951,"charbon":0,"fioul":36,"ech_physiques":-9798},{"at":"2026-09-21T10:45:00+00:00","load":47489,"nucleaire":34252,"gaz":317,"eolien":2091,"solaire":18601,"hydraulique":2136,"bioenergies":953,"charbon":0,"fioul":37,"ech_physiques":-8913},{"at":"2026-09-21T11:45:00+00:00","load":46132,"nucleaire":34065,"gaz":344,"eolien":2181,"solaire":19160,"hydraulique":2182,"bioenergies":963,"charbon":0,"fioul":37,"ech_physiques":-10590},{"at":"2026-09-21T12:45:00+00:00","load":46737,"nucleaire":33888,"gaz":396,"eolien":2350,"solaire":18198,"hydraulique":2008,"bioenergies":956,"charbon":0,"fioul":37,"ech_physiques":-9050},{"at":"2026-09-21T13:45:00+00:00","load":45306,"nucleaire":34095,"gaz":436,"eolien":2363,"solaire":16845,"hydraulique":1912,"bioenergies":957,"charbon":0,"fioul":36,"ech_physiques":-9548},{"at":"2026-09-21T14:45:00+00:00","load":44917,"nucleaire":35071,"gaz":454,"eolien":2746,"solaire":13709,"hydraulique":2826,"bioenergies":957,"charbon":0,"fioul":36,"ech_physiques":-9507},{"at":"2026-09-21T15:45:00+00:00","load":45056,"nucleaire":36422,"gaz":1591,"eolien":3244,"solaire":8907,"hydraulique":4058,"bioenergies":956,"charbon":0,"fioul":35,"ech_physiques":-10337},{"at":"2026-09-21T16:45:00+00:00","load":47409,"nucleaire":36425,"gaz":3480,"eolien":3655,"solaire":3658,"hydraulique":7569,"bioenergies":959,"charbon":0,"fioul":35,"ech_physiques":-8555},{"at":"2026-09-21T17:45:00+00:00","load":48103,"nucleaire":36371,"gaz":3693,"eolien":3185,"solaire":511,"hydraulique":7716,"bioenergies":956,"charbon":0,"fioul":35,"ech_physiques":-4407},{"at":"2026-09-21T18:45:00+00:00","load":45774,"nucleaire":36321,"gaz":3833,"eolien":3775,"solaire":200,"hydraulique":7623,"bioenergies":956,"charbon":0,"fioul":35,"ech_physiques":-7334},{"at":"2026-09-21T19:45:00+00:00","load":42691,"nucleaire":36812,"gaz":4124,"eolien":4337,"solaire":0,"hydraulique":6996,"bioenergies":959,"charbon":0,"fioul":36,"ech_physiques":-10296},{"at":"2026-09-21T20:45:00+00:00","load":43441,"nucleaire":37196,"gaz":3795,"eolien":4179,"solaire":0,"hydraulique":5451,"bioenergies":958,"charbon":0,"fioul":36,"ech_physiques":-8171},{"at":"2026-09-21T21:45:00+00:00","load":41864,"nucleaire":37296,"gaz":2861,"eolien":4355,"solaire":0,"hydraulique":3767,"bioenergies":962,"charbon":0,"fioul":36,"ech_physiques":-7280},{"at":"2026-09-21T22:45:00+00:00","load":38810,"nucleaire":37315,"gaz":3006,"eolien":4384,"solaire":0,"hydraulique":3451,"bioenergies":958,"charbon":0,"fioul":35,"ech_physiques":-10386},{"at":"2026-09-21T23:45:00+00:00","load":37667,"nucleaire":37369,"gaz":2029,"eolien":4136,"solaire":0,"hydraulique":3211,"bioenergies":964,"charbon":0,"fioul":37,"ech_physiques":-9903},{"at":"2026-09-22T00:45:00+00:00","load":35453,"nucleaire":37416,"gaz":1854,"eolien":4095,"solaire":0,"hydraulique":2846,"bioenergies":959,"charbon":0,"fioul":36,"ech_physiques":-11669},{"at":"2026-09-22T01:45:00+00:00","load":33906,"nucleaire":37353,"gaz":1920,"eolien":3980,"solaire":0,"hydraulique":2924,"bioenergies":942,"charbon":0,"fioul":37,"ech_physiques":-12962},{"at":"2026-09-22T02:45:00+00:00","load":33816,"nucleaire":37515,"gaz":1882,"eolien":3831,"solaire":0,"hydraulique":3044,"bioenergies":945,"charbon":0,"fioul":37,"ech_physiques":-13386},{"at":"2026-09-22T03:45:00+00:00","load":35811,"nucleaire":37554,"gaz":2235,"eolien":3913,"solaire":0,"hydraulique":3647,"bioenergies":947,"charbon":0,"fioul":37,"ech_physiques":-12473},{"at":"2026-09-22T04:45:00+00:00","load":40670,"nucleaire":37556,"gaz":3140,"eolien":3892,"solaire":0,"hydraulique":5623,"bioenergies":942,"charbon":0,"fioul":37,"ech_physiques":-10525},{"at":"2026-09-22T05:45:00+00:00","load":43892,"nucleaire":37581,"gaz":3819,"eolien":3777,"solaire":277,"hydraulique":7845,"bioenergies":940,"charbon":0,"fioul":37,"ech_physiques":-10696},{"at":"2026-09-22T06:45:00+00:00","load":45214,"nucleaire":37549,"gaz":3835,"eolien":3449,"solaire":3026,"hydraulique":6808,"bioenergies":964,"charbon":0,"fioul":36,"ech_physiques":-10803},{"at":"2026-09-22T07:45:00+00:00","load":45921,"nucleaire":37335,"gaz":1798,"eolien":2342,"solaire":8634,"hydraulique":3517,"bioenergies":948,"charbon":0,"fioul":37,"ech_physiques":-8654},{"at":"2026-09-22T08:45:00+00:00","load":46856,"nucleaire":37322,"gaz":506,"eolien":2145,"solaire":14396,"hydraulique":2786,"bioenergies":969,"charbon":0,"fioul":36,"ech_physiques":-9837},{"at":"2026-09-22T09:45:00+00:00","load":47886,"nucleaire":36314,"gaz":285,"eolien":2673,"solaire":18090,"hydraulique":2517,"bioenergies":967,"charbon":0,"fioul":37,"ech_physiques":-10964},{"at":"2026-09-22T10:45:00+00:00","load":48257,"nucleaire":34436,"gaz":284,"eolien":2694,"solaire":19975,"hydraulique":2460,"bioenergies":966,"charbon":0,"fioul":37,"ech_physiques":-10497},{"at":"2026-09-22T11:45:00+00:00","load":46257,"nucleaire":33481,"gaz":282,"eolien":2665,"solaire":20335,"hydraulique":2359,"bioenergies":973,"charbon":0,"fioul":36,"ech_physiques":-11828},{"at":"2026-09-22T12:45:00+00:00","load":46727,"nucleaire":33673,"gaz":287,"eolien":2674,"solaire":19372,"hydraulique":2409,"bioenergies":963,"charbon":0,"fioul":36,"ech_physiques":-10649},{"at":"2026-09-22T13:45:00+00:00","load":46218,"nucleaire":34155,"gaz":281,"eolien":2890,"solaire":18232,"hydraulique":2351,"bioenergies":969,"charbon":0,"fioul":36,"ech_physiques":-10616},{"at":"2026-09-22T14:45:00+00:00","load":45165,"nucleaire":34815,"gaz":438,"eolien":3271,"solaire":15056,"hydraulique":2803,"bioenergies":966,"charbon":0,"fioul":35,"ech_physiques":-10572},{"at":"2026-09-22T15:45:00+00:00","load":45292,"nucleaire":36992,"gaz":1241,"eolien":3743,"solaire":9895,"hydraulique":3710,"bioenergies":971,"charbon":0,"fioul":35,"ech_physiques":-11078},{"at":"2026-09-22T16:45:00+00:00","load":47766,"nucleaire":37417,"gaz":4038,"eolien":3918,"solaire":3978,"hydraulique":7994,"bioenergies":969,"charbon":0,"fioul":906,"ech_physiques":-11820},{"at":"2026-09-22T17:45:00+00:00","load":48151,"nucleaire":37464,"gaz":4280,"eolien":3955,"solaire":494,"hydraulique":8527,"bioenergies":973,"charbon":0,"fioul":920,"ech_physiques":-8463},{"at":"2026-09-22T18:45:00+00:00","load":46077,"nucleaire":37548,"gaz":4397,"eolien":5081,"solaire":190,"hydraulique":7143,"bioenergies":974,"charbon":0,"fioul":683,"ech_physiques":-9865},{"at":"2026-09-22T19:45:00+00:00","load":42530,"nucleaire":37606,"gaz":3933,"eolien":6127,"solaire":0,"hydraulique":5981,"bioenergies":977,"charbon":0,"fioul":161,"ech_physiques":-12212},{"at":"2026-09-22T20:45:00+00:00","load":43536,"nucleaire":37643,"gaz":3645,"eolien":6606,"solaire":0,"hydraulique":6906,"bioenergies":975,"charbon":0,"fioul":33,"ech_physiques":-12278},{"at":"2026-09-22T21:45:00+00:00","load":41579,"nucleaire":38369,"gaz":3623,"eolien":6307,"solaire":0,"hydraulique":4975,"bioenergies":979,"charbon":0,"fioul":33,"ech_physiques":-12705},{"at":"2026-09-22T22:45:00+00:00","load":38570,"nucleaire":38378,"gaz":2994,"eolien":5686,"solaire":0,"hydraulique":4046,"bioenergies":979,"charbon":0,"fioul":34,"ech_physiques":-13602},{"at":"2026-09-22T23:45:00+00:00","load":38069,"nucleaire":38407,"gaz":1616,"eolien":5285,"solaire":0,"hydraulique":3838,"bioenergies":974,"charbon":0,"fioul":36,"ech_physiques":-12043},{"at":"2026-09-23T00:45:00+00:00","load":35455,"nucleaire":38343,"gaz":1356,"eolien":4717,"solaire":0,"hydraulique":3417,"bioenergies":977,"charbon":0,"fioul":37,"ech_physiques":-13078},{"at":"2026-09-23T01:45:00+00:00","load":34011,"nucleaire":38474,"gaz":1626,"eolien":3799,"solaire":0,"hydraulique":3303,"bioenergies":975,"charbon":0,"fioul":37,"ech_physiques":-13875},{"at":"2026-09-23T02:45:00+00:00","load":34140,"nucleaire":38528,"gaz":1474,"eolien":3014,"solaire":0,"hydraulique":3685,"bioenergies":979,"charbon":0,"fioul":37,"ech_physiques":-13275},{"at":"2026-09-23T03:45:00+00:00","load":36016,"nucleaire":38563,"gaz":2426,"eolien":2537,"solaire":0,"hydraulique":3489,"bioenergies":994,"charbon":0,"fioul":37,"ech_physiques":-12037},{"at":"2026-09-23T04:45:00+00:00","load":40459,"nucleaire":38583,"gaz":3667,"eolien":2195,"solaire":0,"hydraulique":5351,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-10435},{"at":"2026-09-23T05:45:00+00:00","load":43656,"nucleaire":38544,"gaz":3853,"eolien":2018,"solaire":274,"hydraulique":7197,"bioenergies":997,"charbon":0,"fioul":37,"ech_physiques":-9616},{"at":"2026-09-23T06:45:00+00:00","load":45625,"nucleaire":38563,"gaz":3487,"eolien":1847,"solaire":3043,"hydraulique":5813,"bioenergies":1003,"charbon":0,"fioul":37,"ech_physiques":-8204},{"at":"2026-09-23T07:45:00+00:00","load":46280,"nucleaire":38535,"gaz":2419,"eolien":1134,"solaire":8521,"hydraulique":3438,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-8773},{"at":"2026-09-23T08:45:00+00:00","load":46899,"nucleaire":37905,"gaz":1337,"eolien":858,"solaire":14066,"hydraulique":2444,"bioenergies":1001,"charbon":0,"fioul":37,"ech_physiques":-9564},{"at":"2026-09-23T09:45:00+00:00","load":48382,"nucleaire":37708,"gaz":736,"eolien":756,"solaire":17818,"hydraulique":2288,"bioenergies":1001,"charbon":0,"fioul":37,"ech_physiques":-10311},{"at":"2026-09-23T10:45:00+00:00","load":48871,"nucleaire":36783,"gaz":532,"eolien":916,"solaire":19568,"hydraulique":2204,"bioenergies":1004,"charbon":0,"fioul":36,"ech_physiques":-10224},{"at":"2026-09-23T11:45:00+00:00","load":47556,"nucleaire":35788,"gaz":488,"eolien":988,"solaire":19881,"hydraulique":2107,"bioenergies":1007,"charbon":0,"fioul":36,"ech_physiques":-10415},{"at":"2026-09-23T12:45:00+00:00","load":47942,"nucleaire":36556,"gaz":352,"eolien":1039,"solaire":18799,"hydraulique":1993,"bioenergies":1007,"charbon":0,"fioul":35,"ech_physiques":-10078},{"at":"2026-09-23T13:45:00+00:00","load":47720,"nucleaire":36656,"gaz":462,"eolien":1333,"solaire":17845,"hydraulique":2385,"bioenergies":1002,"charbon":0,"fioul":35,"ech_physiques":-10245},{"at":"2026-09-23T14:45:00+00:00","load":46616,"nucleaire":36587,"gaz":704,"eolien":1883,"solaire":14631,"hydraulique":3477,"bioenergies":1007,"charbon":0,"fioul":35,"ech_physiques":-9714},{"at":"2026-09-23T15:45:00+00:00","load":47107,"nucleaire":37562,"gaz":1693,"eolien":1689,"solaire":9497,"hydraulique":4946,"bioenergies":1002,"charbon":0,"fioul":35,"ech_physiques":-9441},{"at":"2026-09-23T16:45:00+00:00","load":48955,"nucleaire":37737,"gaz":3809,"eolien":1793,"solaire":3639,"hydraulique":7986,"bioenergies":1009,"charbon":0,"fioul":321,"ech_physiques":-7395},{"at":"2026-09-23T17:45:00+00:00","load":48747,"nucleaire":37787,"gaz":4256,"eolien":2104,"solaire":464,"hydraulique":8231,"bioenergies":1007,"charbon":0,"fioul":835,"ech_physiques":-5964},{"at":"2026-09-23T18:45:00+00:00","load":46721,"nucleaire":37830,"gaz":4324,"eolien":2635,"solaire":181,"hydraulique":7749,"bioenergies":1011,"charbon":0,"fioul":44,"ech_physiques":-7444},{"at":"2026-09-23T19:45:00+00:00","load":43540,"nucleaire":37925,"gaz":4143,"eolien":2861,"solaire":0,"hydraulique":5991,"bioenergies":1014,"charbon":0,"fioul":36,"ech_physiques":-8419},{"at":"2026-09-23T20:45:00+00:00","load":44019,"nucleaire":37754,"gaz":3739,"eolien":3008,"solaire":0,"hydraulique":4820,"bioenergies":1010,"charbon":0,"fioul":36,"ech_physiques":-6340},{"at":"2026-09-23T21:45:00+00:00","load":42785,"nucleaire":37077,"gaz":2772,"eolien":3015,"solaire":0,"hydraulique":4208,"bioenergies":1009,"charbon":0,"fioul":36,"ech_physiques":-5322},{"at":"2026-09-23T22:45:00+00:00","load":39596,"nucleaire":37007,"gaz":1864,"eolien":2882,"solaire":0,"hydraulique":4974,"bioenergies":1014,"charbon":0,"fioul":36,"ech_physiques":-8155},{"at":"2026-09-23T23:45:00+00:00","load":38515,"nucleaire":36990,"gaz":1405,"eolien":2916,"solaire":0,"hydraulique":3473,"bioenergies":1019,"charbon":0,"fioul":35,"ech_physiques":-7296},{"at":"2026-09-24T00:45:00+00:00","load":35896,"nucleaire":37014,"gaz":755,"eolien":2804,"solaire":0,"hydraulique":3572,"bioenergies":1017,"charbon":0,"fioul":33,"ech_physiques":-8491},{"at":"2026-09-24T01:45:00+00:00","load":34323,"nucleaire":37046,"gaz":770,"eolien":2608,"solaire":0,"hydraulique":3154,"bioenergies":1015,"charbon":0,"fioul":98,"ech_physiques":-9255},{"at":"2026-09-24T02:45:00+00:00","load":34486,"nucleaire":37102,"gaz":771,"eolien":2309,"solaire":0,"hydraulique":3057,"bioenergies":1003,"charbon":0,"fioul":100,"ech_physiques":-9221},{"at":"2026-09-24T03:45:00+00:00","load":36224,"nucleaire":37095,"gaz":2096,"eolien":1976,"solaire":0,"hydraulique":3299,"bioenergies":999,"charbon":0,"fioul":101,"ech_physiques":-8878},{"at":"2026-09-24T04:45:00+00:00","load":40794,"nucleaire":37123,"gaz":3455,"eolien":1837,"solaire":0,"hydraulique":4266,"bioenergies":999,"charbon":0,"fioul":37,"ech_physiques":-7212},{"at":"2026-09-24T05:45:00+00:00","load":44431,"nucleaire":37127,"gaz":3561,"eolien":1713,"solaire":244,"hydraulique":6792,"bioenergies":1011,"charbon":0,"fioul":36,"ech_physiques":-6402},{"at":"2026-09-24T06:45:00+00:00","load":45971,"nucleaire":37045,"gaz":3559,"eolien":1650,"solaire":2646,"hydraulique":6124,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-6425},{"at":"2026-09-24T07:45:00+00:00","load":46592,"nucleaire":36785,"gaz":3080,"eolien":1437,"solaire":6864,"hydraulique":3830,"bioenergies":1012,"charbon":0,"fioul":37,"ech_physiques":-6442},{"at":"2026-09-24T08:45:00+00:00","load":47584,"nucleaire":36688,"gaz":1119,"eolien":1008,"solaire":11675,"hydraulique":3055,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-6455},{"at":"2026-09-24T09:45:00+00:00","load":48081,"nucleaire":36609,"gaz":949,"eolien":742,"solaire":15059,"hydraulique":3419,"bioenergies":1003,"charbon":0,"fioul":36,"ech_physiques":-8173},{"at":"2026-09-24T10:45:00+00:00","load":48795,"nucleaire":36711,"gaz":1059,"eolien":696,"solaire":16915,"hydraulique":3314,"bioenergies":1002,"charbon":0,"fioul":36,"ech_physiques":-8711},{"at":"2026-09-24T11:45:00+00:00","load":48126,"nucleaire":36540,"gaz":390,"eolien":704,"solaire":17300,"hydraulique":2744,"bioenergies":1007,"charbon":0,"fioul":36,"ech_physiques":-8850},{"at":"2026-09-24T12:45:00+00:00","load":48432,"nucleaire":36500,"gaz":681,"eolien":664,"solaire":16316,"hydraulique":2922,"bioenergies":1007,"charbon":0,"fioul":35,"ech_physiques":-7910},{"at":"2026-09-24T13:45:00+00:00","load":47374,"nucleaire":36644,"gaz":978,"eolien":721,"solaire":14582,"hydraulique":3064,"bioenergies":991,"charbon":0,"fioul":35,"ech_physiques":-8126},{"at":"2026-09-24T14:45:00+00:00","load":46801,"nucleaire":36459,"gaz":1104,"eolien":798,"solaire":11859,"hydraulique":3641,"bioenergies":995,"charbon":0,"fioul":35,"ech_physiques":-6931},{"at":"2026-09-24T15:45:00+00:00","load":46573,"nucleaire":36702,"gaz":3428,"eolien":819,"solaire":7614,"hydraulique":4208,"bioenergies":998,"charbon":0,"fioul":35,"ech_physiques":-7375},{"at":"2026-09-24T16:45:00+00:00","load":48474,"nucleaire":36740,"gaz":3878,"eolien":894,"solaire":3060,"hydraulique":6978,"bioenergies":999,"charbon":0,"fioul":35,"ech_physiques":-4107},{"at":"2026-09-24T17:45:00+00:00","load":48724,"nucleaire":36804,"gaz":4345,"eolien":1266,"solaire":435,"hydraulique":8483,"bioenergies":998,"charbon":0,"fioul":35,"ech_physiques":-3963},{"at":"2026-09-24T18:45:00+00:00","load":46471,"nucleaire":36838,"gaz":4641,"eolien":1919,"solaire":189,"hydraulique":7927,"bioenergies":999,"charbon":0,"fioul":35,"ech_physiques":-6351},{"at":"2026-09-24T19:45:00+00:00","load":43271,"nucleaire":36969,"gaz":4617,"eolien":2830,"solaire":0,"hydraulique":6592,"bioenergies":1000,"charbon":0,"fioul":36,"ech_physiques":-8627},{"at":"2026-09-24T20:45:00+00:00","load":44149,"nucleaire":37565,"gaz":4659,"eolien":3394,"solaire":0,"hydraulique":5071,"bioenergies":995,"charbon":0,"fioul":36,"ech_physiques":-7552},{"at":"2026-09-24T21:45:00+00:00","load":42584,"nucleaire":37723,"gaz":3884,"eolien":3723,"solaire":0,"hydraulique":4341,"bioenergies":1008,"charbon":0,"fioul":35,"ech_physiques":-8111},{"at":"2026-09-24T22:45:00+00:00","load":39586,"nucleaire":37852,"gaz":3407,"eolien":3962,"solaire":0,"hydraulique":3615,"bioenergies":997,"charbon":0,"fioul":37,"ech_physiques":-9909},{"at":"2026-09-24T23:45:00+00:00","load":38413,"nucleaire":37866,"gaz":2400,"eolien":4000,"solaire":0,"hydraulique":3058,"bioenergies":1009,"charbon":0,"fioul":36,"ech_physiques":-9858},{"at":"2026-09-25T00:45:00+00:00","load":35758,"nucleaire":37979,"gaz":1597,"eolien":3649,"solaire":0,"hydraulique":2850,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-11075},{"at":"2026-09-25T01:45:00+00:00","load":34441,"nucleaire":38550,"gaz":1464,"eolien":3355,"solaire":0,"hydraulique":2756,"bioenergies":1008,"charbon":0,"fioul":36,"ech_physiques":-12356},{"at":"2026-09-25T02:45:00+00:00","load":34240,"nucleaire":39125,"gaz":1555,"eolien":3284,"solaire":0,"hydraulique":2797,"bioenergies":1008,"charbon":0,"fioul":37,"ech_physiques":-12678},{"at":"2026-09-25T03:45:00+00:00","load":36409,"nucleaire":39138,"gaz":1957,"eolien":3100,"solaire":0,"hydraulique":2919,"bioenergies":1018,"charbon":0,"fioul":37,"ech_physiques":-11404},{"at":"2026-09-25T04:45:00+00:00","load":40844,"nucleaire":38994,"gaz":3360,"eolien":3142,"solaire":0,"hydraulique":4540,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-10223},{"at":"2026-09-25T05:45:00+00:00","load":44279,"nucleaire":39191,"gaz":3375,"eolien":3310,"solaire":236,"hydraulique":6806,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-10068},{"at":"2026-09-25T06:45:00+00:00","load":45702,"nucleaire":38110,"gaz":3399,"eolien":3368,"solaire":2687,"hydraulique":6449,"bioenergies":994,"charbon":0,"fioul":36,"ech_physiques":-9449},{"at":"2026-09-25T07:45:00+00:00","load":46235,"nucleaire":38047,"gaz":1361,"eolien":2345,"solaire":8074,"hydraulique":4052,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-8541},{"at":"2026-09-25T08:45:00+00:00","load":47507,"nucleaire":37250,"gaz":539,"eolien":1466,"solaire":13840,"hydraulique":2809,"bioenergies":1000,"charbon":0,"fioul":37,"ech_physiques":-8012},{"at":"2026-09-25T09:45:00+00:00","load":48343,"nucleaire":36080,"gaz":296,"eolien":1247,"solaire":17650,"hydraulique":2430,"bioenergies":988,"charbon":0,"fioul":37,"ech_physiques":-8545},{"at":"2026-09-25T10:45:00+00:00","load":48983,"nucleaire":35948,"gaz":292,"eolien":1326,"solaire":19651,"hydraulique":2298,"bioenergies":990,"charbon":0,"fioul":37,"ech_physiques":-9136},{"at":"2026-09-25T11:45:00+00:00","load":46770,"nucleaire":33906,"gaz":288,"eolien":1330,"solaire":19928,"hydraulique":2217,"bioenergies":990,"charbon":0,"fioul":37,"ech_physiques":-9183},{"at":"2026-09-25T12:45:00+00:00","load":47278,"nucleaire":34156,"gaz":323,"eolien":1421,"solaire":18953,"hydraulique":2011,"bioenergies":985,"charbon":0,"fioul":37,"ech_physiques":-8345},{"at":"2026-09-25T13:45:00+00:00","load":46873,"nucleaire":34660,"gaz":428,"eolien":1676,"solaire":17688,"hydraulique":2059,"bioenergies":986,"charbon":0,"fioul":153,"ech_physiques":-8511},{"at":"2026-09-25T14:45:00+00:00","load":46186,"nucleaire":35765,"gaz":999,"eolien":1909,"solaire":14394,"hydraulique":2576,"bioenergies":986,"charbon":0,"fioul":37,"ech_physiques":-8714},{"at":"2026-09-25T15:45:00+00:00","load":46662,"nucleaire":36175,"gaz":2179,"eolien":2464,"solaire":9092,"hydraulique":5213,"bioenergies":994,"charbon":0,"fioul":380,"ech_physiques":-9852},{"at":"2026-09-25T16:45:00+00:00","load":47715,"nucleaire":36346,"gaz":4367,"eolien":2540,"solaire":3261,"hydraulique":8852,"bioenergies":995,"charbon":0,"fioul":701,"ech_physiques":-9462},{"at":"2026-09-25T17:45:00+00:00","load":47537,"nucleaire":36374,"gaz":4504,"eolien":2582,"solaire":376,"hydraulique":8522,"bioenergies":997,"charbon":0,"fioul":718,"ech_physiques":-6625},{"at":"2026-09-25T18:45:00+00:00","load":45955,"nucleaire":35550,"gaz":4592,"eolien":2793,"solaire":188,"hydraulique":8560,"bioenergies":993,"charbon":0,"fioul":735,"ech_physiques":-7684},{"at":"2026-09-25T19:45:00+00:00","load":43206,"nucleaire":35320,"gaz":4553,"eolien":3590,"solaire":0,"hydraulique":6970,"bioenergies":1003,"charbon":0,"fioul":740,"ech_physiques":-8992},{"at":"2026-09-25T20:45:00+00:00","load":44175,"nucleaire":34542,"gaz":4490,"eolien":3979,"solaire":0,"hydraulique":6584,"bioenergies":1014,"charbon":0,"fioul":501,"ech_physiques":-6587},{"at":"2026-09-25T21:45:00+00:00","load":42041,"nucleaire":33914,"gaz":4298,"eolien":3894,"solaire":0,"hydraulique":5295,"bioenergies":1017,"charbon":0,"fioul":37,"ech_physiques":-6127},{"at":"2026-09-25T22:45:00+00:00","load":38630,"nucleaire":33841,"gaz":3980,"eolien":3494,"solaire":0,"hydraulique":5088,"bioenergies":1012,"charbon":0,"fioul":36,"ech_physiques":-8933},{"at":"2026-09-25T23:45:00+00:00","load":37425,"nucleaire":33742,"gaz":3991,"eolien":3197,"solaire":0,"hydraulique":3346,"bioenergies":1026,"charbon":0,"fioul":36,"ech_physiques":-7890},{"at":"2026-09-26T00:45:00+00:00","load":35188,"nucleaire":33833,"gaz":3835,"eolien":3168,"solaire":0,"hydraulique":2791,"bioenergies":1013,"charbon":0,"fioul":36,"ech_physiques":-9314},{"at":"2026-09-26T01:45:00+00:00","load":33413,"nucleaire":33919,"gaz":3494,"eolien":3242,"solaire":0,"hydraulique":2414,"bioenergies":1010,"charbon":0,"fioul":36,"ech_physiques":-10432},{"at":"2026-09-26T02:45:00+00:00","load":32636,"nucleaire":33898,"gaz":3541,"eolien":2921,"solaire":0,"hydraulique":2343,"bioenergies":1013,"charbon":0,"fioul":37,"ech_physiques":-10867},{"at":"2026-09-26T03:45:00+00:00","load":32878,"nucleaire":33854,"gaz":3582,"eolien":2634,"solaire":0,"hydraulique":2463,"bioenergies":1009,"charbon":0,"fioul":36,"ech_physiques":-10644},{"at":"2026-09-26T04:45:00+00:00","load":34212,"nucleaire":33897,"gaz":3740,"eolien":2637,"solaire":0,"hydraulique":3192,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-10252},{"at":"2026-09-26T05:45:00+00:00","load":35422,"nucleaire":33946,"gaz":3610,"eolien":2750,"solaire":214,"hydraulique":3485,"bioenergies":1008,"charbon":0,"fioul":37,"ech_physiques":-9716},{"at":"2026-09-26T06:45:00+00:00","load":37748,"nucleaire":33694,"gaz":2287,"eolien":2872,"solaire":2027,"hydraulique":3339,"bioenergies":1008,"charbon":0,"fioul":33,"ech_physiques":-7295},{"at":"2026-09-26T07:45:00+00:00","load":39991,"nucleaire":33326,"gaz":661,"eolien":2413,"solaire":5721,"hydraulique":2602,"bioenergies":1005,"charbon":0,"fioul":33,"ech_physiques":-5502},{"at":"2026-09-26T08:45:00+00:00","load":41100,"nucleaire":32568,"gaz":553,"eolien":2209,"solaire":10109,"hydraulique":2094,"bioenergies":1005,"charbon":0,"fioul":33,"ech_physiques":-5284},{"at":"2026-09-26T09:45:00+00:00","load":42951,"nucleaire":31740,"gaz":278,"eolien":1927,"solaire":13153,"hydraulique":1882,"bioenergies":1008,"charbon":0,"fioul":33,"ech_physiques":-4610},{"at":"2026-09-26T10:45:00+00:00","load":43852,"nucleaire":28980,"gaz":274,"eolien":1630,"solaire":15141,"hydraulique":1869,"bioenergies":998,"charbon":0,"fioul":33,"ech_physiques":-2469},{"at":"2026-09-26T11:45:00+00:00","load":41333,"nucleaire":28690,"gaz":285,"eolien":1470,"solaire":16669,"hydraulique":1934,"bioenergies":1011,"charbon":0,"fioul":33,"ech_physiques":-5824},{"at":"2026-09-26T12:45:00+00:00","load":41280,"nucleaire":29515,"gaz":283,"eolien":1350,"solaire":16670,"hydraulique":1950,"bioenergies":1009,"charbon":0,"fioul":32,"ech_physiques":-6787},{"at":"2026-09-26T13:45:00+00:00","load":40458,"nucleaire":31056,"gaz":285,"eolien":1278,"solaire":16181,"hydraulique":2114,"bioenergies":1013,"charbon":0,"fioul":32,"ech_physiques":-9172},{"at":"2026-09-26T14:45:00+00:00","load":39865,"nucleaire":32357,"gaz":297,"eolien":1297,"solaire":13272,"hydraulique":2722,"bioenergies":971,"charbon":0,"fioul":33,"ech_physiques":-9317},{"at":"2026-09-26T15:45:00+00:00","load":40877,"nucleaire":33448,"gaz":2263,"eolien":1417,"solaire":8488,"hydraulique":3133,"bioenergies":1012,"charbon":0,"fioul":33,"ech_physiques":-8898},{"at":"2026-09-26T16:45:00+00:00","load":42110,"nucleaire":33525,"gaz":3636,"eolien":1547,"solaire":3033,"hydraulique":6232,"bioenergies":1013,"charbon":0,"fioul":35,"ech_physiques":-6903},{"at":"2026-09-26T17:45:00+00:00","load":42916,"nucleaire":33606,"gaz":3912,"eolien":1617,"solaire":356,"hydraulique":7065,"bioenergies":1013,"charbon":0,"fioul":35,"ech_physiques":-4692},{"at":"2026-09-26T18:45:00+00:00","load":41295,"nucleaire":33712,"gaz":3944,"eolien":1936,"solaire":186,"hydraulique":6333,"bioenergies":1014,"charbon":0,"fioul":34,"ech_physiques":-6213},{"at":"2026-09-26T19:45:00+00:00","load":39282,"nucleaire":33676,"gaz":3940,"eolien":2298,"solaire":0,"hydraulique":4832,"bioenergies":1004,"charbon":0,"fioul":36,"ech_physiques":-6753},{"at":"2026-09-26T20:45:00+00:00","load":40644,"nucleaire":33674,"gaz":3807,"eolien":2552,"solaire":0,"hydraulique":4380,"bioenergies":1016,"charbon":0,"fioul":35,"ech_physiques":-4804},{"at":"2026-09-26T21:45:00+00:00","load":39625,"nucleaire":33883,"gaz":3537,"eolien":2446,"solaire":0,"hydraulique":3401,"bioenergies":1015,"charbon":0,"fioul":37,"ech_physiques":-4657},{"at":"2026-09-26T22:45:00+00:00","load":36722,"nucleaire":34343,"gaz":3291,"eolien":2425,"solaire":0,"hydraulique":3663,"bioenergies":1015,"charbon":0,"fioul":37,"ech_physiques":-7614},{"at":"2026-09-26T23:45:00+00:00","load":35954,"nucleaire":34442,"gaz":2462,"eolien":2256,"solaire":0,"hydraulique":3038,"bioenergies":1018,"charbon":0,"fioul":37,"ech_physiques":-6911},{"at":"2026-09-27T00:45:00+00:00","load":33265,"nucleaire":34795,"gaz":226,"eolien":2163,"solaire":0,"hydraulique":2824,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-6708},{"at":"2026-09-27T01:45:00+00:00","load":31603,"nucleaire":34556,"gaz":232,"eolien":2372,"solaire":0,"hydraulique":3193,"bioenergies":1015,"charbon":0,"fioul":36,"ech_physiques":-8700},{"at":"2026-09-27T02:45:00+00:00","load":30806,"nucleaire":34090,"gaz":239,"eolien":2400,"solaire":0,"hydraulique":2598,"bioenergies":1012,"charbon":0,"fioul":37,"ech_physiques":-8477},{"at":"2026-09-27T03:45:00+00:00","load":31146,"nucleaire":34130,"gaz":232,"eolien":2663,"solaire":0,"hydraulique":2083,"bioenergies":1017,"charbon":0,"fioul":37,"ech_physiques":-8312},{"at":"2026-09-27T04:45:00+00:00","load":32117,"nucleaire":34092,"gaz":244,"eolien":3016,"solaire":0,"hydraulique":2078,"bioenergies":1014,"charbon":0,"fioul":37,"ech_physiques":-7680},{"at":"2026-09-27T05:45:00+00:00","load":32303,"nucleaire":33997,"gaz":244,"eolien":3313,"solaire":195,"hydraulique":2183,"bioenergies":1017,"charbon":0,"fioul":37,"ech_physiques":-8005},{"at":"2026-09-27T06:45:00+00:00","load":33915,"nucleaire":33485,"gaz":243,"eolien":3594,"solaire":2171,"hydraulique":2069,"bioenergies":1007,"charbon":0,"fioul":37,"ech_physiques":-7225},{"at":"2026-09-27T07:45:00+00:00","load":35634,"nucleaire":32562,"gaz":488,"eolien":3373,"solaire":6409,"hydraulique":1657,"bioenergies":995,"charbon":0,"fioul":37,"ech_physiques":-7545},{"at":"2026-09-27T08:45:00+00:00","load":38023,"nucleaire":27590,"gaz":507,"eolien":2793,"solaire":11476,"hydraulique":1525,"bioenergies":988,"charbon":0,"fioul":37,"ech_physiques":-4159},{"at":"2026-09-27T09:45:00+00:00","load":40176,"nucleaire":25712,"gaz":492,"eolien":3093,"solaire":15064,"hydraulique":1571,"bioenergies":992,"charbon":0,"fioul":37,"ech_physiques":-4786},{"at":"2026-09-27T10:45:00+00:00","load":41374,"nucleaire":25711,"gaz":472,"eolien":2413,"solaire":12945,"hydraulique":1555,"bioenergies":1010,"charbon":0,"fioul":37,"ech_physiques":-441},{"at":"2026-09-27T11:45:00+00:00","load":38297,"nucleaire":26118,"gaz":264,"eolien":1359,"solaire":10811,"hydraulique":1574,"bioenergies":997,"charbon":0,"fioul":37,"ech_physiques":-46},{"at":"2026-09-27T12:45:00+00:00","load":39565,"nucleaire":25860,"gaz":255,"eolien":2081,"solaire":11073,"hydraulique":1811,"bioenergies":1006,"charbon":0,"fioul":36,"ech_physiques":12},{"at":"2026-09-27T13:45:00+00:00","load":38753,"nucleaire":26121,"gaz":255,"eolien":4147,"solaire":14165,"hydraulique":1909,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-5920},{"at":"2026-09-27T14:45:00+00:00","load":38955,"nucleaire":29315,"gaz":726,"eolien":4150,"solaire":11078,"hydraulique":2306,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-8015},{"at":"2026-09-27T15:45:00+00:00","load":40041,"nucleaire":32362,"gaz":1170,"eolien":3432,"solaire":6355,"hydraulique":2978,"bioenergies":1009,"charbon":0,"fioul":37,"ech_physiques":-6980},{"at":"2026-09-27T16:45:00+00:00","load":42493,"nucleaire":32492,"gaz":2651,"eolien":2553,"solaire":2119,"hydraulique":5413,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-3805},{"at":"2026-09-27T17:45:00+00:00","load":44171,"nucleaire":32692,"gaz":2764,"eolien":2178,"solaire":335,"hydraulique":5737,"bioenergies":1011,"charbon":0,"fioul":37,"ech_physiques":-575},{"at":"2026-09-27T18:45:00+00:00","load":42401,"nucleaire":32753,"gaz":2878,"eolien":2334,"solaire":195,"hydraulique":4426,"bioenergies":1012,"charbon":0,"fioul":37,"ech_physiques":-1176},{"at":"2026-09-27T19:45:00+00:00","load":40182,"nucleaire":32793,"gaz":2480,"eolien":2493,"solaire":0,"hydraulique":3704,"bioenergies":1004,"charbon":0,"fioul":37,"ech_physiques":-2315},{"at":"2026-09-27T20:45:00+00:00","load":41264,"nucleaire":32819,"gaz":2490,"eolien":2599,"solaire":0,"hydraulique":3410,"bioenergies":1002,"charbon":0,"fioul":36,"ech_physiques":-1051},{"at":"2026-09-27T21:45:00+00:00","load":39849,"nucleaire":32879,"gaz":2105,"eolien":2731,"solaire":0,"hydraulique":2845,"bioenergies":998,"charbon":0,"fioul":37,"ech_physiques":-1732},{"at":"2026-09-27T22:45:00+00:00","load":37022,"nucleaire":33024,"gaz":1221,"eolien":2711,"solaire":0,"hydraulique":2314,"bioenergies":999,"charbon":0,"fioul":37,"ech_physiques":-2312},{"at":"2026-09-27T23:45:00+00:00","load":36178,"nucleaire":33200,"gaz":1293,"eolien":2519,"solaire":0,"hydraulique":2399,"bioenergies":998,"charbon":0,"fioul":37,"ech_physiques":-3653},{"at":"2026-09-28T00:45:00+00:00","load":33960,"nucleaire":33520,"gaz":1310,"eolien":2221,"solaire":0,"hydraulique":2096,"bioenergies":1005,"charbon":0,"fioul":37,"ech_physiques":-5810},{"at":"2026-09-28T01:45:00+00:00","load":32739,"nucleaire":33903,"gaz":1371,"eolien":2397,"solaire":0,"hydraulique":2068,"bioenergies":993,"charbon":0,"fioul":37,"ech_physiques":-7483},{"at":"2026-09-28T02:45:00+00:00","load":32640,"nucleaire":33875,"gaz":1347,"eolien":2800,"solaire":0,"hydraulique":2257,"bioenergies":996,"charbon":0,"fioul":37,"ech_physiques":-8405},{"at":"2026-09-28T03:45:00+00:00","load":35340,"nucleaire":34546,"gaz":3283,"eolien":3044,"solaire":0,"hydraulique":2549,"bioenergies":1000,"charbon":0,"fioul":37,"ech_physiques":-9066},{"at":"2026-09-28T04:45:00+00:00","load":40092,"nucleaire":34561,"gaz":3932,"eolien":2806,"solaire":0,"hydraulique":5019,"bioenergies":993,"charbon":0,"fioul":37,"ech_physiques":-7269},{"at":"2026-09-28T05:45:00+00:00","load":43563,"nucleaire":34554,"gaz":3983,"eolien":2990,"solaire":219,"hydraulique":6577,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-6121},{"at":"2026-09-28T06:45:00+00:00","load":45360,"nucleaire":34552,"gaz":3957,"eolien":2924,"solaire":1741,"hydraulique":5036,"bioenergies":978,"charbon":0,"fioul":37,"ech_physiques":-3993},{"at":"2026-09-28T07:45:00+00:00","load":46475,"nucleaire":34444,"gaz":3733,"eolien":2890,"solaire":4470,"hydraulique":4194,"bioenergies":987,"charbon":0,"fioul":36,"ech_physiques":-4259},{"at":"2026-09-28T08:45:00+00:00","load":47676,"nucleaire":34383,"gaz":3161,"eolien":2658,"solaire":8032,"hydraulique":2934,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-4026},{"at":"2026-09-28T09:45:00+00:00","load":48383,"nucleaire":34417,"gaz":1682,"eolien":2192,"solaire":11138,"hydraulique":2470,"bioenergies":995,"charbon":0,"fioul":37,"ech_physiques":-3828},{"at":"2026-09-28T10:45:00+00:00","load":48896,"nucleaire":33336,"gaz":1219,"eolien":2313,"solaire":12755,"hydraulique":2280,"bioenergies":992,"charbon":0,"fioul":37,"ech_physiques":-3126},{"at":"2026-09-28T11:45:00+00:00","load":47528,"nucleaire":33306,"gaz":1314,"eolien":2200,"solaire":13617,"hydraulique":2307,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-5020},{"at":"2026-09-28T12:45:00+00:00","load":48738,"nucleaire":33582,"gaz":1384,"eolien":2280,"solaire":13074,"hydraulique":2424,"bioenergies":996,"charbon":0,"fioul":37,"ech_physiques":-4338},{"at":"2026-09-28T13:45:00+00:00","load":47708,"nucleaire":33894,"gaz":1806,"eolien":2219,"solaire":11568,"hydraulique":2670,"bioenergies":980,"charbon":0,"fioul":37,"ech_physiques":-5186},{"at":"2026-09-28T14:45:00+00:00","load":46249,"nucleaire":34230,"gaz":3222,"eolien":2352,"solaire":8759,"hydraulique":4143,"bioenergies":982,"charbon":0,"fioul":37,"ech_physiques":-7462},{"at":"2026-09-28T15:45:00+00:00","load":46003,"nucleaire":34394,"gaz":3374,"eolien":2398,"solaire":5255,"hydraulique":6864,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-7544},{"at":"2026-09-28T16:45:00+00:00","load":47932,"nucleaire":34387,"gaz":3616,"eolien":2571,"solaire":1839,"hydraulique":7932,"bioenergies":999,"charbon":0,"fioul":382,"ech_physiques":-4045},{"at":"2026-09-28T17:45:00+00:00","load":49212,"nucleaire":34830,"gaz":3635,"eolien":2714,"solaire":331,"hydraulique":7484,"bioenergies":1024,"charbon":0,"fioul":384,"ech_physiques":-1221},{"at":"2026-09-28T18:45:00+00:00","load":46153,"nucleaire":34882,"gaz":3761,"eolien":3429,"solaire":203,"hydraulique":7100,"bioenergies":1033,"charbon":0,"fioul":305,"ech_physiques":-4836},{"at":"2026-09-28T19:45:00+00:00","load":43136,"nucleaire":34904,"gaz":3988,"eolien":4172,"solaire":0,"hydraulique":5137,"bioenergies":1047,"charbon":0,"fioul":37,"ech_physiques":-6135},{"at":"2026-09-28T20:45:00+00:00","load":43753,"nucleaire":34904,"gaz":3862,"eolien":4407,"solaire":0,"hydraulique":4707,"bioenergies":1053,"charbon":0,"fioul":37,"ech_physiques":-5177},{"at":"2026-09-28T21:45:00+00:00","load":41880,"nucleaire":34928,"gaz":3324,"eolien":4592,"solaire":0,"hydraulique":3431,"bioenergies":1053,"charbon":0,"fioul":37,"ech_physiques":-5402},{"at":"2026-09-28T22:45:00+00:00","load":38813,"nucleaire":34487,"gaz":3079,"eolien":4718,"solaire":0,"hydraulique":2560,"bioenergies":1063,"charbon":0,"fioul":36,"ech_physiques":-7111},{"at":"2026-09-28T23:45:00+00:00","load":38156,"nucleaire":33879,"gaz":2850,"eolien":4852,"solaire":0,"hydraulique":2499,"bioenergies":1057,"charbon":0,"fioul":37,"ech_physiques":-7009},{"at":"2026-09-29T00:45:00+00:00","load":35592,"nucleaire":33915,"gaz":2528,"eolien":4817,"solaire":0,"hydraulique":2291,"bioenergies":1060,"charbon":0,"fioul":37,"ech_physiques":-9048},{"at":"2026-09-29T01:45:00+00:00","load":33973,"nucleaire":33951,"gaz":2232,"eolien":4980,"solaire":0,"hydraulique":2344,"bioenergies":1060,"charbon":0,"fioul":37,"ech_physiques":-10224},{"at":"2026-09-29T02:45:00+00:00","load":34068,"nucleaire":34162,"gaz":2222,"eolien":4755,"solaire":0,"hydraulique":2252,"bioenergies":1050,"charbon":0,"fioul":37,"ech_physiques":-9446},{"at":"2026-09-29T03:45:00+00:00","load":36122,"nucleaire":34306,"gaz":2321,"eolien":5419,"solaire":0,"hydraulique":2761,"bioenergies":1047,"charbon":0,"fioul":37,"ech_physiques":-9667},{"at":"2026-09-29T04:45:00+00:00","load":40550,"nucleaire":34274,"gaz":3357,"eolien":5647,"solaire":0,"hydraulique":3579,"bioenergies":1052,"charbon":0,"fioul":37,"ech_physiques":-7496},{"at":"2026-09-29T05:45:00+00:00","load":44456,"nucleaire":34232,"gaz":3713,"eolien":5950,"solaire":220,"hydraulique":5278,"bioenergies":1052,"charbon":0,"fioul":37,"ech_physiques":-6361},{"at":"2026-09-29T06:45:00+00:00","load":46338,"nucleaire":34289,"gaz":3613,"eolien":6276,"solaire":1689,"hydraulique":4139,"bioenergies":1063,"charbon":0,"fioul":37,"ech_physiques":-4781},{"at":"2026-09-29T07:45:00+00:00","load":46901,"nucleaire":34282,"gaz":3091,"eolien":6058,"solaire":4588,"hydraulique":2762,"bioenergies":1076,"charbon":0,"fioul":37,"ech_physiques":-4978},{"at":"2026-09-29T08:45:00+00:00","load":47902,"nucleaire":34193,"gaz":1526,"eolien":5891,"solaire":8438,"hydraulique":1955,"bioenergies":1091,"charbon":0,"fioul":37,"ech_physiques":-5188},{"at":"2026-09-29T09:45:00+00:00","load":48637,"nucleaire":33886,"gaz":683,"eolien":5853,"solaire":11598,"hydraulique":1583,"bioenergies":1100,"charbon":0,"fioul":37,"ech_physiques":-5706},{"at":"2026-09-29T10:45:00+00:00","load":49123,"nucleaire":33501,"gaz":251,"eolien":6375,"solaire":13887,"hydraulique":1627,"bioenergies":1102,"charbon":0,"fioul":36,"ech_physiques":-6808},{"at":"2026-09-29T11:45:00+00:00","load":48237,"nucleaire":32852,"gaz":267,"eolien":6793,"solaire":15172,"hydraulique":1577,"bioenergies":1095,"charbon":0,"fioul":37,"ech_physiques":-8677},{"at":"2026-09-29T12:45:00+00:00","load":48972,"nucleaire":32860,"gaz":264,"eolien":7534,"solaire":14200,"hydraulique":1743,"bioenergies":1101,"charbon":0,"fioul":37,"ech_physiques":-8243},{"at":"2026-09-29T13:45:00+00:00","load":47951,"nucleaire":33371,"gaz":505,"eolien":7978,"solaire":12939,"hydraulique":2173,"bioenergies":1101,"charbon":0,"fioul":36,"ech_physiques":-9627},{"at":"2026-09-29T14:45:00+00:00","load":47114,"nucleaire":33919,"gaz":1541,"eolien":7761,"solaire":9717,"hydraulique":2482,"bioenergies":1097,"charbon":0,"fioul":36,"ech_physiques":-8933},{"at":"2026-09-29T15:45:00+00:00","load":46439,"nucleaire":33908,"gaz":2653,"eolien":7760,"solaire":5506,"hydraulique":3189,"bioenergies":1111,"charbon":0,"fioul":36,"ech_physiques":-7724},{"at":"2026-09-29T16:45:00+00:00","load":48162,"nucleaire":34044,"gaz":3504,"eolien":6815,"solaire":1950,"hydraulique":5407,"bioenergies":1109,"charbon":0,"fioul":36,"ech_physiques":-5065},{"at":"2026-09-29T17:45:00+00:00","load":49347,"nucleaire":34027,"gaz":3607,"eolien":6534,"solaire":312,"hydraulique":6079,"bioenergies":1118,"charbon":0,"fioul":36,"ech_physiques":-2527},{"at":"2026-09-29T18:45:00+00:00","load":46140,"nucleaire":34069,"gaz":3618,"eolien":8008,"solaire":200,"hydraulique":4524,"bioenergies":1122,"charbon":0,"fioul":36,"ech_physiques":-5663},{"at":"2026-09-29T19:45:00+00:00","load":43359,"nucleaire":34134,"gaz":2944,"eolien":9795,"solaire":0,"hydraulique":2770,"bioenergies":1121,"charbon":0,"fioul":37,"ech_physiques":-7267},{"at":"2026-09-29T20:45:00+00:00","load":43884,"nucleaire":34130,"gaz":942,"eolien":10796,"solaire":0,"hydraulique":2461,"bioenergies":1118,"charbon":0,"fioul":35,"ech_physiques":-5457},{"at":"2026-09-29T21:45:00+00:00","load":43079,"nucleaire":33904,"gaz":901,"eolien":11494,"solaire":0,"hydraulique":2248,"bioenergies":1120,"charbon":0,"fioul":33,"ech_physiques":-6320},{"at":"2026-09-29T22:45:00+00:00","load":39672,"nucleaire":33686,"gaz":487,"eolien":11636,"solaire":0,"hydraulique":2628,"bioenergies":1117,"charbon":0,"fioul":33,"ech_physiques":-9042},{"at":"2026-09-29T23:45:00+00:00","load":38995,"nucleaire":33854,"gaz":670,"eolien":11857,"solaire":0,"hydraulique":2451,"bioenergies":1121,"charbon":0,"fioul":37,"ech_physiques":-9849},{"at":"2026-09-30T00:45:00+00:00","load":36311,"nucleaire":32031,"gaz":290,"eolien":11502,"solaire":0,"hydraulique":2099,"bioenergies":1126,"charbon":0,"fioul":37,"ech_physiques":-9391},{"at":"2026-09-30T01:45:00+00:00","load":35434,"nucleaire":31743,"gaz":282,"eolien":11985,"solaire":0,"hydraulique":2092,"bioenergies":1105,"charbon":0,"fioul":37,"ech_physiques":-10092},{"at":"2026-09-30T02:45:00+00:00","load":34427,"nucleaire":30888,"gaz":282,"eolien":11607,"solaire":0,"hydraulique":2065,"bioenergies":1103,"charbon":0,"fioul":37,"ech_physiques":-10076},{"at":"2026-09-30T03:45:00+00:00","load":36283,"nucleaire":31012,"gaz":574,"eolien":10247,"solaire":0,"hydraulique":2896,"bioenergies":1102,"charbon":0,"fioul":37,"ech_physiques":-9385},{"at":"2026-09-30T04:45:00+00:00","load":40755,"nucleaire":31746,"gaz":2890,"eolien":9339,"solaire":0,"hydraulique":3272,"bioenergies":1099,"charbon":0,"fioul":37,"ech_physiques":-7626},{"at":"2026-09-30T05:45:00+00:00","load":44481,"nucleaire":31743,"gaz":3262,"eolien":8199,"solaire":201,"hydraulique":3444,"bioenergies":1117,"charbon":0,"fioul":37,"ech_physiques":-3766},{"at":"2026-09-30T06:45:00+00:00","load":46754,"nucleaire":31749,"gaz":3115,"eolien":7470,"solaire":1412,"hydraulique":3003,"bioenergies":1147,"charbon":0,"fioul":37,"ech_physiques":-1152},{"at":"2026-09-30T07:45:00+00:00","load":48183,"nucleaire":31447,"gaz":2018,"eolien":6717,"solaire":3231,"hydraulique":3008,"bioenergies":1137,"charbon":0,"fioul":37,"ech_physiques":591},{"at":"2026-09-30T08:45:00+00:00","load":48447,"nucleaire":30198,"gaz":1669,"eolien":5626,"solaire":5478,"hydraulique":2748,"bioenergies":1125,"charbon":0,"fioul":37,"ech_physiques":1296},{"at":"2026-09-30T09:45:00+00:00","load":49465,"nucleaire":29693,"gaz":1953,"eolien":5248,"solaire":7152,"hydraulique":2606,"bioenergies":1118,"charbon":0,"fioul":920,"ech_physiques":792},{"at":"2026-09-30T10:45:00+00:00","load":50394,"nucleaire":29811,"gaz":1411,"eolien":5154,"solaire":8268,"hydraulique":2656,"bioenergies":1125,"charbon":0,"fioul":37,"ech_physiques":2385},{"at":"2026-09-30T11:45:00+00:00","load":48455,"nucleaire":29924,"gaz":1140,"eolien":4601,"solaire":8263,"hydraulique":2452,"bioenergies":1129,"charbon":0,"fioul":36,"ech_physiques":1364},{"at":"2026-09-30T12:45:00+00:00","load":49247,"nucleaire":29944,"gaz":2235,"eolien":4223,"solaire":7692,"hydraulique":2065,"bioenergies":1133,"charbon":0,"fioul":35,"ech_physiques":2191},{"at":"2026-09-30T13:45:00+00:00","load":48401,"nucleaire":30331,"gaz":1823,"eolien":4363,"solaire":6725,"hydraulique":2331,"bioenergies":1130,"charbon":0,"fioul":36,"ech_physiques":1616},{"at":"2026-09-30T14:45:00+00:00","load":47196,"nucleaire":30415,"gaz":2315,"eolien":4921,"solaire":4876,"hydraulique":3642,"bioenergies":1131,"charbon":0,"fioul":37,"ech_physiques":-328},{"at":"2026-09-30T15:45:00+00:00","load":46505,"nucleaire":30492,"gaz":3242,"eolien":5102,"solaire":2858,"hydraulique":5234,"bioenergies":1135,"charbon":0,"fioul":195,"ech_physiques":-2145},{"at":"2026-09-30T16:45:00+00:00","load":48322,"nucleaire":30771,"gaz":3875,"eolien":4920,"solaire":1272,"hydraulique":6254,"bioenergies":1133,"charbon":0,"fioul":907,"ech_physiques":-809},{"at":"2026-09-30T17:45:00+00:00","load":49793,"nucleaire":31133,"gaz":4089,"eolien":4713,"solaire":291,"hydraulique":6120,"bioenergies":1136,"charbon":0,"fioul":913,"ech_physiques":1404},{"at":"2026-09-30T18:45:00+00:00","load":46516,"nucleaire":31197,"gaz":3839,"eolien":4598,"solaire":195,"hydraulique":5427,"bioenergies":985,"charbon":0,"fioul":280,"ech_physiques":-30},{"at":"2026-09-30T19:45:00+00:00","load":43127,"nucleaire":31193,"gaz":3735,"eolien":4348,"solaire":0,"hydraulique":4350,"bioenergies":990,"charbon":0,"fioul":37,"ech_physiques":-1479},{"at":"2026-09-30T20:45:00+00:00","load":44415,"nucleaire":31286,"gaz":3742,"eolien":4690,"solaire":0,"hydraulique":3283,"bioenergies":989,"charbon":0,"fioul":37,"ech_physiques":512},{"at":"2026-09-30T21:45:00+00:00","load":42707,"nucleaire":31293,"gaz":3526,"eolien":4985,"solaire":0,"hydraulique":3098,"bioenergies":985,"charbon":0,"fioul":37,"ech_physiques":-1120},{"at":"2026-09-30T22:45:00+00:00","load":39553,"nucleaire":31302,"gaz":2419,"eolien":5033,"solaire":0,"hydraulique":3364,"bioenergies":984,"charbon":0,"fioul":37,"ech_physiques":-3221},{"at":"2026-09-30T23:45:00+00:00","load":38528,"nucleaire":31348,"gaz":2489,"eolien":4094,"solaire":0,"hydraulique":3457,"bioenergies":985,"charbon":0,"fioul":37,"ech_physiques":-3052},{"at":"2026-10-01T00:45:00+00:00","load":35811,"nucleaire":31374,"gaz":3172,"eolien":3539,"solaire":0,"hydraulique":2917,"bioenergies":987,"charbon":0,"fioul":36,"ech_physiques":-4981},{"at":"2026-10-01T01:45:00+00:00","load":34452,"nucleaire":31419,"gaz":3227,"eolien":3760,"solaire":0,"hydraulique":2739,"bioenergies":991,"charbon":0,"fioul":37,"ech_physiques":-6183},{"at":"2026-10-01T02:45:00+00:00","load":34487,"nucleaire":31404,"gaz":3231,"eolien":4190,"solaire":0,"hydraulique":2695,"bioenergies":988,"charbon":0,"fioul":36,"ech_physiques":-6583},{"at":"2026-10-01T03:45:00+00:00","load":36392,"nucleaire":31397,"gaz":3263,"eolien":3813,"solaire":0,"hydraulique":2890,"bioenergies":987,"charbon":0,"fioul":37,"ech_physiques":-5173},{"at":"2026-10-01T04:45:00+00:00","load":40760,"nucleaire":31441,"gaz":3993,"eolien":3538,"solaire":0,"hydraulique":4135,"bioenergies":987,"charbon":0,"fioul":37,"ech_physiques":-3225},{"at":"2026-10-01T05:45:00+00:00","load":44712,"nucleaire":31416,"gaz":4141,"eolien":3320,"solaire":183,"hydraulique":4628,"bioenergies":980,"charbon":0,"fioul":36,"ech_physiques":-329},{"at":"2026-10-01T06:45:00+00:00","load":46881,"nucleaire":31146,"gaz":4209,"eolien":3027,"solaire":1041,"hydraulique":4705,"bioenergies":981,"charbon":0,"fioul":36,"ech_physiques":1401},{"at":"2026-10-01T07:45:00+00:00","load":47833,"nucleaire":30734,"gaz":4350,"eolien":2411,"solaire":3470,"hydraulique":4694,"bioenergies":981,"charbon":0,"fioul":36,"ech_physiques":1149},{"at":"2026-10-01T08:45:00+00:00","load":48446,"nucleaire":30691,"gaz":4201,"eolien":2217,"solaire":6448,"hydraulique":3524,"bioenergies":981,"charbon":0,"fioul":36,"ech_physiques":354},{"at":"2026-10-01T09:45:00+00:00","load":49294,"nucleaire":30729,"gaz":2957,"eolien":2040,"solaire":8736,"hydraulique":2957,"bioenergies":980,"charbon":0,"fioul":33,"ech_physiques":936},{"at":"2026-10-01T10:45:00+00:00","load":49138,"nucleaire":30600,"gaz":2805,"eolien":2125,"solaire":10053,"hydraulique":2625,"bioenergies":988,"charbon":0,"fioul":37,"ech_physiques":269},{"at":"2026-10-01T11:45:00+00:00","load":47536,"nucleaire":30685,"gaz":2594,"eolien":2336,"solaire":10229,"hydraulique":2871,"bioenergies":988,"charbon":0,"fioul":37,"ech_physiques":-1687},{"at":"2026-10-01T12:45:00+00:00","load":47223,"nucleaire":30638,"gaz":2340,"eolien":2410,"solaire":9299,"hydraulique":3445,"bioenergies":994,"charbon":0,"fioul":37,"ech_physiques":-1576},{"at":"2026-10-01T13:45:00+00:00","load":46421,"nucleaire":30719,"gaz":2576,"eolien":2594,"solaire":9030,"hydraulique":3505,"bioenergies":987,"charbon":0,"fioul":36,"ech_physiques":-2944},{"at":"2026-10-01T14:45:00+00:00","load":45081,"nucleaire":30719,"gaz":3259,"eolien":2708,"solaire":7204,"hydraulique":4268,"bioenergies":990,"charbon":0,"fioul":36,"ech_physiques":-4126},{"at":"2026-10-01T15:45:00+00:00","load":45013,"nucleaire":30739,"gaz":3962,"eolien":2533,"solaire":4747,"hydraulique":7003,"bioenergies":988,"charbon":0,"fioul":36,"ech_physiques":-5204},{"at":"2026-10-01T16:45:00+00:00","load":47059,"nucleaire":30752,"gaz":4032,"eolien":1686,"solaire":1736,"hydraulique":8969,"bioenergies":994,"charbon":0,"fioul":711,"ech_physiques":-2228},{"at":"2026-10-01T17:45:00+00:00","load":48807,"nucleaire":30744,"gaz":4057,"eolien":1415,"solaire":253,"hydraulique":8974,"bioenergies":989,"charbon":0,"fioul":716,"ech_physiques":1368},{"at":"2026-10-01T18:45:00+00:00","load":45491,"nucleaire":30733,"gaz":4250,"eolien":1542,"solaire":0,"hydraulique":8096,"bioenergies":994,"charbon":0,"fioul":91,"ech_physiques":-201},{"at":"2026-10-01T19:45:00+00:00","load":42841,"nucleaire":30761,"gaz":4071,"eolien":1679,"solaire":0,"hydraulique":5959,"bioenergies":996,"charbon":0,"fioul":33,"ech_physiques":-426},{"at":"2026-10-01T20:45:00+00:00","load":43929,"nucleaire":30768,"gaz":4039,"eolien":1725,"solaire":0,"hydraulique":4897,"bioenergies":989,"charbon":0,"fioul":35,"ech_physiques":1528},{"at":"2026-10-01T21:45:00+00:00","load":42703,"nucleaire":30797,"gaz":3353,"eolien":1743,"solaire":0,"hydraulique":4174,"bioenergies":991,"charbon":0,"fioul":33,"ech_physiques":1508},{"at":"2026-10-01T22:45:00+00:00","load":39313,"nucleaire":30914,"gaz":3470,"eolien":1564,"solaire":0,"hydraulique":4255,"bioenergies":989,"charbon":0,"fioul":35,"ech_physiques":-1853},{"at":"2026-10-01T23:45:00+00:00","load":38480,"nucleaire":31056,"gaz":3601,"eolien":1531,"solaire":0,"hydraulique":3931,"bioenergies":988,"charbon":0,"fioul":36,"ech_physiques":-2252},{"at":"2026-10-02T00:45:00+00:00","load":35829,"nucleaire":30648,"gaz":3544,"eolien":1411,"solaire":0,"hydraulique":3036,"bioenergies":987,"charbon":0,"fioul":37,"ech_physiques":-3239},{"at":"2026-10-02T01:45:00+00:00","load":34462,"nucleaire":30987,"gaz":3637,"eolien":1335,"solaire":0,"hydraulique":3002,"bioenergies":993,"charbon":0,"fioul":37,"ech_physiques":-4823},{"at":"2026-10-02T02:45:00+00:00","load":34534,"nucleaire":31117,"gaz":3527,"eolien":1422,"solaire":0,"hydraulique":2946,"bioenergies":992,"charbon":0,"fioul":37,"ech_physiques":-4612},{"at":"2026-10-02T03:45:00+00:00","load":36477,"nucleaire":31264,"gaz":3776,"eolien":1608,"solaire":0,"hydraulique":3590,"bioenergies":986,"charbon":0,"fioul":37,"ech_physiques":-4574},{"at":"2026-10-02T04:45:00+00:00","load":40563,"nucleaire":30871,"gaz":3931,"eolien":1750,"solaire":0,"hydraulique":6638,"bioenergies":992,"charbon":0,"fioul":37,"ech_physiques":-3664},{"at":"2026-10-02T05:45:00+00:00","load":44435,"nucleaire":30854,"gaz":4051,"eolien":1975,"solaire":175,"hydraulique":7629,"bioenergies":990,"charbon":0,"fioul":37,"ech_physiques":-1677},{"at":"2026-10-02T06:45:00+00:00","load":46108,"nucleaire":30856,"gaz":4065,"eolien":2081,"solaire":1524,"hydraulique":6434,"bioenergies":991,"charbon":0,"fioul":36,"ech_physiques":-199},{"at":"2026-10-02T07:45:00+00:00","load":46376,"nucleaire":29911,"gaz":3848,"eolien":1924,"solaire":5283,"hydraulique":4661,"bioenergies":985,"charbon":0,"fioul":36,"ech_physiques":-70},{"at":"2026-10-02T08:45:00+00:00","load":46629,"nucleaire":29880,"gaz":3912,"eolien":1229,"solaire":9825,"hydraulique":4050,"bioenergies":985,"charbon":0,"fioul":36,"ech_physiques":-3241},{"at":"2026-10-02T09:30:00+00:00","load":46705,"nucleaire":30040,"gaz":3297,"eolien":1153,"solaire":12422,"hydraulique":2864,"bioenergies":985,"charbon":0,"fioul":36,"ech_physiques":-3278}]}
 </script>
   <script id="power-price-data" type="application/json">
-{"schema":1,"source":"Fraunhofer ISE Energy-Charts","market":"day-ahead auction · France and DE-LU","unit":"EUR/MWh","generated_at":"2026-10-01T22:41:55+00:00","series":{"fr":[{"at":"2026-09-18T22:00:00+00:00","value":144.89},{"at":"2026-09-18T22:15:00+00:00","value":132.57},{"at":"2026-09-18T22:30:00+00:00","value":112.13},{"at":"2026-09-18T22:45:00+00:00","value":81.14},{"at":"2026-09-18T23:00:00+00:00","value":110.55},{"at":"2026-09-18T23:15:00+00:00","value":96.62},{"at":"2026-09-18T23:30:00+00:00","value":94.72},{"at":"2026-09-18T23:45:00+00:00","value":76.14},{"at":"2026-09-19T00:00:00+00:00","value":90.46},{"at":"2026-09-19T00:15:00+00:00","value":79.0},{"at":"2026-09-19T00:30:00+00:00","value":68.56},{"at":"2026-09-19T00:45:00+00:00","value":63.16},{"at":"2026-09-19T01:00:00+00:00","value":60.85},{"at":"2026-09-19T01:15:00+00:00","value":43.73},{"at":"2026-09-19T01:30:00+00:00","value":33.84},{"at":"2026-09-19T01:45:00+00:00","value":28.37},{"at":"2026-09-19T02:00:00+00:00","value":46.01},{"at":"2026-09-19T02:15:00+00:00","value":48.75},{"at":"2026-09-19T02:30:00+00:00","value":45.46},{"at":"2026-09-19T02:45:00+00:00","value":40.76},{"at":"2026-09-19T03:00:00+00:00","value":45.03},{"at":"2026-09-19T03:15:00+00:00","value":44.42},{"at":"2026-09-19T03:30:00+00:00","value":43.69},{"at":"2026-09-19T03:45:00+00:00","value":55.28},{"at":"2026-09-19T04:00:00+00:00","value":51.76},{"at":"2026-09-19T04:15:00+00:00","value":58.11},{"at":"2026-09-19T04:30:00+00:00","value":52.43},{"at":"2026-09-19T04:45:00+00:00","value":56.57},{"at":"2026-09-19T05:00:00+00:00","value":56.08},{"at":"2026-09-19T05:15:00+00:00","value":56.35},{"at":"2026-09-19T05:30:00+00:00","value":57.67},{"at":"2026-09-19T05:45:00+00:00","value":49.21},{"at":"2026-09-19T06:00:00+00:00","value":58.08},{"at":"2026-09-19T06:15:00+00:00","value":38.94},{"at":"2026-09-19T06:30:00+00:00","value":33.77},{"at":"2026-09-19T06:45:00+00:00","value":12.34},{"at":"2026-09-19T07:00:00+00:00","value":29.34},{"at":"2026-09-19T07:15:00+00:00","value":9.32},{"at":"2026-09-19T07:30:00+00:00","value":3.98},{"at":"2026-09-19T07:45:00+00:00","value":0.72},{"at":"2026-09-19T08:00:00+00:00","value":0.51},{"at":"2026-09-19T08:15:00+00:00","value":0.23},{"at":"2026-09-19T08:30:00+00:00","value":0.0},{"at":"2026-09-19T08:45:00+00:00","value":0.0},{"at":"2026-09-19T09:00:00+00:00","value":-0.01},{"at":"2026-09-19T09:15:00+00:00","value":-0.01},{"at":"2026-09-19T09:30:00+00:00","value":-0.01},{"at":"2026-09-19T09:45:00+00:00","value":-0.02},{"at":"2026-09-19T10:00:00+00:00","value":-0.11},{"at":"2026-09-19T10:15:00+00:00","value":-0.11},{"at":"2026-09-19T10:30:00+00:00","value":-0.11},{"at":"2026-09-19T10:45:00+00:00","value":-0.3},{"at":"2026-09-19T11:00:00+00:00","value":-0.7},{"at":"2026-09-19T11:15:00+00:00","value":-0.82},{"at":"2026-09-19T11:30:00+00:00","value":-1.06},{"at":"2026-09-19T11:45:00+00:00","value":-1.29},{"at":"2026-09-19T12:00:00+00:00","value":-1.0},{"at":"2026-09-19T12:15:00+00:00","value":-1.0},{"at":"2026-09-19T12:30:00+00:00","value":-0.91},{"at":"2026-09-19T12:45:00+00:00","value":-0.78},{"at":"2026-09-19T13:00:00+00:00","value":-0.5},{"at":"2026-09-19T13:15:00+00:00","value":-0.19},{"at":"2026-09-19T13:30:00+00:00","value":-0.11},{"at":"2026-09-19T13:45:00+00:00","value":-0.09},{"at":"2026-09-19T14:00:00+00:00","value":-0.1},{"at":"2026-09-19T14:15:00+00:00","value":-0.07},{"at":"2026-09-19T14:30:00+00:00","value":-0.01},{"at":"2026-09-19T14:45:00+00:00","value":-0.01},{"at":"2026-09-19T15:00:00+00:00","value":-0.01},{"at":"2026-09-19T15:15:00+00:00","value":0.0},{"at":"2026-09-19T15:30:00+00:00","value":0.51},{"at":"2026-09-19T15:45:00+00:00","value":2.51},{"at":"2026-09-19T16:00:00+00:00","value":19.17},{"at":"2026-09-19T16:15:00+00:00","value":64.08},{"at":"2026-09-19T16:30:00+00:00","value":94.5},{"at":"2026-09-19T16:45:00+00:00","value":115.03},{"at":"2026-09-19T17:00:00+00:00","value":115.0},{"at":"2026-09-19T17:15:00+00:00","value":136.34},{"at":"2026-09-19T17:30:00+00:00","value":149.32},{"at":"2026-09-19T17:45:00+00:00","value":154.22},{"at":"2026-09-19T18:00:00+00:00","value":147.94},{"at":"2026-09-19T18:15:00+00:00","value":134.32},{"at":"2026-09-19T18:30:00+00:00","value":120.54},{"at":"2026-09-19T18:45:00+00:00","value":110.84},{"at":"2026-09-19T19:00:00+00:00","value":121.37},{"at":"2026-09-19T19:15:00+00:00","value":111.72},{"at":"2026-09-19T19:30:00+00:00","value":107.12},{"at":"2026-09-19T19:45:00+00:00","value":87.06},{"at":"2026-09-19T20:00:00+00:00","value":103.17},{"at":"2026-09-19T20:15:00+00:00","value":102.91},{"at":"2026-09-19T20:30:00+00:00","value":102.44},{"at":"2026-09-19T20:45:00+00:00","value":100.74},{"at":"2026-09-19T21:00:00+00:00","value":103.81},{"at":"2026-09-19T21:15:00+00:00","value":98.49},{"at":"2026-09-19T21:30:00+00:00","value":97.84},{"at":"2026-09-19T21:45:00+00:00","value":89.06},{"at":"2026-09-19T22:00:00+00:00","value":38.91},{"at":"2026-09-19T22:15:00+00:00","value":39.31},{"at":"2026-09-19T22:30:00+00:00","value":36.87},{"at":"2026-09-19T22:45:00+00:00","value":33.78},{"at":"2026-09-19T23:00:00+00:00","value":40.7},{"at":"2026-09-19T23:15:00+00:00","value":35.64},{"at":"2026-09-19T23:30:00+00:00","value":35.19},{"at":"2026-09-19T23:45:00+00:00","value":32.15},{"at":"2026-09-20T00:00:00+00:00","value":30.83},{"at":"2026-09-20T00:15:00+00:00","value":32.73},{"at":"2026-09-20T00:30:00+00:00","value":32.93},{"at":"2026-09-20T00:45:00+00:00","value":28.67},{"at":"2026-09-20T01:00:00+00:00","value":28.29},{"at":"2026-09-20T01:15:00+00:00","value":28.37},{"at":"2026-09-20T01:30:00+00:00","value":27.98},{"at":"2026-09-20T01:45:00+00:00","value":25.51},{"at":"2026-09-20T02:00:00+00:00","value":27.21},{"at":"2026-09-20T02:15:00+00:00","value":24.79},{"at":"2026-09-20T02:30:00+00:00","value":23.69},{"at":"2026-09-20T02:45:00+00:00","value":23.11},{"at":"2026-09-20T03:00:00+00:00","value":27.35},{"at":"2026-09-20T03:15:00+00:00","value":27.48},{"at":"2026-09-20T03:30:00+00:00","value":23.59},{"at":"2026-09-20T03:45:00+00:00","value":24.68},{"at":"2026-09-20T04:00:00+00:00","value":27.51},{"at":"2026-09-20T04:15:00+00:00","value":30.91},{"at":"2026-09-20T04:30:00+00:00","value":31.69},{"at":"2026-09-20T04:45:00+00:00","value":33.31},{"at":"2026-09-20T05:00:00+00:00","value":33.43},{"at":"2026-09-20T05:15:00+00:00","value":32.67},{"at":"2026-09-20T05:30:00+00:00","value":34.73},{"at":"2026-09-20T05:45:00+00:00","value":22.25},{"at":"2026-09-20T06:00:00+00:00","value":40.93},{"at":"2026-09-20T06:15:00+00:00","value":20.4},{"at":"2026-09-20T06:30:00+00:00","value":10.61},{"at":"2026-09-20T06:45:00+00:00","value":5.12},{"at":"2026-09-20T07:00:00+00:00","value":8.98},{"at":"2026-09-20T07:15:00+00:00","value":5.19},{"at":"2026-09-20T07:30:00+00:00","value":1.4},{"at":"2026-09-20T07:45:00+00:00","value":0.01},{"at":"2026-09-20T08:00:00+00:00","value":0.01},{"at":"2026-09-20T08:15:00+00:00","value":0.0},{"at":"2026-09-20T08:30:00+00:00","value":-0.01},{"at":"2026-09-20T08:45:00+00:00","value":-0.03},{"at":"2026-09-20T09:00:00+00:00","value":-0.04},{"at":"2026-09-20T09:15:00+00:00","value":-0.09},{"at":"2026-09-20T09:30:00+00:00","value":-0.11},{"at":"2026-09-20T09:45:00+00:00","value":-0.11},{"at":"2026-09-20T10:00:00+00:00","value":-0.23},{"at":"2026-09-20T10:15:00+00:00","value":-0.23},{"at":"2026-09-20T10:30:00+00:00","value":-0.31},{"at":"2026-09-20T10:45:00+00:00","value":-0.81},{"at":"2026-09-20T11:00:00+00:00","value":-1.0},{"at":"2026-09-20T11:15:00+00:00","value":-1.06},{"at":"2026-09-20T11:30:00+00:00","value":-1.14},{"at":"2026-09-20T11:45:00+00:00","value":-1.11},{"at":"2026-09-20T12:00:00+00:00","value":-1.0},{"at":"2026-09-20T12:15:00+00:00","value":-1.0},{"at":"2026-09-20T12:30:00+00:00","value":-1.0},{"at":"2026-09-20T12:45:00+00:00","value":-1.0},{"at":"2026-09-20T13:00:00+00:00","value":-1.0},{"at":"2026-09-20T13:15:00+00:00","value":-0.82},{"at":"2026-09-20T13:30:00+00:00","value":-0.8},{"at":"2026-09-20T13:45:00+00:00","value":-0.78},{"at":"2026-09-20T14:00:00+00:00","value":-0.01},{"at":"2026-09-20T14:15:00+00:00","value":-0.01},{"at":"2026-09-20T14:30:00+00:00","value":0.0},{"at":"2026-09-20T14:45:00+00:00","value":0.0},{"at":"2026-09-20T15:00:00+00:00","value":7.0},{"at":"2026-09-20T15:15:00+00:00","value":18.8},{"at":"2026-09-20T15:30:00+00:00","value":42.01},{"at":"2026-09-20T15:45:00+00:00","value":72.19},{"at":"2026-09-20T16:00:00+00:00","value":70.23},{"at":"2026-09-20T16:15:00+00:00","value":114.46},{"at":"2026-09-20T16:30:00+00:00","value":148.34},{"at":"2026-09-20T16:45:00+00:00","value":237.8},{"at":"2026-09-20T17:00:00+00:00","value":162.96},{"at":"2026-09-20T17:15:00+00:00","value":230.0},{"at":"2026-09-20T17:30:00+00:00","value":200.74},{"at":"2026-09-20T17:45:00+00:00","value":225.57},{"at":"2026-09-20T18:00:00+00:00","value":198.9},{"at":"2026-09-20T18:15:00+00:00","value":200.74},{"at":"2026-09-20T18:30:00+00:00","value":205.71},{"at":"2026-09-20T18:45:00+00:00","value":200.74},{"at":"2026-09-20T19:00:00+00:00","value":211.13},{"at":"2026-09-20T19:15:00+00:00","value":200.99},{"at":"2026-09-20T19:30:00+00:00","value":191.42},{"at":"2026-09-20T19:45:00+00:00","value":192.36},{"at":"2026-09-20T20:00:00+00:00","value":200.74},{"at":"2026-09-20T20:15:00+00:00","value":189.94},{"at":"2026-09-20T20:30:00+00:00","value":195.87},{"at":"2026-09-20T20:45:00+00:00","value":186.76},{"at":"2026-09-20T21:00:00+00:00","value":180.56},{"at":"2026-09-20T21:15:00+00:00","value":186.76},{"at":"2026-09-20T21:30:00+00:00","value":186.18},{"at":"2026-09-20T21:45:00+00:00","value":166.5},{"at":"2026-09-20T22:00:00+00:00","value":200.76},{"at":"2026-09-20T22:15:00+00:00","value":190.0},{"at":"2026-09-20T22:30:00+00:00","value":165.94},{"at":"2026-09-20T22:45:00+00:00","value":145.17},{"at":"2026-09-20T23:00:00+00:00","value":169.93},{"at":"2026-09-20T23:15:00+00:00","value":148.45},{"at":"2026-09-20T23:30:00+00:00","value":153.27},{"at":"2026-09-20T23:45:00+00:00","value":136.33},{"at":"2026-09-21T00:00:00+00:00","value":150.9},{"at":"2026-09-21T00:15:00+00:00","value":135.56},{"at":"2026-09-21T00:30:00+00:00","value":130.4},{"at":"2026-09-21T00:45:00+00:00","value":139.13},{"at":"2026-09-21T01:00:00+00:00","value":139.24},{"at":"2026-09-21T01:15:00+00:00","value":143.39},{"at":"2026-09-21T01:30:00+00:00","value":136.01},{"at":"2026-09-21T01:45:00+00:00","value":120.87},{"at":"2026-09-21T02:00:00+00:00","value":131.59},{"at":"2026-09-21T02:15:00+00:00","value":134.24},{"at":"2026-09-21T02:30:00+00:00","value":137.99},{"at":"2026-09-21T02:45:00+00:00","value":129.67},{"at":"2026-09-21T03:00:00+00:00","value":124.48},{"at":"2026-09-21T03:15:00+00:00","value":149.01},{"at":"2026-09-21T03:30:00+00:00","value":141.87},{"at":"2026-09-21T03:45:00+00:00","value":158.0},{"at":"2026-09-21T04:00:00+00:00","value":163.14},{"at":"2026-09-21T04:15:00+00:00","value":186.53},{"at":"2026-09-21T04:30:00+00:00","value":182.99},{"at":"2026-09-21T04:45:00+00:00","value":187.69},{"at":"2026-09-21T05:00:00+00:00","value":211.7},{"at":"2026-09-21T05:15:00+00:00","value":224.0},{"at":"2026-09-21T05:30:00+00:00","value":227.0},{"at":"2026-09-21T05:45:00+00:00","value":230.57},{"at":"2026-09-21T06:00:00+00:00","value":263.9},{"at":"2026-09-21T06:15:00+00:00","value":246.23},{"at":"2026-09-21T06:30:00+00:00","value":226.0},{"at":"2026-09-21T06:45:00+00:00","value":195.0},{"at":"2026-09-21T07:00:00+00:00","value":212.25},{"at":"2026-09-21T07:15:00+00:00","value":186.25},{"at":"2026-09-21T07:30:00+00:00","value":167.52},{"at":"2026-09-21T07:45:00+00:00","value":110.77},{"at":"2026-09-21T08:00:00+00:00","value":131.12},{"at":"2026-09-21T08:15:00+00:00","value":91.6},{"at":"2026-09-21T08:30:00+00:00","value":83.6},{"at":"2026-09-21T08:45:00+00:00","value":48.5},{"at":"2026-09-21T09:00:00+00:00","value":55.68},{"at":"2026-09-21T09:15:00+00:00","value":46.38},{"at":"2026-09-21T09:30:00+00:00","value":35.94},{"at":"2026-09-21T09:45:00+00:00","value":33.22},{"at":"2026-09-21T10:00:00+00:00","value":32.17},{"at":"2026-09-21T10:15:00+00:00","value":28.15},{"at":"2026-09-21T10:30:00+00:00","value":28.0},{"at":"2026-09-21T10:45:00+00:00","value":23.34},{"at":"2026-09-21T11:00:00+00:00","value":23.47},{"at":"2026-09-21T11:15:00+00:00","value":20.17},{"at":"2026-09-21T11:30:00+00:00","value":16.75},{"at":"2026-09-21T11:45:00+00:00","value":16.38},{"at":"2026-09-21T12:00:00+00:00","value":20.02},{"at":"2026-09-21T12:15:00+00:00","value":22.08},{"at":"2026-09-21T12:30:00+00:00","value":22.54},{"at":"2026-09-21T12:45:00+00:00","value":26.11},{"at":"2026-09-21T13:00:00+00:00","value":25.67},{"at":"2026-09-21T13:15:00+00:00","value":31.3},{"at":"2026-09-21T13:30:00+00:00","value":20.24},{"at":"2026-09-21T13:45:00+00:00","value":17.24},{"at":"2026-09-21T14:00:00+00:00","value":37.19},{"at":"2026-09-21T14:15:00+00:00","value":76.19},{"at":"2026-09-21T14:30:00+00:00","value":54.27},{"at":"2026-09-21T14:45:00+00:00","value":52.38},{"at":"2026-09-21T15:00:00+00:00","value":75.23},{"at":"2026-09-21T15:15:00+00:00","value":111.75},{"at":"2026-09-21T15:30:00+00:00","value":163.93},{"at":"2026-09-21T15:45:00+00:00","value":208.84},{"at":"2026-09-21T16:00:00+00:00","value":174.12},{"at":"2026-09-21T16:15:00+00:00","value":202.94},{"at":"2026-09-21T16:30:00+00:00","value":224.23},{"at":"2026-09-21T16:45:00+00:00","value":261.77},{"at":"2026-09-21T17:00:00+00:00","value":221.71},{"at":"2026-09-21T17:15:00+00:00","value":224.92},{"at":"2026-09-21T17:30:00+00:00","value":251.9},{"at":"2026-09-21T17:45:00+00:00","value":276.54},{"at":"2026-09-21T18:00:00+00:00","value":251.3},{"at":"2026-09-21T18:15:00+00:00","value":250.28},{"at":"2026-09-21T18:30:00+00:00","value":243.48},{"at":"2026-09-21T18:45:00+00:00","value":219.04},{"at":"2026-09-21T19:00:00+00:00","value":232.7},{"at":"2026-09-21T19:15:00+00:00","value":219.22},{"at":"2026-09-21T19:30:00+00:00","value":215.05},{"at":"2026-09-21T19:45:00+00:00","value":207.8},{"at":"2026-09-21T20:00:00+00:00","value":216.63},{"at":"2026-09-21T20:15:00+00:00","value":205.54},{"at":"2026-09-21T20:30:00+00:00","value":206.93},{"at":"2026-09-21T20:45:00+00:00","value":197.26},{"at":"2026-09-21T21:00:00+00:00","value":199.01},{"at":"2026-09-21T21:15:00+00:00","value":185.42},{"at":"2026-09-21T21:30:00+00:00","value":187.25},{"at":"2026-09-21T21:45:00+00:00","value":172.4},{"at":"2026-09-21T22:00:00+00:00","value":191.21},{"at":"2026-09-21T22:15:00+00:00","value":184.04},{"at":"2026-09-21T22:30:00+00:00","value":177.73},{"at":"2026-09-21T22:45:00+00:00","value":176.79},{"at":"2026-09-21T23:00:00+00:00","value":178.2},{"at":"2026-09-21T23:15:00+00:00","value":175.61},{"at":"2026-09-21T23:30:00+00:00","value":177.48},{"at":"2026-09-21T23:45:00+00:00","value":176.66},{"at":"2026-09-22T00:00:00+00:00","value":176.87},{"at":"2026-09-22T00:15:00+00:00","value":175.45},{"at":"2026-09-22T00:30:00+00:00","value":173.57},{"at":"2026-09-22T00:45:00+00:00","value":172.68},{"at":"2026-09-22T01:00:00+00:00","value":174.62},{"at":"2026-09-22T01:15:00+00:00","value":171.86},{"at":"2026-09-22T01:30:00+00:00","value":171.27},{"at":"2026-09-22T01:45:00+00:00","value":172.25},{"at":"2026-09-22T02:00:00+00:00","value":175.15},{"at":"2026-09-22T02:15:00+00:00","value":174.73},{"at":"2026-09-22T02:30:00+00:00","value":176.45},{"at":"2026-09-22T02:45:00+00:00","value":181.0},{"at":"2026-09-22T03:00:00+00:00","value":170.03},{"at":"2026-09-22T03:15:00+00:00","value":181.47},{"at":"2026-09-22T03:30:00+00:00","value":192.99},{"at":"2026-09-22T03:45:00+00:00","value":185.53},{"at":"2026-09-22T04:00:00+00:00","value":199.28},{"at":"2026-09-22T04:15:00+00:00","value":201.5},{"at":"2026-09-22T04:30:00+00:00","value":202.1},{"at":"2026-09-22T04:45:00+00:00","value":210.0},{"at":"2026-09-22T05:00:00+00:00","value":226.0},{"at":"2026-09-22T05:15:00+00:00","value":228.72},{"at":"2026-09-22T05:30:00+00:00","value":237.23},{"at":"2026-09-22T05:45:00+00:00","value":244.71},{"at":"2026-09-22T06:00:00+00:00","value":282.29},{"at":"2026-09-22T06:15:00+00:00","value":268.06},{"at":"2026-09-22T06:30:00+00:00","value":240.76},{"at":"2026-09-22T06:45:00+00:00","value":204.98},{"at":"2026-09-22T07:00:00+00:00","value":215.0},{"at":"2026-09-22T07:15:00+00:00","value":193.91},{"at":"2026-09-22T07:30:00+00:00","value":186.93},{"at":"2026-09-22T07:45:00+00:00","value":166.18},{"at":"2026-09-22T08:00:00+00:00","value":163.0},{"at":"2026-09-22T08:15:00+00:00","value":120.5},{"at":"2026-09-22T08:30:00+00:00","value":95.06},{"at":"2026-09-22T08:45:00+00:00","value":40.0},{"at":"2026-09-22T09:00:00+00:00","value":52.0},{"at":"2026-09-22T09:15:00+00:00","value":38.99},{"at":"2026-09-22T09:30:00+00:00","value":38.66},{"at":"2026-09-22T09:45:00+00:00","value":27.0},{"at":"2026-09-22T10:00:00+00:00","value":20.01},{"at":"2026-09-22T10:15:00+00:00","value":19.64},{"at":"2026-09-22T10:30:00+00:00","value":12.96},{"at":"2026-09-22T10:45:00+00:00","value":10.01},{"at":"2026-09-22T11:00:00+00:00","value":4.61},{"at":"2026-09-22T11:15:00+00:00","value":3.43},{"at":"2026-09-22T11:30:00+00:00","value":1.99},{"at":"2026-09-22T11:45:00+00:00","value":2.0},{"at":"2026-09-22T12:00:00+00:00","value":6.07},{"at":"2026-09-22T12:15:00+00:00","value":15.1},{"at":"2026-09-22T12:30:00+00:00","value":20.17},{"at":"2026-09-22T12:45:00+00:00","value":24.11},{"at":"2026-09-22T13:00:00+00:00","value":25.0},{"at":"2026-09-22T13:15:00+00:00","value":24.01},{"at":"2026-09-22T13:30:00+00:00","value":22.14},{"at":"2026-09-22T13:45:00+00:00","value":24.01},{"at":"2026-09-22T14:00:00+00:00","value":32.5},{"at":"2026-09-22T14:15:00+00:00","value":39.09},{"at":"2026-09-22T14:30:00+00:00","value":54.41},{"at":"2026-09-22T14:45:00+00:00","value":70.0},{"at":"2026-09-22T15:00:00+00:00","value":92.55},{"at":"2026-09-22T15:15:00+00:00","value":107.32},{"at":"2026-09-22T15:30:00+00:00","value":156.64},{"at":"2026-09-22T15:45:00+00:00","value":169.11},{"at":"2026-09-22T16:00:00+00:00","value":207.24},{"at":"2026-09-22T16:15:00+00:00","value":218.14},{"at":"2026-09-22T16:30:00+00:00","value":244.63},{"at":"2026-09-22T16:45:00+00:00","value":268.06},{"at":"2026-09-22T17:00:00+00:00","value":250.0},{"at":"2026-09-22T17:15:00+00:00","value":268.06},{"at":"2026-09-22T17:30:00+00:00","value":287.94},{"at":"2026-09-22T17:45:00+00:00","value":300.0},{"at":"2026-09-22T18:00:00+00:00","value":285.0},{"at":"2026-09-22T18:15:00+00:00","value":290.01},{"at":"2026-09-22T18:30:00+00:00","value":278.18},{"at":"2026-09-22T18:45:00+00:00","value":276.51},{"at":"2026-09-22T19:00:00+00:00","value":272.51},{"at":"2026-09-22T19:15:00+00:00","value":251.44},{"at":"2026-09-22T19:30:00+00:00","value":255.83},{"at":"2026-09-22T19:45:00+00:00","value":227.5},{"at":"2026-09-22T20:00:00+00:00","value":253.01},{"at":"2026-09-22T20:15:00+00:00","value":231.8},{"at":"2026-09-22T20:30:00+00:00","value":232.19},{"at":"2026-09-22T20:45:00+00:00","value":224.41},{"at":"2026-09-22T21:00:00+00:00","value":224.0},{"at":"2026-09-22T21:15:00+00:00","value":214.54},{"at":"2026-09-22T21:30:00+00:00","value":210.21},{"at":"2026-09-22T21:45:00+00:00","value":201.18},{"at":"2026-09-22T22:00:00+00:00","value":194.55},{"at":"2026-09-22T22:15:00+00:00","value":188.51},{"at":"2026-09-22T22:30:00+00:00","value":186.39},{"at":"2026-09-22T22:45:00+00:00","value":166.66},{"at":"2026-09-22T23:00:00+00:00","value":175.28},{"at":"2026-09-22T23:15:00+00:00","value":174.88},{"at":"2026-09-22T23:30:00+00:00","value":173.68},{"at":"2026-09-22T23:45:00+00:00","value":179.76},{"at":"2026-09-23T00:00:00+00:00","value":174.52},{"at":"2026-09-23T00:15:00+00:00","value":171.1},{"at":"2026-09-23T00:30:00+00:00","value":164.07},{"at":"2026-09-23T00:45:00+00:00","value":161.89},{"at":"2026-09-23T01:00:00+00:00","value":152.23},{"at":"2026-09-23T01:15:00+00:00","value":156.85},{"at":"2026-09-23T01:30:00+00:00","value":155.77},{"at":"2026-09-23T01:45:00+00:00","value":160.27},{"at":"2026-09-23T02:00:00+00:00","value":151.49},{"at":"2026-09-23T02:15:00+00:00","value":155.69},{"at":"2026-09-23T02:30:00+00:00","value":157.22},{"at":"2026-09-23T02:45:00+00:00","value":161.57},{"at":"2026-09-23T03:00:00+00:00","value":161.23},{"at":"2026-09-23T03:15:00+00:00","value":167.04},{"at":"2026-09-23T03:30:00+00:00","value":175.01},{"at":"2026-09-23T03:45:00+00:00","value":157.83},{"at":"2026-09-23T04:00:00+00:00","value":179.66},{"at":"2026-09-23T04:15:00+00:00","value":205.12},{"at":"2026-09-23T04:30:00+00:00","value":170.94},{"at":"2026-09-23T04:45:00+00:00","value":197.13},{"at":"2026-09-23T05:00:00+00:00","value":206.5},{"at":"2026-09-23T05:15:00+00:00","value":219.88},{"at":"2026-09-23T05:30:00+00:00","value":225.0},{"at":"2026-09-23T05:45:00+00:00","value":226.9},{"at":"2026-09-23T06:00:00+00:00","value":257.65},{"at":"2026-09-23T06:15:00+00:00","value":240.5},{"at":"2026-09-23T06:30:00+00:00","value":224.31},{"at":"2026-09-23T06:45:00+00:00","value":189.12},{"at":"2026-09-23T07:00:00+00:00","value":207.12},{"at":"2026-09-23T07:15:00+00:00","value":193.88},{"at":"2026-09-23T07:30:00+00:00","value":170.82},{"at":"2026-09-23T07:45:00+00:00","value":146.46},{"at":"2026-09-23T08:00:00+00:00","value":166.24},{"at":"2026-09-23T08:15:00+00:00","value":148.1},{"at":"2026-09-23T08:30:00+00:00","value":134.95},{"at":"2026-09-23T08:45:00+00:00","value":93.3},{"at":"2026-09-23T09:00:00+00:00","value":90.0},{"at":"2026-09-23T09:15:00+00:00","value":73.59},{"at":"2026-09-23T09:30:00+00:00","value":57.59},{"at":"2026-09-23T09:45:00+00:00","value":38.99},{"at":"2026-09-23T10:00:00+00:00","value":40.0},{"at":"2026-09-23T10:15:00+00:00","value":35.0},{"at":"2026-09-23T10:30:00+00:00","value":35.0},{"at":"2026-09-23T10:45:00+00:00","value":30.0},{"at":"2026-09-23T11:00:00+00:00","value":24.01},{"at":"2026-09-23T11:15:00+00:00","value":15.0},{"at":"2026-09-23T11:30:00+00:00","value":11.1},{"at":"2026-09-23T11:45:00+00:00","value":10.02},{"at":"2026-09-23T12:00:00+00:00","value":24.01},{"at":"2026-09-23T12:15:00+00:00","value":23.38},{"at":"2026-09-23T12:30:00+00:00","value":25.58},{"at":"2026-09-23T12:45:00+00:00","value":27.23},{"at":"2026-09-23T13:00:00+00:00","value":25.71},{"at":"2026-09-23T13:15:00+00:00","value":28.28},{"at":"2026-09-23T13:30:00+00:00","value":34.08},{"at":"2026-09-23T13:45:00+00:00","value":38.77},{"at":"2026-09-23T14:00:00+00:00","value":38.77},{"at":"2026-09-23T14:15:00+00:00","value":51.51},{"at":"2026-09-23T14:30:00+00:00","value":74.0},{"at":"2026-09-23T14:45:00+00:00","value":107.72},{"at":"2026-09-23T15:00:00+00:00","value":114.94},{"at":"2026-09-23T15:15:00+00:00","value":111.65},{"at":"2026-09-23T15:30:00+00:00","value":141.64},{"at":"2026-09-23T15:45:00+00:00","value":152.38},{"at":"2026-09-23T16:00:00+00:00","value":175.05},{"at":"2026-09-23T16:15:00+00:00","value":187.45},{"at":"2026-09-23T16:30:00+00:00","value":191.65},{"at":"2026-09-23T16:45:00+00:00","value":230.21},{"at":"2026-09-23T17:00:00+00:00","value":240.5},{"at":"2026-09-23T17:15:00+00:00","value":255.32},{"at":"2026-09-23T17:30:00+00:00","value":264.47},{"at":"2026-09-23T17:45:00+00:00","value":274.36},{"at":"2026-09-23T18:00:00+00:00","value":266.17},{"at":"2026-09-23T18:15:00+00:00","value":252.97},{"at":"2026-09-23T18:30:00+00:00","value":237.18},{"at":"2026-09-23T18:45:00+00:00","value":212.96},{"at":"2026-09-23T19:00:00+00:00","value":219.26},{"at":"2026-09-23T19:15:00+00:00","value":210.39},{"at":"2026-09-23T19:30:00+00:00","value":196.79},{"at":"2026-09-23T19:45:00+00:00","value":184.9},{"at":"2026-09-23T20:00:00+00:00","value":189.38},{"at":"2026-09-23T20:15:00+00:00","value":181.48},{"at":"2026-09-23T20:30:00+00:00","value":179.9},{"at":"2026-09-23T20:45:00+00:00","value":172.87},{"at":"2026-09-23T21:00:00+00:00","value":176.08},{"at":"2026-09-23T21:15:00+00:00","value":164.18},{"at":"2026-09-23T21:30:00+00:00","value":166.93},{"at":"2026-09-23T21:45:00+00:00","value":161.77},{"at":"2026-09-23T22:00:00+00:00","value":194.36},{"at":"2026-09-23T22:15:00+00:00","value":177.51},{"at":"2026-09-23T22:30:00+00:00","value":173.33},{"at":"2026-09-23T22:45:00+00:00","value":179.6},{"at":"2026-09-23T23:00:00+00:00","value":186.71},{"at":"2026-09-23T23:15:00+00:00","value":177.91},{"at":"2026-09-23T23:30:00+00:00","value":180.46},{"at":"2026-09-23T23:45:00+00:00","value":160.68},{"at":"2026-09-24T00:00:00+00:00","value":156.42},{"at":"2026-09-24T00:15:00+00:00","value":147.84},{"at":"2026-09-24T00:30:00+00:00","value":142.51},{"at":"2026-09-24T00:45:00+00:00","value":134.99},{"at":"2026-09-24T01:00:00+00:00","value":141.93},{"at":"2026-09-24T01:15:00+00:00","value":135.29},{"at":"2026-09-24T01:30:00+00:00","value":141.99},{"at":"2026-09-24T01:45:00+00:00","value":136.17},{"at":"2026-09-24T02:00:00+00:00","value":147.26},{"at":"2026-09-24T02:15:00+00:00","value":147.99},{"at":"2026-09-24T02:30:00+00:00","value":149.37},{"at":"2026-09-24T02:45:00+00:00","value":158.24},{"at":"2026-09-24T03:00:00+00:00","value":174.82},{"at":"2026-09-24T03:15:00+00:00","value":149.98},{"at":"2026-09-24T03:30:00+00:00","value":153.0},{"at":"2026-09-24T03:45:00+00:00","value":169.69},{"at":"2026-09-24T04:00:00+00:00","value":164.62},{"at":"2026-09-24T04:15:00+00:00","value":179.25},{"at":"2026-09-24T04:30:00+00:00","value":196.3},{"at":"2026-09-24T04:45:00+00:00","value":200.0},{"at":"2026-09-24T05:00:00+00:00","value":200.0},{"at":"2026-09-24T05:15:00+00:00","value":210.0},{"at":"2026-09-24T05:30:00+00:00","value":215.37},{"at":"2026-09-24T05:45:00+00:00","value":220.42},{"at":"2026-09-24T06:00:00+00:00","value":250.0},{"at":"2026-09-24T06:15:00+00:00","value":238.03},{"at":"2026-09-24T06:30:00+00:00","value":214.97},{"at":"2026-09-24T06:45:00+00:00","value":195.98},{"at":"2026-09-24T07:00:00+00:00","value":221.84},{"at":"2026-09-24T07:15:00+00:00","value":194.99},{"at":"2026-09-24T07:30:00+00:00","value":174.0},{"at":"2026-09-24T07:45:00+00:00","value":161.75},{"at":"2026-09-24T08:00:00+00:00","value":165.1},{"at":"2026-09-24T08:15:00+00:00","value":167.14},{"at":"2026-09-24T08:30:00+00:00","value":147.56},{"at":"2026-09-24T08:45:00+00:00","value":116.36},{"at":"2026-09-24T09:00:00+00:00","value":126.36},{"at":"2026-09-24T09:15:00+00:00","value":78.86},{"at":"2026-09-24T09:30:00+00:00","value":60.02},{"at":"2026-09-24T09:45:00+00:00","value":53.68},{"at":"2026-09-24T10:00:00+00:00","value":50.1},{"at":"2026-09-24T10:15:00+00:00","value":38.55},{"at":"2026-09-24T10:30:00+00:00","value":35.48},{"at":"2026-09-24T10:45:00+00:00","value":38.55},{"at":"2026-09-24T11:00:00+00:00","value":27.0},{"at":"2026-09-24T11:15:00+00:00","value":23.5},{"at":"2026-09-24T11:30:00+00:00","value":17.62},{"at":"2026-09-24T11:45:00+00:00","value":20.0},{"at":"2026-09-24T12:00:00+00:00","value":30.0},{"at":"2026-09-24T12:15:00+00:00","value":34.99},{"at":"2026-09-24T12:30:00+00:00","value":38.66},{"at":"2026-09-24T12:45:00+00:00","value":38.55},{"at":"2026-09-24T13:00:00+00:00","value":38.66},{"at":"2026-09-24T13:15:00+00:00","value":38.77},{"at":"2026-09-24T13:30:00+00:00","value":38.99},{"at":"2026-09-24T13:45:00+00:00","value":73.61},{"at":"2026-09-24T14:00:00+00:00","value":74.07},{"at":"2026-09-24T14:15:00+00:00","value":95.13},{"at":"2026-09-24T14:30:00+00:00","value":118.13},{"at":"2026-09-24T14:45:00+00:00","value":152.8},{"at":"2026-09-24T15:00:00+00:00","value":141.6},{"at":"2026-09-24T15:15:00+00:00","value":170.89},{"at":"2026-09-24T15:30:00+00:00","value":171.17},{"at":"2026-09-24T15:45:00+00:00","value":214.43},{"at":"2026-09-24T16:00:00+00:00","value":169.37},{"at":"2026-09-24T16:15:00+00:00","value":218.93},{"at":"2026-09-24T16:30:00+00:00","value":233.27},{"at":"2026-09-24T16:45:00+00:00","value":261.0},{"at":"2026-09-24T17:00:00+00:00","value":251.4},{"at":"2026-09-24T17:15:00+00:00","value":265.8},{"at":"2026-09-24T17:30:00+00:00","value":267.94},{"at":"2026-09-24T17:45:00+00:00","value":288.23},{"at":"2026-09-24T18:00:00+00:00","value":272.65},{"at":"2026-09-24T18:15:00+00:00","value":265.8},{"at":"2026-09-24T18:30:00+00:00","value":253.5},{"at":"2026-09-24T18:45:00+00:00","value":248.05},{"at":"2026-09-24T19:00:00+00:00","value":240.29},{"at":"2026-09-24T19:15:00+00:00","value":230.9},{"at":"2026-09-24T19:30:00+00:00","value":224.17},{"at":"2026-09-24T19:45:00+00:00","value":210.4},{"at":"2026-09-24T20:00:00+00:00","value":222.09},{"at":"2026-09-24T20:15:00+00:00","value":205.95},{"at":"2026-09-24T20:30:00+00:00","value":202.67},{"at":"2026-09-24T20:45:00+00:00","value":194.87},{"at":"2026-09-24T21:00:00+00:00","value":198.86},{"at":"2026-09-24T21:15:00+00:00","value":190.36},{"at":"2026-09-24T21:30:00+00:00","value":187.58},{"at":"2026-09-24T21:45:00+00:00","value":182.5},{"at":"2026-09-24T22:00:00+00:00","value":197.12},{"at":"2026-09-24T22:15:00+00:00","value":184.82},{"at":"2026-09-24T22:30:00+00:00","value":176.3},{"at":"2026-09-24T22:45:00+00:00","value":170.83},{"at":"2026-09-24T23:00:00+00:00","value":175.34},{"at":"2026-09-24T23:15:00+00:00","value":171.96},{"at":"2026-09-24T23:30:00+00:00","value":171.6},{"at":"2026-09-24T23:45:00+00:00","value":170.96},{"at":"2026-09-25T00:00:00+00:00","value":168.83},{"at":"2026-09-25T00:15:00+00:00","value":167.62},{"at":"2026-09-25T00:30:00+00:00","value":166.96},{"at":"2026-09-25T00:45:00+00:00","value":162.32},{"at":"2026-09-25T01:00:00+00:00","value":165.48},{"at":"2026-09-25T01:15:00+00:00","value":163.57},{"at":"2026-09-25T01:30:00+00:00","value":163.99},{"at":"2026-09-25T01:45:00+00:00","value":169.14},{"at":"2026-09-25T02:00:00+00:00","value":158.58},{"at":"2026-09-25T02:15:00+00:00","value":155.25},{"at":"2026-09-25T02:30:00+00:00","value":157.09},{"at":"2026-09-25T02:45:00+00:00","value":164.94},{"at":"2026-09-25T03:00:00+00:00","value":167.4},{"at":"2026-09-25T03:15:00+00:00","value":169.26},{"at":"2026-09-25T03:30:00+00:00","value":187.11},{"at":"2026-09-25T03:45:00+00:00","value":177.6},{"at":"2026-09-25T04:00:00+00:00","value":196.18},{"at":"2026-09-25T04:15:00+00:00","value":197.12},{"at":"2026-09-25T04:30:00+00:00","value":199.56},{"at":"2026-09-25T04:45:00+00:00","value":210.94},{"at":"2026-09-25T05:00:00+00:00","value":219.93},{"at":"2026-09-25T05:15:00+00:00","value":237.02},{"at":"2026-09-25T05:30:00+00:00","value":243.97},{"at":"2026-09-25T05:45:00+00:00","value":246.06},{"at":"2026-09-25T06:00:00+00:00","value":261.99},{"at":"2026-09-25T06:15:00+00:00","value":251.3},{"at":"2026-09-25T06:30:00+00:00","value":235.0},{"at":"2026-09-25T06:45:00+00:00","value":200.0},{"at":"2026-09-25T07:00:00+00:00","value":201.18},{"at":"2026-09-25T07:15:00+00:00","value":199.3},{"at":"2026-09-25T07:30:00+00:00","value":189.27},{"at":"2026-09-25T07:45:00+00:00","value":157.5},{"at":"2026-09-25T08:00:00+00:00","value":163.0},{"at":"2026-09-25T08:15:00+00:00","value":148.0},{"at":"2026-09-25T08:30:00+00:00","value":140.99},{"at":"2026-09-25T08:45:00+00:00","value":100.01},{"at":"2026-09-25T09:00:00+00:00","value":97.06},{"at":"2026-09-25T09:15:00+00:00","value":85.2},{"at":"2026-09-25T09:30:00+00:00","value":72.89},{"at":"2026-09-25T09:45:00+00:00","value":55.88},{"at":"2026-09-25T10:00:00+00:00","value":52.88},{"at":"2026-09-25T10:15:00+00:00","value":38.99},{"at":"2026-09-25T10:30:00+00:00","value":47.76},{"at":"2026-09-25T10:45:00+00:00","value":42.75},{"at":"2026-09-25T11:00:00+00:00","value":38.99},{"at":"2026-09-25T11:15:00+00:00","value":36.12},{"at":"2026-09-25T11:30:00+00:00","value":26.14},{"at":"2026-09-25T11:45:00+00:00","value":19.17},{"at":"2026-09-25T12:00:00+00:00","value":23.12},{"at":"2026-09-25T12:15:00+00:00","value":35.0},{"at":"2026-09-25T12:30:00+00:00","value":38.99},{"at":"2026-09-25T12:45:00+00:00","value":39.1},{"at":"2026-09-25T13:00:00+00:00","value":39.1},{"at":"2026-09-25T13:15:00+00:00","value":39.1},{"at":"2026-09-25T13:30:00+00:00","value":38.66},{"at":"2026-09-25T13:45:00+00:00","value":44.01},{"at":"2026-09-25T14:00:00+00:00","value":65.0},{"at":"2026-09-25T14:15:00+00:00","value":69.0},{"at":"2026-09-25T14:30:00+00:00","value":74.61},{"at":"2026-09-25T14:45:00+00:00","value":106.82},{"at":"2026-09-25T15:00:00+00:00","value":142.48},{"at":"2026-09-25T15:15:00+00:00","value":171.9},{"at":"2026-09-25T15:30:00+00:00","value":178.75},{"at":"2026-09-25T15:45:00+00:00","value":204.01},{"at":"2026-09-25T16:00:00+00:00","value":202.24},{"at":"2026-09-25T16:15:00+00:00","value":229.77},{"at":"2026-09-25T16:30:00+00:00","value":239.54},{"at":"2026-09-25T16:45:00+00:00","value":272.29},{"at":"2026-09-25T17:00:00+00:00","value":242.5},{"at":"2026-09-25T17:15:00+00:00","value":248.58},{"at":"2026-09-25T17:30:00+00:00","value":255.1},{"at":"2026-09-25T17:45:00+00:00","value":287.13},{"at":"2026-09-25T18:00:00+00:00","value":270.0},{"at":"2026-09-25T18:15:00+00:00","value":255.0},{"at":"2026-09-25T18:30:00+00:00","value":247.73},{"at":"2026-09-25T18:45:00+00:00","value":237.51},{"at":"2026-09-25T19:00:00+00:00","value":244.81},{"at":"2026-09-25T19:15:00+00:00","value":232.14},{"at":"2026-09-25T19:30:00+00:00","value":219.97},{"at":"2026-09-25T19:45:00+00:00","value":204.46},{"at":"2026-09-25T20:00:00+00:00","value":220.92},{"at":"2026-09-25T20:15:00+00:00","value":210.0},{"at":"2026-09-25T20:30:00+00:00","value":203.67},{"at":"2026-09-25T20:45:00+00:00","value":196.65},{"at":"2026-09-25T21:00:00+00:00","value":201.18},{"at":"2026-09-25T21:15:00+00:00","value":198.5},{"at":"2026-09-25T21:30:00+00:00","value":194.86},{"at":"2026-09-25T21:45:00+00:00","value":185.3},{"at":"2026-09-25T22:00:00+00:00","value":207.72},{"at":"2026-09-25T22:15:00+00:00","value":201.51},{"at":"2026-09-25T22:30:00+00:00","value":194.81},{"at":"2026-09-25T22:45:00+00:00","value":186.47},{"at":"2026-09-25T23:00:00+00:00","value":189.42},{"at":"2026-09-25T23:15:00+00:00","value":185.76},{"at":"2026-09-25T23:30:00+00:00","value":184.41},{"at":"2026-09-25T23:45:00+00:00","value":182.59},{"at":"2026-09-26T00:00:00+00:00","value":183.13},{"at":"2026-09-26T00:15:00+00:00","value":181.63},{"at":"2026-09-26T00:30:00+00:00","value":176.13},{"at":"2026-09-26T00:45:00+00:00","value":169.87},{"at":"2026-09-26T01:00:00+00:00","value":169.43},{"at":"2026-09-26T01:15:00+00:00","value":166.35},{"at":"2026-09-26T01:30:00+00:00","value":165.51},{"at":"2026-09-26T01:45:00+00:00","value":165.12},{"at":"2026-09-26T02:00:00+00:00","value":163.01},{"at":"2026-09-26T02:15:00+00:00","value":163.56},{"at":"2026-09-26T02:30:00+00:00","value":163.56},{"at":"2026-09-26T02:45:00+00:00","value":164.07},{"at":"2026-09-26T03:00:00+00:00","value":161.62},{"at":"2026-09-26T03:15:00+00:00","value":161.59},{"at":"2026-09-26T03:30:00+00:00","value":163.54},{"at":"2026-09-26T03:45:00+00:00","value":168.06},{"at":"2026-09-26T04:00:00+00:00","value":170.16},{"at":"2026-09-26T04:15:00+00:00","value":178.75},{"at":"2026-09-26T04:30:00+00:00","value":184.15},{"at":"2026-09-26T04:45:00+00:00","value":190.61},{"at":"2026-09-26T05:00:00+00:00","value":194.92},{"at":"2026-09-26T05:15:00+00:00","value":196.88},{"at":"2026-09-26T05:30:00+00:00","value":195.6},{"at":"2026-09-26T05:45:00+00:00","value":196.76},{"at":"2026-09-26T06:00:00+00:00","value":211.34},{"at":"2026-09-26T06:15:00+00:00","value":203.0},{"at":"2026-09-26T06:30:00+00:00","value":187.34},{"at":"2026-09-26T06:45:00+00:00","value":166.4},{"at":"2026-09-26T07:00:00+00:00","value":193.17},{"at":"2026-09-26T07:15:00+00:00","value":165.98},{"at":"2026-09-26T07:30:00+00:00","value":139.03},{"at":"2026-09-26T07:45:00+00:00","value":127.59},{"at":"2026-09-26T08:00:00+00:00","value":132.41},{"at":"2026-09-26T08:15:00+00:00","value":120.56},{"at":"2026-09-26T08:30:00+00:00","value":104.99},{"at":"2026-09-26T08:45:00+00:00","value":97.54},{"at":"2026-09-26T09:00:00+00:00","value":78.49},{"at":"2026-09-26T09:15:00+00:00","value":59.02},{"at":"2026-09-26T09:30:00+00:00","value":46.32},{"at":"2026-09-26T09:45:00+00:00","value":39.62},{"at":"2026-09-26T10:00:00+00:00","value":30.3},{"at":"2026-09-26T10:15:00+00:00","value":26.93},{"at":"2026-09-26T10:30:00+00:00","value":22.31},{"at":"2026-09-26T10:45:00+00:00","value":16.15},{"at":"2026-09-26T11:00:00+00:00","value":11.42},{"at":"2026-09-26T11:15:00+00:00","value":2.22},{"at":"2026-09-26T11:30:00+00:00","value":0.76},{"at":"2026-09-26T11:45:00+00:00","value":0.76},{"at":"2026-09-26T12:00:00+00:00","value":8.99},{"at":"2026-09-26T12:15:00+00:00","value":12.51},{"at":"2026-09-26T12:30:00+00:00","value":23.3},{"at":"2026-09-26T12:45:00+00:00","value":25.02},{"at":"2026-09-26T13:00:00+00:00","value":23.0},{"at":"2026-09-26T13:15:00+00:00","value":40.0},{"at":"2026-09-26T13:30:00+00:00","value":35.93},{"at":"2026-09-26T13:45:00+00:00","value":59.07},{"at":"2026-09-26T14:00:00+00:00","value":62.43},{"at":"2026-09-26T14:15:00+00:00","value":95.77},{"at":"2026-09-26T14:30:00+00:00","value":106.77},{"at":"2026-09-26T14:45:00+00:00","value":160.1},{"at":"2026-09-26T15:00:00+00:00","value":141.25},{"at":"2026-09-26T15:15:00+00:00","value":158.98},{"at":"2026-09-26T15:30:00+00:00","value":128.03},{"at":"2026-09-26T15:45:00+00:00","value":181.76},{"at":"2026-09-26T16:00:00+00:00","value":169.94},{"at":"2026-09-26T16:15:00+00:00","value":202.75},{"at":"2026-09-26T16:30:00+00:00","value":219.48},{"at":"2026-09-26T16:45:00+00:00","value":234.23},{"at":"2026-09-26T17:00:00+00:00","value":222.0},{"at":"2026-09-26T17:15:00+00:00","value":230.46},{"at":"2026-09-26T17:30:00+00:00","value":243.61},{"at":"2026-09-26T17:45:00+00:00","value":251.08},{"at":"2026-09-26T18:00:00+00:00","value":238.97},{"at":"2026-09-26T18:15:00+00:00","value":232.0},{"at":"2026-09-26T18:30:00+00:00","value":222.48},{"at":"2026-09-26T18:45:00+00:00","value":211.99},{"at":"2026-09-26T19:00:00+00:00","value":218.18},{"at":"2026-09-26T19:15:00+00:00","value":210.24},{"at":"2026-09-26T19:30:00+00:00","value":205.53},{"at":"2026-09-26T19:45:00+00:00","value":200.0},{"at":"2026-09-26T20:00:00+00:00","value":207.0},{"at":"2026-09-26T20:15:00+00:00","value":200.62},{"at":"2026-09-26T20:30:00+00:00","value":197.73},{"at":"2026-09-26T20:45:00+00:00","value":191.89},{"at":"2026-09-26T21:00:00+00:00","value":195.2},{"at":"2026-09-26T21:15:00+00:00","value":188.45},{"at":"2026-09-26T21:30:00+00:00","value":182.55},{"at":"2026-09-26T21:45:00+00:00","value":177.8},{"at":"2026-09-26T22:00:00+00:00","value":192.07},{"at":"2026-09-26T22:15:00+00:00","value":187.0},{"at":"2026-09-26T22:30:00+00:00","value":183.34},{"at":"2026-09-26T22:45:00+00:00","value":172.83},{"at":"2026-09-26T23:00:00+00:00","value":180.7},{"at":"2026-09-26T23:15:00+00:00","value":178.0},{"at":"2026-09-26T23:30:00+00:00","value":176.62},{"at":"2026-09-26T23:45:00+00:00","value":178.0},{"at":"2026-09-27T00:00:00+00:00","value":176.0},{"at":"2026-09-27T00:15:00+00:00","value":171.31},{"at":"2026-09-27T00:30:00+00:00","value":169.97},{"at":"2026-09-27T00:45:00+00:00","value":168.08},{"at":"2026-09-27T01:00:00+00:00","value":168.16},{"at":"2026-09-27T01:15:00+00:00","value":166.78},{"at":"2026-09-27T01:30:00+00:00","value":165.4},{"at":"2026-09-27T01:45:00+00:00","value":165.39},{"at":"2026-09-27T02:00:00+00:00","value":165.0},{"at":"2026-09-27T02:15:00+00:00","value":160.83},{"at":"2026-09-27T02:30:00+00:00","value":160.44},{"at":"2026-09-27T02:45:00+00:00","value":160.0},{"at":"2026-09-27T03:00:00+00:00","value":160.44},{"at":"2026-09-27T03:15:00+00:00","value":158.08},{"at":"2026-09-27T03:30:00+00:00","value":159.4},{"at":"2026-09-27T03:45:00+00:00","value":156.76},{"at":"2026-09-27T04:00:00+00:00","value":156.25},{"at":"2026-09-27T04:15:00+00:00","value":156.79},{"at":"2026-09-27T04:30:00+00:00","value":163.19},{"at":"2026-09-27T04:45:00+00:00","value":163.77},{"at":"2026-09-27T05:00:00+00:00","value":169.21},{"at":"2026-09-27T05:15:00+00:00","value":160.68},{"at":"2026-09-27T05:30:00+00:00","value":147.95},{"at":"2026-09-27T05:45:00+00:00","value":134.63},{"at":"2026-09-27T06:00:00+00:00","value":160.43},{"at":"2026-09-27T06:15:00+00:00","value":143.86},{"at":"2026-09-27T06:30:00+00:00","value":119.48},{"at":"2026-09-27T06:45:00+00:00","value":95.84},{"at":"2026-09-27T07:00:00+00:00","value":110.16},{"at":"2026-09-27T07:15:00+00:00","value":80.97},{"at":"2026-09-27T07:30:00+00:00","value":37.22},{"at":"2026-09-27T07:45:00+00:00","value":23.14},{"at":"2026-09-27T08:00:00+00:00","value":36.14},{"at":"2026-09-27T08:15:00+00:00","value":15.85},{"at":"2026-09-27T08:30:00+00:00","value":4.47},{"at":"2026-09-27T08:45:00+00:00","value":1.5},{"at":"2026-09-27T09:00:00+00:00","value":0.89},{"at":"2026-09-27T09:15:00+00:00","value":0.0},{"at":"2026-09-27T09:30:00+00:00","value":0.0},{"at":"2026-09-27T09:45:00+00:00","value":0.0},{"at":"2026-09-27T10:00:00+00:00","value":-0.01},{"at":"2026-09-27T10:15:00+00:00","value":-0.01},{"at":"2026-09-27T10:30:00+00:00","value":-0.01},{"at":"2026-09-27T10:45:00+00:00","value":-0.01},{"at":"2026-09-27T11:00:00+00:00","value":-0.11},{"at":"2026-09-27T11:15:00+00:00","value":-0.11},{"at":"2026-09-27T11:30:00+00:00","value":-1.24},{"at":"2026-09-27T11:45:00+00:00","value":-2.03},{"at":"2026-09-27T12:00:00+00:00","value":-0.11},{"at":"2026-09-27T12:15:00+00:00","value":-0.11},{"at":"2026-09-27T12:30:00+00:00","value":-0.11},{"at":"2026-09-27T12:45:00+00:00","value":-0.11},{"at":"2026-09-27T13:00:00+00:00","value":-0.01},{"at":"2026-09-27T13:15:00+00:00","value":-0.01},{"at":"2026-09-27T13:30:00+00:00","value":0.0},{"at":"2026-09-27T13:45:00+00:00","value":0.0},{"at":"2026-09-27T14:00:00+00:00","value":0.0},{"at":"2026-09-27T14:15:00+00:00","value":0.15},{"at":"2026-09-27T14:30:00+00:00","value":7.01},{"at":"2026-09-27T14:45:00+00:00","value":45.25},{"at":"2026-09-27T15:00:00+00:00","value":41.25},{"at":"2026-09-27T15:15:00+00:00","value":92.71},{"at":"2026-09-27T15:30:00+00:00","value":144.61},{"at":"2026-09-27T15:45:00+00:00","value":179.2},{"at":"2026-09-27T16:00:00+00:00","value":168.79},{"at":"2026-09-27T16:15:00+00:00","value":189.78},{"at":"2026-09-27T16:30:00+00:00","value":198.61},{"at":"2026-09-27T16:45:00+00:00","value":202.34},{"at":"2026-09-27T17:00:00+00:00","value":195.34},{"at":"2026-09-27T17:15:00+00:00","value":196.64},{"at":"2026-09-27T17:30:00+00:00","value":205.0},{"at":"2026-09-27T17:45:00+00:00","value":210.26},{"at":"2026-09-27T18:00:00+00:00","value":201.21},{"at":"2026-09-27T18:15:00+00:00","value":201.0},{"at":"2026-09-27T18:30:00+00:00","value":197.33},{"at":"2026-09-27T18:45:00+00:00","value":186.26},{"at":"2026-09-27T19:00:00+00:00","value":191.66},{"at":"2026-09-27T19:15:00+00:00","value":185.6},{"at":"2026-09-27T19:30:00+00:00","value":175.53},{"at":"2026-09-27T19:45:00+00:00","value":168.22},{"at":"2026-09-27T20:00:00+00:00","value":181.92},{"at":"2026-09-27T20:15:00+00:00","value":173.66},{"at":"2026-09-27T20:30:00+00:00","value":172.32},{"at":"2026-09-27T20:45:00+00:00","value":163.89},{"at":"2026-09-27T21:00:00+00:00","value":168.36},{"at":"2026-09-27T21:15:00+00:00","value":162.42},{"at":"2026-09-27T21:30:00+00:00","value":159.91},{"at":"2026-09-27T21:45:00+00:00","value":153.85},{"at":"2026-09-27T22:00:00+00:00","value":162.9},{"at":"2026-09-27T22:15:00+00:00","value":163.01},{"at":"2026-09-27T22:30:00+00:00","value":163.54},{"at":"2026-09-27T22:45:00+00:00","value":162.51},{"at":"2026-09-27T23:00:00+00:00","value":168.03},{"at":"2026-09-27T23:15:00+00:00","value":163.02},{"at":"2026-09-27T23:30:00+00:00","value":163.54},{"at":"2026-09-27T23:45:00+00:00","value":162.2},{"at":"2026-09-28T00:00:00+00:00","value":160.05},{"at":"2026-09-28T00:15:00+00:00","value":157.65},{"at":"2026-09-28T00:30:00+00:00","value":156.03},{"at":"2026-09-28T00:45:00+00:00","value":154.49},{"at":"2026-09-28T01:00:00+00:00","value":155.15},{"at":"2026-09-28T01:15:00+00:00","value":157.06},{"at":"2026-09-28T01:30:00+00:00","value":157.44},{"at":"2026-09-28T01:45:00+00:00","value":159.56},{"at":"2026-09-28T02:00:00+00:00","value":158.58},{"at":"2026-09-28T02:15:00+00:00","value":160.0},{"at":"2026-09-28T02:30:00+00:00","value":163.54},{"at":"2026-09-28T02:45:00+00:00","value":168.69},{"at":"2026-09-28T03:00:00+00:00","value":169.26},{"at":"2026-09-28T03:15:00+00:00","value":173.1},{"at":"2026-09-28T03:30:00+00:00","value":178.08},{"at":"2026-09-28T03:45:00+00:00","value":185.9},{"at":"2026-09-28T04:00:00+00:00","value":193.68},{"at":"2026-09-28T04:15:00+00:00","value":204.99},{"at":"2026-09-28T04:30:00+00:00","value":214.84},{"at":"2026-09-28T04:45:00+00:00","value":231.02},{"at":"2026-09-28T05:00:00+00:00","value":229.39},{"at":"2026-09-28T05:15:00+00:00","value":244.02},{"at":"2026-09-28T05:30:00+00:00","value":246.3},{"at":"2026-09-28T05:45:00+00:00","value":245.84},{"at":"2026-09-28T06:00:00+00:00","value":275.95},{"at":"2026-09-28T06:15:00+00:00","value":254.9},{"at":"2026-09-28T06:30:00+00:00","value":241.63},{"at":"2026-09-28T06:45:00+00:00","value":227.52},{"at":"2026-09-28T07:00:00+00:00","value":255.75},{"at":"2026-09-28T07:15:00+00:00","value":241.6},{"at":"2026-09-28T07:30:00+00:00","value":233.16},{"at":"2026-09-28T07:45:00+00:00","value":213.58},{"at":"2026-09-28T08:00:00+00:00","value":225.99},{"at":"2026-09-28T08:15:00+00:00","value":210.02},{"at":"2026-09-28T08:30:00+00:00","value":201.81},{"at":"2026-09-28T08:45:00+00:00","value":177.7},{"at":"2026-09-28T09:00:00+00:00","value":181.66},{"at":"2026-09-28T09:15:00+00:00","value":177.98},{"at":"2026-09-28T09:30:00+00:00","value":180.8},{"at":"2026-09-28T09:45:00+00:00","value":175.58},{"at":"2026-09-28T10:00:00+00:00","value":175.43},{"at":"2026-09-28T10:15:00+00:00","value":155.0},{"at":"2026-09-28T10:30:00+00:00","value":153.75},{"at":"2026-09-28T10:45:00+00:00","value":148.56},{"at":"2026-09-28T11:00:00+00:00","value":151.94},{"at":"2026-09-28T11:15:00+00:00","value":147.32},{"at":"2026-09-28T11:30:00+00:00","value":149.5},{"at":"2026-09-28T11:45:00+00:00","value":152.53},{"at":"2026-09-28T12:00:00+00:00","value":152.4},{"at":"2026-09-28T12:15:00+00:00","value":155.42},{"at":"2026-09-28T12:30:00+00:00","value":159.0},{"at":"2026-09-28T12:45:00+00:00","value":163.58},{"at":"2026-09-28T13:00:00+00:00","value":158.1},{"at":"2026-09-28T13:15:00+00:00","value":164.76},{"at":"2026-09-28T13:30:00+00:00","value":165.0},{"at":"2026-09-28T13:45:00+00:00","value":182.0},{"at":"2026-09-28T14:00:00+00:00","value":169.95},{"at":"2026-09-28T14:15:00+00:00","value":186.87},{"at":"2026-09-28T14:30:00+00:00","value":201.93},{"at":"2026-09-28T14:45:00+00:00","value":217.88},{"at":"2026-09-28T15:00:00+00:00","value":207.45},{"at":"2026-09-28T15:15:00+00:00","value":231.26},{"at":"2026-09-28T15:30:00+00:00","value":241.07},{"at":"2026-09-28T15:45:00+00:00","value":266.9},{"at":"2026-09-28T16:00:00+00:00","value":234.14},{"at":"2026-09-28T16:15:00+00:00","value":252.66},{"at":"2026-09-28T16:30:00+00:00","value":294.11},{"at":"2026-09-28T16:45:00+00:00","value":390.6},{"at":"2026-09-28T17:00:00+00:00","value":350.0},{"at":"2026-09-28T17:15:00+00:00","value":354.0},{"at":"2026-09-28T17:30:00+00:00","value":349.99},{"at":"2026-09-28T17:45:00+00:00","value":314.86},{"at":"2026-09-28T18:00:00+00:00","value":320.83},{"at":"2026-09-28T18:15:00+00:00","value":280.59},{"at":"2026-09-28T18:30:00+00:00","value":260.91},{"at":"2026-09-28T18:45:00+00:00","value":246.9},{"at":"2026-09-28T19:00:00+00:00","value":252.58},{"at":"2026-09-28T19:15:00+00:00","value":234.44},{"at":"2026-09-28T19:30:00+00:00","value":223.98},{"at":"2026-09-28T19:45:00+00:00","value":205.0},{"at":"2026-09-28T20:00:00+00:00","value":216.93},{"at":"2026-09-28T20:15:00+00:00","value":208.16},{"at":"2026-09-28T20:30:00+00:00","value":201.99},{"at":"2026-09-28T20:45:00+00:00","value":186.32},{"at":"2026-09-28T21:00:00+00:00","value":197.01},{"at":"2026-09-28T21:15:00+00:00","value":187.78},{"at":"2026-09-28T21:30:00+00:00","value":179.24},{"at":"2026-09-28T21:45:00+00:00","value":168.66},{"at":"2026-09-28T22:00:00+00:00","value":201.22},{"at":"2026-09-28T22:15:00+00:00","value":191.39},{"at":"2026-09-28T22:30:00+00:00","value":181.38},{"at":"2026-09-28T22:45:00+00:00","value":175.18},{"at":"2026-09-28T23:00:00+00:00","value":183.46},{"at":"2026-09-28T23:15:00+00:00","value":177.19},{"at":"2026-09-28T23:30:00+00:00","value":174.89},{"at":"2026-09-28T23:45:00+00:00","value":169.09},{"at":"2026-09-29T00:00:00+00:00","value":173.53},{"at":"2026-09-29T00:15:00+00:00","value":171.98},{"at":"2026-09-29T00:30:00+00:00","value":170.98},{"at":"2026-09-29T00:45:00+00:00","value":169.56},{"at":"2026-09-29T01:00:00+00:00","value":166.26},{"at":"2026-09-29T01:15:00+00:00","value":167.06},{"at":"2026-09-29T01:30:00+00:00","value":165.29},{"at":"2026-09-29T01:45:00+00:00","value":166.9},{"at":"2026-09-29T02:00:00+00:00","value":163.39},{"at":"2026-09-29T02:15:00+00:00","value":163.53},{"at":"2026-09-29T02:30:00+00:00","value":161.95},{"at":"2026-09-29T02:45:00+00:00","value":158.41},{"at":"2026-09-29T03:00:00+00:00","value":157.1},{"at":"2026-09-29T03:15:00+00:00","value":160.7},{"at":"2026-09-29T03:30:00+00:00","value":172.94},{"at":"2026-09-29T03:45:00+00:00","value":180.0},{"at":"2026-09-29T04:00:00+00:00","value":172.8},{"at":"2026-09-29T04:15:00+00:00","value":185.0},{"at":"2026-09-29T04:30:00+00:00","value":194.62},{"at":"2026-09-29T04:45:00+00:00","value":210.37},{"at":"2026-09-29T05:00:00+00:00","value":211.75},{"at":"2026-09-29T05:15:00+00:00","value":228.1},{"at":"2026-09-29T05:30:00+00:00","value":228.64},{"at":"2026-09-29T05:45:00+00:00","value":228.1},{"at":"2026-09-29T06:00:00+00:00","value":239.17},{"at":"2026-09-29T06:15:00+00:00","value":231.15},{"at":"2026-09-29T06:30:00+00:00","value":216.12},{"at":"2026-09-29T06:45:00+00:00","value":193.96},{"at":"2026-09-29T07:00:00+00:00","value":215.83},{"at":"2026-09-29T07:15:00+00:00","value":189.43},{"at":"2026-09-29T07:30:00+00:00","value":178.12},{"at":"2026-09-29T07:45:00+00:00","value":169.02},{"at":"2026-09-29T08:00:00+00:00","value":200.25},{"at":"2026-09-29T08:15:00+00:00","value":187.45},{"at":"2026-09-29T08:30:00+00:00","value":180.36},{"at":"2026-09-29T08:45:00+00:00","value":161.46},{"at":"2026-09-29T09:00:00+00:00","value":157.73},{"at":"2026-09-29T09:15:00+00:00","value":143.77},{"at":"2026-09-29T09:30:00+00:00","value":119.08},{"at":"2026-09-29T09:45:00+00:00","value":106.43},{"at":"2026-09-29T10:00:00+00:00","value":103.05},{"at":"2026-09-29T10:15:00+00:00","value":93.72},{"at":"2026-09-29T10:30:00+00:00","value":93.45},{"at":"2026-09-29T10:45:00+00:00","value":79.93},{"at":"2026-09-29T11:00:00+00:00","value":86.38},{"at":"2026-09-29T11:15:00+00:00","value":77.99},{"at":"2026-09-29T11:30:00+00:00","value":70.21},{"at":"2026-09-29T11:45:00+00:00","value":64.07},{"at":"2026-09-29T12:00:00+00:00","value":65.66},{"at":"2026-09-29T12:15:00+00:00","value":79.03},{"at":"2026-09-29T12:30:00+00:00","value":88.03},{"at":"2026-09-29T12:45:00+00:00","value":93.47},{"at":"2026-09-29T13:00:00+00:00","value":89.63},{"at":"2026-09-29T13:15:00+00:00","value":105.31},{"at":"2026-09-29T13:30:00+00:00","value":96.11},{"at":"2026-09-29T13:45:00+00:00","value":110.73},{"at":"2026-09-29T14:00:00+00:00","value":95.83},{"at":"2026-09-29T14:15:00+00:00","value":127.17},{"at":"2026-09-29T14:30:00+00:00","value":143.77},{"at":"2026-09-29T14:45:00+00:00","value":181.17},{"at":"2026-09-29T15:00:00+00:00","value":167.13},{"at":"2026-09-29T15:15:00+00:00","value":171.48},{"at":"2026-09-29T15:30:00+00:00","value":160.52},{"at":"2026-09-29T15:45:00+00:00","value":205.22},{"at":"2026-09-29T16:00:00+00:00","value":182.9},{"at":"2026-09-29T16:15:00+00:00","value":222.41},{"at":"2026-09-29T16:30:00+00:00","value":232.88},{"at":"2026-09-29T16:45:00+00:00","value":250.12},{"at":"2026-09-29T17:00:00+00:00","value":243.54},{"at":"2026-09-29T17:15:00+00:00","value":240.44},{"at":"2026-09-29T17:30:00+00:00","value":243.03},{"at":"2026-09-29T17:45:00+00:00","value":236.24},{"at":"2026-09-29T18:00:00+00:00","value":238.94},{"at":"2026-09-29T18:15:00+00:00","value":227.55},{"at":"2026-09-29T18:30:00+00:00","value":213.58},{"at":"2026-09-29T18:45:00+00:00","value":198.14},{"at":"2026-09-29T19:00:00+00:00","value":189.14},{"at":"2026-09-29T19:15:00+00:00","value":187.65},{"at":"2026-09-29T19:30:00+00:00","value":180.22},{"at":"2026-09-29T19:45:00+00:00","value":168.64},{"at":"2026-09-29T20:00:00+00:00","value":176.0},{"at":"2026-09-29T20:15:00+00:00","value":168.49},{"at":"2026-09-29T20:30:00+00:00","value":173.0},{"at":"2026-09-29T20:45:00+00:00","value":153.89},{"at":"2026-09-29T21:00:00+00:00","value":151.87},{"at":"2026-09-29T21:15:00+00:00","value":144.36},{"at":"2026-09-29T21:30:00+00:00","value":140.33},{"at":"2026-09-29T21:45:00+00:00","value":128.83},{"at":"2026-09-29T22:00:00+00:00","value":122.15},{"at":"2026-09-29T22:15:00+00:00","value":107.57},{"at":"2026-09-29T22:30:00+00:00","value":94.26},{"at":"2026-09-29T22:45:00+00:00","value":40.96},{"at":"2026-09-29T23:00:00+00:00","value":100.0},{"at":"2026-09-29T23:15:00+00:00","value":73.01},{"at":"2026-09-29T23:30:00+00:00","value":75.91},{"at":"2026-09-29T23:45:00+00:00","value":32.72},{"at":"2026-09-30T00:00:00+00:00","value":90.0},{"at":"2026-09-30T00:15:00+00:00","value":101.94},{"at":"2026-09-30T00:30:00+00:00","value":55.41},{"at":"2026-09-30T00:45:00+00:00","value":20.59},{"at":"2026-09-30T01:00:00+00:00","value":80.76},{"at":"2026-09-30T01:15:00+00:00","value":34.54},{"at":"2026-09-30T01:30:00+00:00","value":30.53},{"at":"2026-09-30T01:45:00+00:00","value":44.95},{"at":"2026-09-30T02:00:00+00:00","value":32.45},{"at":"2026-09-30T02:15:00+00:00","value":53.12},{"at":"2026-09-30T02:30:00+00:00","value":55.0},{"at":"2026-09-30T02:45:00+00:00","value":60.67},{"at":"2026-09-30T03:00:00+00:00","value":20.95},{"at":"2026-09-30T03:15:00+00:00","value":40.04},{"at":"2026-09-30T03:30:00+00:00","value":38.56},{"at":"2026-09-30T03:45:00+00:00","value":114.24},{"at":"2026-09-30T04:00:00+00:00","value":150.0},{"at":"2026-09-30T04:15:00+00:00","value":164.0},{"at":"2026-09-30T04:30:00+00:00","value":171.59},{"at":"2026-09-30T04:45:00+00:00","value":174.0},{"at":"2026-09-30T05:00:00+00:00","value":192.88},{"at":"2026-09-30T05:15:00+00:00","value":207.0},{"at":"2026-09-30T05:30:00+00:00","value":211.81},{"at":"2026-09-30T05:45:00+00:00","value":207.07},{"at":"2026-09-30T06:00:00+00:00","value":223.94},{"at":"2026-09-30T06:15:00+00:00","value":208.48},{"at":"2026-09-30T06:30:00+00:00","value":189.98},{"at":"2026-09-30T06:45:00+00:00","value":169.59},{"at":"2026-09-30T07:00:00+00:00","value":201.94},{"at":"2026-09-30T07:15:00+00:00","value":184.99},{"at":"2026-09-30T07:30:00+00:00","value":173.54},{"at":"2026-09-30T07:45:00+00:00","value":162.41},{"at":"2026-09-30T08:00:00+00:00","value":185.87},{"at":"2026-09-30T08:15:00+00:00","value":175.5},{"at":"2026-09-30T08:30:00+00:00","value":145.1},{"at":"2026-09-30T08:45:00+00:00","value":132.08},{"at":"2026-09-30T09:00:00+00:00","value":132.35},{"at":"2026-09-30T09:15:00+00:00","value":130.0},{"at":"2026-09-30T09:30:00+00:00","value":124.79},{"at":"2026-09-30T09:45:00+00:00","value":115.15},{"at":"2026-09-30T10:00:00+00:00","value":103.41},{"at":"2026-09-30T10:15:00+00:00","value":108.7},{"at":"2026-09-30T10:30:00+00:00","value":108.7},{"at":"2026-09-30T10:45:00+00:00","value":100.0},{"at":"2026-09-30T11:00:00+00:00","value":89.99},{"at":"2026-09-30T11:15:00+00:00","value":90.7},{"at":"2026-09-30T11:30:00+00:00","value":90.0},{"at":"2026-09-30T11:45:00+00:00","value":85.6},{"at":"2026-09-30T12:00:00+00:00","value":89.4},{"at":"2026-09-30T12:15:00+00:00","value":94.99},{"at":"2026-09-30T12:30:00+00:00","value":100.0},{"at":"2026-09-30T12:45:00+00:00","value":118.55},{"at":"2026-09-30T13:00:00+00:00","value":112.93},{"at":"2026-09-30T13:15:00+00:00","value":121.87},{"at":"2026-09-30T13:30:00+00:00","value":127.87},{"at":"2026-09-30T13:45:00+00:00","value":123.68},{"at":"2026-09-30T14:00:00+00:00","value":120.68},{"at":"2026-09-30T14:15:00+00:00","value":135.59},{"at":"2026-09-30T14:30:00+00:00","value":171.38},{"at":"2026-09-30T14:45:00+00:00","value":191.47},{"at":"2026-09-30T15:00:00+00:00","value":174.62},{"at":"2026-09-30T15:15:00+00:00","value":196.78},{"at":"2026-09-30T15:30:00+00:00","value":213.58},{"at":"2026-09-30T15:45:00+00:00","value":233.17},{"at":"2026-09-30T16:00:00+00:00","value":214.87},{"at":"2026-09-30T16:15:00+00:00","value":228.7},{"at":"2026-09-30T16:30:00+00:00","value":235.0},{"at":"2026-09-30T16:45:00+00:00","value":251.77},{"at":"2026-09-30T17:00:00+00:00","value":243.77},{"at":"2026-09-30T17:15:00+00:00","value":250.0},{"at":"2026-09-30T17:30:00+00:00","value":260.0},{"at":"2026-09-30T17:45:00+00:00","value":261.03},{"at":"2026-09-30T18:00:00+00:00","value":249.79},{"at":"2026-09-30T18:15:00+00:00","value":248.59},{"at":"2026-09-30T18:30:00+00:00","value":232.14},{"at":"2026-09-30T18:45:00+00:00","value":221.41},{"at":"2026-09-30T19:00:00+00:00","value":243.15},{"at":"2026-09-30T19:15:00+00:00","value":230.45},{"at":"2026-09-30T19:30:00+00:00","value":212.76},{"at":"2026-09-30T19:45:00+00:00","value":175.86},{"at":"2026-09-30T20:00:00+00:00","value":223.49},{"at":"2026-09-30T20:15:00+00:00","value":201.93},{"at":"2026-09-30T20:30:00+00:00","value":200.96},{"at":"2026-09-30T20:45:00+00:00","value":190.0},{"at":"2026-09-30T21:00:00+00:00","value":202.38},{"at":"2026-09-30T21:15:00+00:00","value":184.3},{"at":"2026-09-30T21:30:00+00:00","value":199.6},{"at":"2026-09-30T21:45:00+00:00","value":173.72},{"at":"2026-09-30T22:00:00+00:00","value":190.18},{"at":"2026-09-30T22:15:00+00:00","value":176.95},{"at":"2026-09-30T22:30:00+00:00","value":160.18},{"at":"2026-09-30T22:45:00+00:00","value":159.07},{"at":"2026-09-30T23:00:00+00:00","value":165.58},{"at":"2026-09-30T23:15:00+00:00","value":166.16},{"at":"2026-09-30T23:30:00+00:00","value":167.47},{"at":"2026-09-30T23:45:00+00:00","value":167.47},{"at":"2026-10-01T00:00:00+00:00","value":169.18},{"at":"2026-10-01T00:15:00+00:00","value":165.4},{"at":"2026-10-01T00:30:00+00:00","value":163.69},{"at":"2026-10-01T00:45:00+00:00","value":160.83},{"at":"2026-10-01T01:00:00+00:00","value":165.32},{"at":"2026-10-01T01:15:00+00:00","value":165.39},{"at":"2026-10-01T01:30:00+00:00","value":163.26},{"at":"2026-10-01T01:45:00+00:00","value":161.58},{"at":"2026-10-01T02:00:00+00:00","value":162.32},{"at":"2026-10-01T02:15:00+00:00","value":162.19},{"at":"2026-10-01T02:30:00+00:00","value":159.74},{"at":"2026-10-01T02:45:00+00:00","value":163.84},{"at":"2026-10-01T03:00:00+00:00","value":161.85},{"at":"2026-10-01T03:15:00+00:00","value":163.0},{"at":"2026-10-01T03:30:00+00:00","value":172.54},{"at":"2026-10-01T03:45:00+00:00","value":185.1},{"at":"2026-10-01T04:00:00+00:00","value":179.67},{"at":"2026-10-01T04:15:00+00:00","value":205.24},{"at":"2026-10-01T04:30:00+00:00","value":219.13},{"at":"2026-10-01T04:45:00+00:00","value":233.76},{"at":"2026-10-01T05:00:00+00:00","value":229.21},{"at":"2026-10-01T05:15:00+00:00","value":243.11},{"at":"2026-10-01T05:30:00+00:00","value":246.58},{"at":"2026-10-01T05:45:00+00:00","value":238.18},{"at":"2026-10-01T06:00:00+00:00","value":261.71},{"at":"2026-10-01T06:15:00+00:00","value":238.11},{"at":"2026-10-01T06:30:00+00:00","value":226.94},{"at":"2026-10-01T06:45:00+00:00","value":214.79},{"at":"2026-10-01T07:00:00+00:00","value":238.12},{"at":"2026-10-01T07:15:00+00:00","value":231.84},{"at":"2026-10-01T07:30:00+00:00","value":228.3},{"at":"2026-10-01T07:45:00+00:00","value":212.82},{"at":"2026-10-01T08:00:00+00:00","value":248.23},{"at":"2026-10-01T08:15:00+00:00","value":224.14},{"at":"2026-10-01T08:30:00+00:00","value":205.61},{"at":"2026-10-01T08:45:00+00:00","value":192.49},{"at":"2026-10-01T09:00:00+00:00","value":180.71},{"at":"2026-10-01T09:15:00+00:00","value":176.63},{"at":"2026-10-01T09:30:00+00:00","value":184.6},{"at":"2026-10-01T09:45:00+00:00","value":191.85},{"at":"2026-10-01T10:00:00+00:00","value":185.54},{"at":"2026-10-01T10:15:00+00:00","value":179.0},{"at":"2026-10-01T10:30:00+00:00","value":178.56},{"at":"2026-10-01T10:45:00+00:00","value":160.98},{"at":"2026-10-01T11:00:00+00:00","value":169.22},{"at":"2026-10-01T11:15:00+00:00","value":168.25},{"at":"2026-10-01T11:30:00+00:00","value":166.65},{"at":"2026-10-01T11:45:00+00:00","value":165.54},{"at":"2026-10-01T12:00:00+00:00","value":172.44},{"at":"2026-10-01T12:15:00+00:00","value":166.67},{"at":"2026-10-01T12:30:00+00:00","value":169.32},{"at":"2026-10-01T12:45:00+00:00","value":169.07},{"at":"2026-10-01T13:00:00+00:00","value":159.74},{"at":"2026-10-01T13:15:00+00:00","value":157.65},{"at":"2026-10-01T13:30:00+00:00","value":159.0},{"at":"2026-10-01T13:45:00+00:00","value":170.1},{"at":"2026-10-01T14:00:00+00:00","value":149.7},{"at":"2026-10-01T14:15:00+00:00","value":166.6},{"at":"2026-10-01T14:30:00+00:00","value":196.75},{"at":"2026-10-01T14:45:00+00:00","value":243.68},{"at":"2026-10-01T15:00:00+00:00","value":179.92},{"at":"2026-10-01T15:15:00+00:00","value":211.92},{"at":"2026-10-01T15:30:00+00:00","value":250.0},{"at":"2026-10-01T15:45:00+00:00","value":275.0},{"at":"2026-10-01T16:00:00+00:00","value":246.19},{"at":"2026-10-01T16:15:00+00:00","value":265.01},{"at":"2026-10-01T16:30:00+00:00","value":276.58},{"at":"2026-10-01T16:45:00+00:00","value":310.98},{"at":"2026-10-01T17:00:00+00:00","value":289.7},{"at":"2026-10-01T17:15:00+00:00","value":300.22},{"at":"2026-10-01T17:30:00+00:00","value":314.78},{"at":"2026-10-01T17:45:00+00:00","value":297.47},{"at":"2026-10-01T18:00:00+00:00","value":280.0},{"at":"2026-10-01T18:15:00+00:00","value":268.11},{"at":"2026-10-01T18:30:00+00:00","value":251.93},{"at":"2026-10-01T18:45:00+00:00","value":230.01},{"at":"2026-10-01T19:00:00+00:00","value":250.03},{"at":"2026-10-01T19:15:00+00:00","value":229.97},{"at":"2026-10-01T19:30:00+00:00","value":221.01},{"at":"2026-10-01T19:45:00+00:00","value":204.42},{"at":"2026-10-01T20:00:00+00:00","value":221.64},{"at":"2026-10-01T20:15:00+00:00","value":207.5},{"at":"2026-10-01T20:30:00+00:00","value":203.9},{"at":"2026-10-01T20:45:00+00:00","value":186.95},{"at":"2026-10-01T21:00:00+00:00","value":201.71},{"at":"2026-10-01T21:15:00+00:00","value":190.04},{"at":"2026-10-01T21:30:00+00:00","value":182.58},{"at":"2026-10-01T21:45:00+00:00","value":171.38},{"at":"2026-10-01T22:00:00+00:00","value":185.11},{"at":"2026-10-01T22:15:00+00:00","value":180.76},{"at":"2026-10-01T22:30:00+00:00","value":171.32},{"at":"2026-10-01T22:45:00+00:00","value":168.45},{"at":"2026-10-01T23:00:00+00:00","value":169.0},{"at":"2026-10-01T23:15:00+00:00","value":166.71},{"at":"2026-10-01T23:30:00+00:00","value":164.72},{"at":"2026-10-01T23:45:00+00:00","value":161.45},{"at":"2026-10-02T00:00:00+00:00","value":162.95},{"at":"2026-10-02T00:15:00+00:00","value":161.0},{"at":"2026-10-02T00:30:00+00:00","value":161.43},{"at":"2026-10-02T00:45:00+00:00","value":161.47},{"at":"2026-10-02T01:00:00+00:00","value":160.29},{"at":"2026-10-02T01:15:00+00:00","value":159.51},{"at":"2026-10-02T01:30:00+00:00","value":161.62},{"at":"2026-10-02T01:45:00+00:00","value":161.2},{"at":"2026-10-02T02:00:00+00:00","value":162.92},{"at":"2026-10-02T02:15:00+00:00","value":163.12},{"at":"2026-10-02T02:30:00+00:00","value":162.05},{"at":"2026-10-02T02:45:00+00:00","value":166.6},{"at":"2026-10-02T03:00:00+00:00","value":163.55},{"at":"2026-10-02T03:15:00+00:00","value":170.49},{"at":"2026-10-02T03:30:00+00:00","value":184.84},{"at":"2026-10-02T03:45:00+00:00","value":192.61},{"at":"2026-10-02T04:00:00+00:00","value":195.55},{"at":"2026-10-02T04:15:00+00:00","value":216.11},{"at":"2026-10-02T04:30:00+00:00","value":229.62},{"at":"2026-10-02T04:45:00+00:00","value":242.53},{"at":"2026-10-02T05:00:00+00:00","value":246.83},{"at":"2026-10-02T05:15:00+00:00","value":258.53},{"at":"2026-10-02T05:30:00+00:00","value":265.5},{"at":"2026-10-02T05:45:00+00:00","value":268.82},{"at":"2026-10-02T06:00:00+00:00","value":288.93},{"at":"2026-10-02T06:15:00+00:00","value":269.79},{"at":"2026-10-02T06:30:00+00:00","value":255.8},{"at":"2026-10-02T06:45:00+00:00","value":232.9},{"at":"2026-10-02T07:00:00+00:00","value":259.45},{"at":"2026-10-02T07:15:00+00:00","value":229.15},{"at":"2026-10-02T07:30:00+00:00","value":215.16},{"at":"2026-10-02T07:45:00+00:00","value":181.4},{"at":"2026-10-02T08:00:00+00:00","value":206.8},{"at":"2026-10-02T08:15:00+00:00","value":184.27},{"at":"2026-10-02T08:30:00+00:00","value":172.76},{"at":"2026-10-02T08:45:00+00:00","value":167.74},{"at":"2026-10-02T09:00:00+00:00","value":182.1},{"at":"2026-10-02T09:15:00+00:00","value":171.42},{"at":"2026-10-02T09:30:00+00:00","value":163.46},{"at":"2026-10-02T09:45:00+00:00","value":149.73},{"at":"2026-10-02T10:00:00+00:00","value":150.71},{"at":"2026-10-02T10:15:00+00:00","value":147.1},{"at":"2026-10-02T10:30:00+00:00","value":147.83},{"at":"2026-10-02T10:45:00+00:00","value":144.41},{"at":"2026-10-02T11:00:00+00:00","value":142.7},{"at":"2026-10-02T11:15:00+00:00","value":136.42},{"at":"2026-10-02T11:30:00+00:00","value":127.56},{"at":"2026-10-02T11:45:00+00:00","value":130.46},{"at":"2026-10-02T12:00:00+00:00","value":137.04},{"at":"2026-10-02T12:15:00+00:00","value":136.14},{"at":"2026-10-02T12:30:00+00:00","value":139.27},{"at":"2026-10-02T12:45:00+00:00","value":140.04},{"at":"2026-10-02T13:00:00+00:00","value":141.04},{"at":"2026-10-02T13:15:00+00:00","value":142.71},{"at":"2026-10-02T13:30:00+00:00","value":140.71},{"at":"2026-10-02T13:45:00+00:00","value":144.16},{"at":"2026-10-02T14:00:00+00:00","value":127.49},{"at":"2026-10-02T14:15:00+00:00","value":148.1},{"at":"2026-10-02T14:30:00+00:00","value":157.44},{"at":"2026-10-02T14:45:00+00:00","value":152.3},{"at":"2026-10-02T15:00:00+00:00","value":164.12},{"at":"2026-10-02T15:15:00+00:00","value":194.4},{"at":"2026-10-02T15:30:00+00:00","value":189.59},{"at":"2026-10-02T15:45:00+00:00","value":231.89},{"at":"2026-10-02T16:00:00+00:00","value":239.98},{"at":"2026-10-02T16:15:00+00:00","value":250.44},{"at":"2026-10-02T16:30:00+00:00","value":275.42},{"at":"2026-10-02T16:45:00+00:00","value":294.16},{"at":"2026-10-02T17:00:00+00:00","value":282.7},{"at":"2026-10-02T17:15:00+00:00","value":301.3},{"at":"2026-10-02T17:30:00+00:00","value":315.28},{"at":"2026-10-02T17:45:00+00:00","value":307.27},{"at":"2026-10-02T18:00:00+00:00","value":282.7},{"at":"2026-10-02T18:15:00+00:00","value":279.83},{"at":"2026-10-02T18:30:00+00:00","value":261.82},{"at":"2026-10-02T18:45:00+00:00","value":248.08},{"at":"2026-10-02T19:00:00+00:00","value":244.78},{"at":"2026-10-02T19:15:00+00:00","value":238.14},{"at":"2026-10-02T19:30:00+00:00","value":224.99},{"at":"2026-10-02T19:45:00+00:00","value":211.92},{"at":"2026-10-02T20:00:00+00:00","value":220.23},{"at":"2026-10-02T20:15:00+00:00","value":215.0},{"at":"2026-10-02T20:30:00+00:00","value":209.39},{"at":"2026-10-02T20:45:00+00:00","value":201.39},{"at":"2026-10-02T21:00:00+00:00","value":201.62},{"at":"2026-10-02T21:15:00+00:00","value":197.52},{"at":"2026-10-02T21:30:00+00:00","value":194.55},{"at":"2026-10-02T21:45:00+00:00","value":185.1}],"de":[{"at":"2026-09-18T22:00:00+00:00","value":132.52},{"at":"2026-09-18T22:15:00+00:00","value":117.76},{"at":"2026-09-18T22:30:00+00:00","value":97.43},{"at":"2026-09-18T22:45:00+00:00","value":65.83},{"at":"2026-09-18T23:00:00+00:00","value":96.05},{"at":"2026-09-18T23:15:00+00:00","value":82.44},{"at":"2026-09-18T23:30:00+00:00","value":79.18},{"at":"2026-09-18T23:45:00+00:00","value":60.43},{"at":"2026-09-19T00:00:00+00:00","value":73.77},{"at":"2026-09-19T00:15:00+00:00","value":62.38},{"at":"2026-09-19T00:30:00+00:00","value":52.75},{"at":"2026-09-19T00:45:00+00:00","value":48.02},{"at":"2026-09-19T01:00:00+00:00","value":45.15},{"at":"2026-09-19T01:15:00+00:00","value":32.75},{"at":"2026-09-19T01:30:00+00:00","value":26.48},{"at":"2026-09-19T01:45:00+00:00","value":23.16},{"at":"2026-09-19T02:00:00+00:00","value":33.57},{"at":"2026-09-19T02:15:00+00:00","value":36.04},{"at":"2026-09-19T02:30:00+00:00","value":36.9},{"at":"2026-09-19T02:45:00+00:00","value":36.66},{"at":"2026-09-19T03:00:00+00:00","value":34.79},{"at":"2026-09-19T03:15:00+00:00","value":34.41},{"at":"2026-09-19T03:30:00+00:00","value":34.03},{"at":"2026-09-19T03:45:00+00:00","value":39.94},{"at":"2026-09-19T04:00:00+00:00","value":40.74},{"at":"2026-09-19T04:15:00+00:00","value":46.66},{"at":"2026-09-19T04:30:00+00:00","value":40.08},{"at":"2026-09-19T04:45:00+00:00","value":43.47},{"at":"2026-09-19T05:00:00+00:00","value":41.38},{"at":"2026-09-19T05:15:00+00:00","value":41.99},{"at":"2026-09-19T05:30:00+00:00","value":45.07},{"at":"2026-09-19T05:45:00+00:00","value":40.1},{"at":"2026-09-19T06:00:00+00:00","value":47.71},{"at":"2026-09-19T06:15:00+00:00","value":36.53},{"at":"2026-09-19T06:30:00+00:00","value":27.96},{"at":"2026-09-19T06:45:00+00:00","value":11.8},{"at":"2026-09-19T07:00:00+00:00","value":16.9},{"at":"2026-09-19T07:15:00+00:00","value":6.55},{"at":"2026-09-19T07:30:00+00:00","value":2.74},{"at":"2026-09-19T07:45:00+00:00","value":0.01},{"at":"2026-09-19T08:00:00+00:00","value":0.1},{"at":"2026-09-19T08:15:00+00:00","value":0.0},{"at":"2026-09-19T08:30:00+00:00","value":-0.03},{"at":"2026-09-19T08:45:00+00:00","value":-0.09},{"at":"2026-09-19T09:00:00+00:00","value":-0.13},{"at":"2026-09-19T09:15:00+00:00","value":-0.16},{"at":"2026-09-19T09:30:00+00:00","value":-0.21},{"at":"2026-09-19T09:45:00+00:00","value":-0.74},{"at":"2026-09-19T10:00:00+00:00","value":-0.78},{"at":"2026-09-19T10:15:00+00:00","value":-0.65},{"at":"2026-09-19T10:30:00+00:00","value":-0.71},{"at":"2026-09-19T10:45:00+00:00","value":-0.86},{"at":"2026-09-19T11:00:00+00:00","value":-1.01},{"at":"2026-09-19T11:15:00+00:00","value":-1.06},{"at":"2026-09-19T11:30:00+00:00","value":-1.34},{"at":"2026-09-19T11:45:00+00:00","value":-1.62},{"at":"2026-09-19T12:00:00+00:00","value":-1.27},{"at":"2026-09-19T12:15:00+00:00","value":-1.26},{"at":"2026-09-19T12:30:00+00:00","value":-1.21},{"at":"2026-09-19T12:45:00+00:00","value":-1.46},{"at":"2026-09-19T13:00:00+00:00","value":-1.85},{"at":"2026-09-19T13:15:00+00:00","value":-1.5},{"at":"2026-09-19T13:30:00+00:00","value":-1.43},{"at":"2026-09-19T13:45:00+00:00","value":-1.94},{"at":"2026-09-19T14:00:00+00:00","value":-0.1},{"at":"2026-09-19T14:15:00+00:00","value":-0.07},{"at":"2026-09-19T14:30:00+00:00","value":-0.01},{"at":"2026-09-19T14:45:00+00:00","value":0.0},{"at":"2026-09-19T15:00:00+00:00","value":0.0},{"at":"2026-09-19T15:15:00+00:00","value":0.0},{"at":"2026-09-19T15:30:00+00:00","value":8.2},{"at":"2026-09-19T15:45:00+00:00","value":25.0},{"at":"2026-09-19T16:00:00+00:00","value":30.0},{"at":"2026-09-19T16:15:00+00:00","value":51.74},{"at":"2026-09-19T16:30:00+00:00","value":79.66},{"at":"2026-09-19T16:45:00+00:00","value":100.43},{"at":"2026-09-19T17:00:00+00:00","value":99.98},{"at":"2026-09-19T17:15:00+00:00","value":119.52},{"at":"2026-09-19T17:30:00+00:00","value":129.37},{"at":"2026-09-19T17:45:00+00:00","value":134.25},{"at":"2026-09-19T18:00:00+00:00","value":133.07},{"at":"2026-09-19T18:15:00+00:00","value":119.19},{"at":"2026-09-19T18:30:00+00:00","value":107.0},{"at":"2026-09-19T18:45:00+00:00","value":99.94},{"at":"2026-09-19T19:00:00+00:00","value":101.57},{"at":"2026-09-19T19:15:00+00:00","value":99.95},{"at":"2026-09-19T19:30:00+00:00","value":91.05},{"at":"2026-09-19T19:45:00+00:00","value":67.32},{"at":"2026-09-19T20:00:00+00:00","value":88.87},{"at":"2026-09-19T20:15:00+00:00","value":86.21},{"at":"2026-09-19T20:30:00+00:00","value":83.64},{"at":"2026-09-19T20:45:00+00:00","value":75.7},{"at":"2026-09-19T21:00:00+00:00","value":85.0},{"at":"2026-09-19T21:15:00+00:00","value":80.0},{"at":"2026-09-19T21:30:00+00:00","value":77.65},{"at":"2026-09-19T21:45:00+00:00","value":70.82},{"at":"2026-09-19T22:00:00+00:00","value":18.2},{"at":"2026-09-19T22:15:00+00:00","value":16.37},{"at":"2026-09-19T22:30:00+00:00","value":14.99},{"at":"2026-09-19T22:45:00+00:00","value":13.61},{"at":"2026-09-19T23:00:00+00:00","value":14.85},{"at":"2026-09-19T23:15:00+00:00","value":13.05},{"at":"2026-09-19T23:30:00+00:00","value":12.49},{"at":"2026-09-19T23:45:00+00:00","value":11.04},{"at":"2026-09-20T00:00:00+00:00","value":8.57},{"at":"2026-09-20T00:15:00+00:00","value":11.25},{"at":"2026-09-20T00:30:00+00:00","value":12.2},{"at":"2026-09-20T00:45:00+00:00","value":8.0},{"at":"2026-09-20T01:00:00+00:00","value":8.19},{"at":"2026-09-20T01:15:00+00:00","value":7.92},{"at":"2026-09-20T01:30:00+00:00","value":8.05},{"at":"2026-09-20T01:45:00+00:00","value":7.09},{"at":"2026-09-20T02:00:00+00:00","value":9.69},{"at":"2026-09-20T02:15:00+00:00","value":8.95},{"at":"2026-09-20T02:30:00+00:00","value":8.75},{"at":"2026-09-20T02:45:00+00:00","value":8.6},{"at":"2026-09-20T03:00:00+00:00","value":10.12},{"at":"2026-09-20T03:15:00+00:00","value":9.62},{"at":"2026-09-20T03:30:00+00:00","value":9.47},{"at":"2026-09-20T03:45:00+00:00","value":10.81},{"at":"2026-09-20T04:00:00+00:00","value":8.13},{"at":"2026-09-20T04:15:00+00:00","value":8.96},{"at":"2026-09-20T04:30:00+00:00","value":10.37},{"at":"2026-09-20T04:45:00+00:00","value":12.55},{"at":"2026-09-20T05:00:00+00:00","value":11.51},{"at":"2026-09-20T05:15:00+00:00","value":12.74},{"at":"2026-09-20T05:30:00+00:00","value":13.34},{"at":"2026-09-20T05:45:00+00:00","value":11.49},{"at":"2026-09-20T06:00:00+00:00","value":13.4},{"at":"2026-09-20T06:15:00+00:00","value":12.51},{"at":"2026-09-20T06:30:00+00:00","value":8.34},{"at":"2026-09-20T06:45:00+00:00","value":5.12},{"at":"2026-09-20T07:00:00+00:00","value":8.15},{"at":"2026-09-20T07:15:00+00:00","value":5.06},{"at":"2026-09-20T07:30:00+00:00","value":1.4},{"at":"2026-09-20T07:45:00+00:00","value":0.01},{"at":"2026-09-20T08:00:00+00:00","value":0.01},{"at":"2026-09-20T08:15:00+00:00","value":0.0},{"at":"2026-09-20T08:30:00+00:00","value":-0.01},{"at":"2026-09-20T08:45:00+00:00","value":-0.04},{"at":"2026-09-20T09:00:00+00:00","value":-0.04},{"at":"2026-09-20T09:15:00+00:00","value":-0.1},{"at":"2026-09-20T09:30:00+00:00","value":-0.12},{"at":"2026-09-20T09:45:00+00:00","value":-0.17},{"at":"2026-09-20T10:00:00+00:00","value":-1.0},{"at":"2026-09-20T10:15:00+00:00","value":-1.0},{"at":"2026-09-20T10:30:00+00:00","value":-1.05},{"at":"2026-09-20T10:45:00+00:00","value":-1.59},{"at":"2026-09-20T11:00:00+00:00","value":-1.92},{"at":"2026-09-20T11:15:00+00:00","value":-1.97},{"at":"2026-09-20T11:30:00+00:00","value":-2.02},{"at":"2026-09-20T11:45:00+00:00","value":-2.02},{"at":"2026-09-20T12:00:00+00:00","value":-1.94},{"at":"2026-09-20T12:15:00+00:00","value":-1.95},{"at":"2026-09-20T12:30:00+00:00","value":-1.94},{"at":"2026-09-20T12:45:00+00:00","value":-1.91},{"at":"2026-09-20T13:00:00+00:00","value":-1.56},{"at":"2026-09-20T13:15:00+00:00","value":-1.39},{"at":"2026-09-20T13:30:00+00:00","value":-1.01},{"at":"2026-09-20T13:45:00+00:00","value":-1.0},{"at":"2026-09-20T14:00:00+00:00","value":-0.18},{"at":"2026-09-20T14:15:00+00:00","value":-0.1},{"at":"2026-09-20T14:30:00+00:00","value":-0.08},{"at":"2026-09-20T14:45:00+00:00","value":-0.01},{"at":"2026-09-20T15:00:00+00:00","value":-0.03},{"at":"2026-09-20T15:15:00+00:00","value":0.0},{"at":"2026-09-20T15:30:00+00:00","value":0.01},{"at":"2026-09-20T15:45:00+00:00","value":10.72},{"at":"2026-09-20T16:00:00+00:00","value":15.13},{"at":"2026-09-20T16:15:00+00:00","value":35.62},{"at":"2026-09-20T16:30:00+00:00","value":58.37},{"at":"2026-09-20T16:45:00+00:00","value":92.51},{"at":"2026-09-20T17:00:00+00:00","value":61.64},{"at":"2026-09-20T17:15:00+00:00","value":79.14},{"at":"2026-09-20T17:30:00+00:00","value":86.21},{"at":"2026-09-20T17:45:00+00:00","value":102.24},{"at":"2026-09-20T18:00:00+00:00","value":86.69},{"at":"2026-09-20T18:15:00+00:00","value":88.42},{"at":"2026-09-20T18:30:00+00:00","value":82.02},{"at":"2026-09-20T18:45:00+00:00","value":89.48},{"at":"2026-09-20T19:00:00+00:00","value":90.08},{"at":"2026-09-20T19:15:00+00:00","value":79.26},{"at":"2026-09-20T19:30:00+00:00","value":67.9},{"at":"2026-09-20T19:45:00+00:00","value":65.36},{"at":"2026-09-20T20:00:00+00:00","value":76.2},{"at":"2026-09-20T20:15:00+00:00","value":80.07},{"at":"2026-09-20T20:30:00+00:00","value":67.31},{"at":"2026-09-20T20:45:00+00:00","value":61.68},{"at":"2026-09-20T21:00:00+00:00","value":63.74},{"at":"2026-09-20T21:15:00+00:00","value":60.09},{"at":"2026-09-20T21:30:00+00:00","value":57.78},{"at":"2026-09-20T21:45:00+00:00","value":51.76},{"at":"2026-09-20T22:00:00+00:00","value":50.68},{"at":"2026-09-20T22:15:00+00:00","value":50.29},{"at":"2026-09-20T22:30:00+00:00","value":45.28},{"at":"2026-09-20T22:45:00+00:00","value":40.81},{"at":"2026-09-20T23:00:00+00:00","value":45.61},{"at":"2026-09-20T23:15:00+00:00","value":41.88},{"at":"2026-09-20T23:30:00+00:00","value":42.85},{"at":"2026-09-20T23:45:00+00:00","value":40.01},{"at":"2026-09-21T00:00:00+00:00","value":41.33},{"at":"2026-09-21T00:15:00+00:00","value":37.85},{"at":"2026-09-21T00:30:00+00:00","value":38.38},{"at":"2026-09-21T00:45:00+00:00","value":39.82},{"at":"2026-09-21T01:00:00+00:00","value":40.85},{"at":"2026-09-21T01:15:00+00:00","value":41.02},{"at":"2026-09-21T01:30:00+00:00","value":39.9},{"at":"2026-09-21T01:45:00+00:00","value":37.99},{"at":"2026-09-21T02:00:00+00:00","value":37.53},{"at":"2026-09-21T02:15:00+00:00","value":39.24},{"at":"2026-09-21T02:30:00+00:00","value":43.76},{"at":"2026-09-21T02:45:00+00:00","value":47.2},{"at":"2026-09-21T03:00:00+00:00","value":43.27},{"at":"2026-09-21T03:15:00+00:00","value":54.93},{"at":"2026-09-21T03:30:00+00:00","value":60.38},{"at":"2026-09-21T03:45:00+00:00","value":76.69},{"at":"2026-09-21T04:00:00+00:00","value":91.43},{"at":"2026-09-21T04:15:00+00:00","value":124.61},{"at":"2026-09-21T04:30:00+00:00","value":130.5},{"at":"2026-09-21T04:45:00+00:00","value":148.88},{"at":"2026-09-21T05:00:00+00:00","value":160.88},{"at":"2026-09-21T05:15:00+00:00","value":187.01},{"at":"2026-09-21T05:30:00+00:00","value":194.48},{"at":"2026-09-21T05:45:00+00:00","value":170.08},{"at":"2026-09-21T06:00:00+00:00","value":257.09},{"at":"2026-09-21T06:15:00+00:00","value":195.49},{"at":"2026-09-21T06:30:00+00:00","value":154.11},{"at":"2026-09-21T06:45:00+00:00","value":108.01},{"at":"2026-09-21T07:00:00+00:00","value":121.74},{"at":"2026-09-21T07:15:00+00:00","value":103.29},{"at":"2026-09-21T07:30:00+00:00","value":63.51},{"at":"2026-09-21T07:45:00+00:00","value":43.74},{"at":"2026-09-21T08:00:00+00:00","value":62.15},{"at":"2026-09-21T08:15:00+00:00","value":33.39},{"at":"2026-09-21T08:30:00+00:00","value":28.43},{"at":"2026-09-21T08:45:00+00:00","value":11.39},{"at":"2026-09-21T09:00:00+00:00","value":19.82},{"at":"2026-09-21T09:15:00+00:00","value":13.13},{"at":"2026-09-21T09:30:00+00:00","value":2.66},{"at":"2026-09-21T09:45:00+00:00","value":0.03},{"at":"2026-09-21T10:00:00+00:00","value":0.76},{"at":"2026-09-21T10:15:00+00:00","value":0.01},{"at":"2026-09-21T10:30:00+00:00","value":0.02},{"at":"2026-09-21T10:45:00+00:00","value":0.01},{"at":"2026-09-21T11:00:00+00:00","value":0.0},{"at":"2026-09-21T11:15:00+00:00","value":0.0},{"at":"2026-09-21T11:30:00+00:00","value":0.0},{"at":"2026-09-21T11:45:00+00:00","value":0.0},{"at":"2026-09-21T12:00:00+00:00","value":0.0},{"at":"2026-09-21T12:15:00+00:00","value":0.0},{"at":"2026-09-21T12:30:00+00:00","value":0.01},{"at":"2026-09-21T12:45:00+00:00","value":0.03},{"at":"2026-09-21T13:00:00+00:00","value":0.0},{"at":"2026-09-21T13:15:00+00:00","value":0.03},{"at":"2026-09-21T13:30:00+00:00","value":0.1},{"at":"2026-09-21T13:45:00+00:00","value":5.47},{"at":"2026-09-21T14:00:00+00:00","value":0.08},{"at":"2026-09-21T14:15:00+00:00","value":20.95},{"at":"2026-09-21T14:30:00+00:00","value":33.95},{"at":"2026-09-21T14:45:00+00:00","value":59.32},{"at":"2026-09-21T15:00:00+00:00","value":22.71},{"at":"2026-09-21T15:15:00+00:00","value":67.08},{"at":"2026-09-21T15:30:00+00:00","value":135.63},{"at":"2026-09-21T15:45:00+00:00","value":203.34},{"at":"2026-09-21T16:00:00+00:00","value":166.62},{"at":"2026-09-21T16:15:00+00:00","value":198.79},{"at":"2026-09-21T16:30:00+00:00","value":222.59},{"at":"2026-09-21T16:45:00+00:00","value":261.72},{"at":"2026-09-21T17:00:00+00:00","value":220.8},{"at":"2026-09-21T17:15:00+00:00","value":223.97},{"at":"2026-09-21T17:30:00+00:00","value":251.23},{"at":"2026-09-21T17:45:00+00:00","value":275.9},{"at":"2026-09-21T18:00:00+00:00","value":251.3},{"at":"2026-09-21T18:15:00+00:00","value":250.28},{"at":"2026-09-21T18:30:00+00:00","value":243.48},{"at":"2026-09-21T18:45:00+00:00","value":219.04},{"at":"2026-09-21T19:00:00+00:00","value":232.28},{"at":"2026-09-21T19:15:00+00:00","value":218.15},{"at":"2026-09-21T19:30:00+00:00","value":213.93},{"at":"2026-09-21T19:45:00+00:00","value":206.68},{"at":"2026-09-21T20:00:00+00:00","value":216.0},{"at":"2026-09-21T20:15:00+00:00","value":204.58},{"at":"2026-09-21T20:30:00+00:00","value":206.08},{"at":"2026-09-21T20:45:00+00:00","value":196.23},{"at":"2026-09-21T21:00:00+00:00","value":197.98},{"at":"2026-09-21T21:15:00+00:00","value":184.14},{"at":"2026-09-21T21:30:00+00:00","value":186.58},{"at":"2026-09-21T21:45:00+00:00","value":172.11},{"at":"2026-09-21T22:00:00+00:00","value":189.97},{"at":"2026-09-21T22:15:00+00:00","value":183.05},{"at":"2026-09-21T22:30:00+00:00","value":176.66},{"at":"2026-09-21T22:45:00+00:00","value":175.81},{"at":"2026-09-21T23:00:00+00:00","value":177.29},{"at":"2026-09-21T23:15:00+00:00","value":174.96},{"at":"2026-09-21T23:30:00+00:00","value":176.55},{"at":"2026-09-21T23:45:00+00:00","value":175.61},{"at":"2026-09-22T00:00:00+00:00","value":175.89},{"at":"2026-09-22T00:15:00+00:00","value":174.39},{"at":"2026-09-22T00:30:00+00:00","value":172.41},{"at":"2026-09-22T00:45:00+00:00","value":171.52},{"at":"2026-09-22T01:00:00+00:00","value":173.57},{"at":"2026-09-22T01:15:00+00:00","value":170.91},{"at":"2026-09-22T01:30:00+00:00","value":170.42},{"at":"2026-09-22T01:45:00+00:00","value":171.42},{"at":"2026-09-22T02:00:00+00:00","value":172.65},{"at":"2026-09-22T02:15:00+00:00","value":172.33},{"at":"2026-09-22T02:30:00+00:00","value":174.19},{"at":"2026-09-22T02:45:00+00:00","value":180.34},{"at":"2026-09-22T03:00:00+00:00","value":167.7},{"at":"2026-09-22T03:15:00+00:00","value":180.53},{"at":"2026-09-22T03:30:00+00:00","value":193.44},{"at":"2026-09-22T03:45:00+00:00","value":224.33},{"at":"2026-09-22T04:00:00+00:00","value":198.34},{"at":"2026-09-22T04:15:00+00:00","value":225.83},{"at":"2026-09-22T04:30:00+00:00","value":253.32},{"at":"2026-09-22T04:45:00+00:00","value":277.03},{"at":"2026-09-22T05:00:00+00:00","value":289.86},{"at":"2026-09-22T05:15:00+00:00","value":302.05},{"at":"2026-09-22T05:30:00+00:00","value":293.4},{"at":"2026-09-22T05:45:00+00:00","value":276.47},{"at":"2026-09-22T06:00:00+00:00","value":282.29},{"at":"2026-09-22T06:15:00+00:00","value":268.06},{"at":"2026-09-22T06:30:00+00:00","value":240.76},{"at":"2026-09-22T06:45:00+00:00","value":204.98},{"at":"2026-09-22T07:00:00+00:00","value":247.86},{"at":"2026-09-22T07:15:00+00:00","value":217.86},{"at":"2026-09-22T07:30:00+00:00","value":191.48},{"at":"2026-09-22T07:45:00+00:00","value":166.18},{"at":"2026-09-22T08:00:00+00:00","value":186.02},{"at":"2026-09-22T08:15:00+00:00","value":173.99},{"at":"2026-09-22T08:30:00+00:00","value":167.25},{"at":"2026-09-22T08:45:00+00:00","value":161.83},{"at":"2026-09-22T09:00:00+00:00","value":162.63},{"at":"2026-09-22T09:15:00+00:00","value":151.03},{"at":"2026-09-22T09:30:00+00:00","value":144.7},{"at":"2026-09-22T09:45:00+00:00","value":135.85},{"at":"2026-09-22T10:00:00+00:00","value":128.76},{"at":"2026-09-22T10:15:00+00:00","value":130.54},{"at":"2026-09-22T10:30:00+00:00","value":125.51},{"at":"2026-09-22T10:45:00+00:00","value":118.22},{"at":"2026-09-22T11:00:00+00:00","value":119.31},{"at":"2026-09-22T11:15:00+00:00","value":117.72},{"at":"2026-09-22T11:30:00+00:00","value":114.92},{"at":"2026-09-22T11:45:00+00:00","value":112.14},{"at":"2026-09-22T12:00:00+00:00","value":115.15},{"at":"2026-09-22T12:15:00+00:00","value":119.39},{"at":"2026-09-22T12:30:00+00:00","value":119.08},{"at":"2026-09-22T12:45:00+00:00","value":122.93},{"at":"2026-09-22T13:00:00+00:00","value":124.89},{"at":"2026-09-22T13:15:00+00:00","value":130.22},{"at":"2026-09-22T13:30:00+00:00","value":139.62},{"at":"2026-09-22T13:45:00+00:00","value":151.71},{"at":"2026-09-22T14:00:00+00:00","value":147.3},{"at":"2026-09-22T14:15:00+00:00","value":161.28},{"at":"2026-09-22T14:30:00+00:00","value":185.78},{"at":"2026-09-22T14:45:00+00:00","value":213.13},{"at":"2026-09-22T15:00:00+00:00","value":164.68},{"at":"2026-09-22T15:15:00+00:00","value":211.86},{"at":"2026-09-22T15:30:00+00:00","value":241.96},{"at":"2026-09-22T15:45:00+00:00","value":289.06},{"at":"2026-09-22T16:00:00+00:00","value":253.0},{"at":"2026-09-22T16:15:00+00:00","value":317.94},{"at":"2026-09-22T16:30:00+00:00","value":417.93},{"at":"2026-09-22T16:45:00+00:00","value":510.34},{"at":"2026-09-22T17:00:00+00:00","value":564.09},{"at":"2026-09-22T17:15:00+00:00","value":647.5},{"at":"2026-09-22T17:30:00+00:00","value":640.67},{"at":"2026-09-22T17:45:00+00:00","value":533.26},{"at":"2026-09-22T18:00:00+00:00","value":543.39},{"at":"2026-09-22T18:15:00+00:00","value":442.38},{"at":"2026-09-22T18:30:00+00:00","value":389.22},{"at":"2026-09-22T18:45:00+00:00","value":357.66},{"at":"2026-09-22T19:00:00+00:00","value":315.72},{"at":"2026-09-22T19:15:00+00:00","value":292.8},{"at":"2026-09-22T19:30:00+00:00","value":291.88},{"at":"2026-09-22T19:45:00+00:00","value":256.14},{"at":"2026-09-22T20:00:00+00:00","value":258.79},{"at":"2026-09-22T20:15:00+00:00","value":252.99},{"at":"2026-09-22T20:30:00+00:00","value":249.35},{"at":"2026-09-22T20:45:00+00:00","value":225.58},{"at":"2026-09-22T21:00:00+00:00","value":226.09},{"at":"2026-09-22T21:15:00+00:00","value":214.54},{"at":"2026-09-22T21:30:00+00:00","value":210.21},{"at":"2026-09-22T21:45:00+00:00","value":201.18},{"at":"2026-09-22T22:00:00+00:00","value":194.51},{"at":"2026-09-22T22:15:00+00:00","value":188.57},{"at":"2026-09-22T22:30:00+00:00","value":190.3},{"at":"2026-09-22T22:45:00+00:00","value":182.46},{"at":"2026-09-22T23:00:00+00:00","value":181.76},{"at":"2026-09-22T23:15:00+00:00","value":174.93},{"at":"2026-09-22T23:30:00+00:00","value":173.68},{"at":"2026-09-22T23:45:00+00:00","value":179.0},{"at":"2026-09-23T00:00:00+00:00","value":174.52},{"at":"2026-09-23T00:15:00+00:00","value":171.11},{"at":"2026-09-23T00:30:00+00:00","value":177.24},{"at":"2026-09-23T00:45:00+00:00","value":183.06},{"at":"2026-09-23T01:00:00+00:00","value":176.72},{"at":"2026-09-23T01:15:00+00:00","value":178.53},{"at":"2026-09-23T01:30:00+00:00","value":178.72},{"at":"2026-09-23T01:45:00+00:00","value":173.43},{"at":"2026-09-23T02:00:00+00:00","value":173.39},{"at":"2026-09-23T02:15:00+00:00","value":178.13},{"at":"2026-09-23T02:30:00+00:00","value":178.35},{"at":"2026-09-23T02:45:00+00:00","value":173.94},{"at":"2026-09-23T03:00:00+00:00","value":171.61},{"at":"2026-09-23T03:15:00+00:00","value":188.0},{"at":"2026-09-23T03:30:00+00:00","value":202.0},{"at":"2026-09-23T03:45:00+00:00","value":232.86},{"at":"2026-09-23T04:00:00+00:00","value":236.07},{"at":"2026-09-23T04:15:00+00:00","value":260.63},{"at":"2026-09-23T04:30:00+00:00","value":355.5},{"at":"2026-09-23T04:45:00+00:00","value":347.79},{"at":"2026-09-23T05:00:00+00:00","value":370.63},{"at":"2026-09-23T05:15:00+00:00","value":385.35},{"at":"2026-09-23T05:30:00+00:00","value":348.25},{"at":"2026-09-23T05:45:00+00:00","value":280.09},{"at":"2026-09-23T06:00:00+00:00","value":274.32},{"at":"2026-09-23T06:15:00+00:00","value":240.5},{"at":"2026-09-23T06:30:00+00:00","value":224.31},{"at":"2026-09-23T06:45:00+00:00","value":189.12},{"at":"2026-09-23T07:00:00+00:00","value":217.94},{"at":"2026-09-23T07:15:00+00:00","value":193.88},{"at":"2026-09-23T07:30:00+00:00","value":170.82},{"at":"2026-09-23T07:45:00+00:00","value":146.46},{"at":"2026-09-23T08:00:00+00:00","value":166.24},{"at":"2026-09-23T08:15:00+00:00","value":148.1},{"at":"2026-09-23T08:30:00+00:00","value":134.95},{"at":"2026-09-23T08:45:00+00:00","value":116.12},{"at":"2026-09-23T09:00:00+00:00","value":119.82},{"at":"2026-09-23T09:15:00+00:00","value":107.13},{"at":"2026-09-23T09:30:00+00:00","value":86.82},{"at":"2026-09-23T09:45:00+00:00","value":75.87},{"at":"2026-09-23T10:00:00+00:00","value":85.87},{"at":"2026-09-23T10:15:00+00:00","value":73.37},{"at":"2026-09-23T10:30:00+00:00","value":69.72},{"at":"2026-09-23T10:45:00+00:00","value":63.26},{"at":"2026-09-23T11:00:00+00:00","value":64.74},{"at":"2026-09-23T11:15:00+00:00","value":60.02},{"at":"2026-09-23T11:30:00+00:00","value":55.07},{"at":"2026-09-23T11:45:00+00:00","value":49.47},{"at":"2026-09-23T12:00:00+00:00","value":41.99},{"at":"2026-09-23T12:15:00+00:00","value":64.85},{"at":"2026-09-23T12:30:00+00:00","value":85.33},{"at":"2026-09-23T12:45:00+00:00","value":108.18},{"at":"2026-09-23T13:00:00+00:00","value":72.09},{"at":"2026-09-23T13:15:00+00:00","value":101.31},{"at":"2026-09-23T13:30:00+00:00","value":126.3},{"at":"2026-09-23T13:45:00+00:00","value":141.93},{"at":"2026-09-23T14:00:00+00:00","value":124.17},{"at":"2026-09-23T14:15:00+00:00","value":148.07},{"at":"2026-09-23T14:30:00+00:00","value":165.54},{"at":"2026-09-23T14:45:00+00:00","value":189.45},{"at":"2026-09-23T15:00:00+00:00","value":158.94},{"at":"2026-09-23T15:15:00+00:00","value":186.1},{"at":"2026-09-23T15:30:00+00:00","value":211.46},{"at":"2026-09-23T15:45:00+00:00","value":239.54},{"at":"2026-09-23T16:00:00+00:00","value":206.0},{"at":"2026-09-23T16:15:00+00:00","value":225.83},{"at":"2026-09-23T16:30:00+00:00","value":267.94},{"at":"2026-09-23T16:45:00+00:00","value":275.11},{"at":"2026-09-23T17:00:00+00:00","value":271.83},{"at":"2026-09-23T17:15:00+00:00","value":257.33},{"at":"2026-09-23T17:30:00+00:00","value":272.89},{"at":"2026-09-23T17:45:00+00:00","value":284.31},{"at":"2026-09-23T18:00:00+00:00","value":262.21},{"at":"2026-09-23T18:15:00+00:00","value":249.7},{"at":"2026-09-23T18:30:00+00:00","value":223.83},{"at":"2026-09-23T18:45:00+00:00","value":210.76},{"at":"2026-09-23T19:00:00+00:00","value":213.26},{"at":"2026-09-23T19:15:00+00:00","value":205.96},{"at":"2026-09-23T19:30:00+00:00","value":190.73},{"at":"2026-09-23T19:45:00+00:00","value":170.84},{"at":"2026-09-23T20:00:00+00:00","value":182.87},{"at":"2026-09-23T20:15:00+00:00","value":170.36},{"at":"2026-09-23T20:30:00+00:00","value":165.74},{"at":"2026-09-23T20:45:00+00:00","value":161.5},{"at":"2026-09-23T21:00:00+00:00","value":166.95},{"at":"2026-09-23T21:15:00+00:00","value":154.16},{"at":"2026-09-23T21:30:00+00:00","value":150.68},{"at":"2026-09-23T21:45:00+00:00","value":144.2},{"at":"2026-09-23T22:00:00+00:00","value":124.78},{"at":"2026-09-23T22:15:00+00:00","value":136.68},{"at":"2026-09-23T22:30:00+00:00","value":130.6},{"at":"2026-09-23T22:45:00+00:00","value":129.4},{"at":"2026-09-23T23:00:00+00:00","value":121.01},{"at":"2026-09-23T23:15:00+00:00","value":118.29},{"at":"2026-09-23T23:30:00+00:00","value":119.7},{"at":"2026-09-23T23:45:00+00:00","value":116.49},{"at":"2026-09-24T00:00:00+00:00","value":117.38},{"at":"2026-09-24T00:15:00+00:00","value":114.96},{"at":"2026-09-24T00:30:00+00:00","value":114.36},{"at":"2026-09-24T00:45:00+00:00","value":111.35},{"at":"2026-09-24T01:00:00+00:00","value":109.27},{"at":"2026-09-24T01:15:00+00:00","value":107.97},{"at":"2026-09-24T01:30:00+00:00","value":106.5},{"at":"2026-09-24T01:45:00+00:00","value":104.39},{"at":"2026-09-24T02:00:00+00:00","value":106.36},{"at":"2026-09-24T02:15:00+00:00","value":106.43},{"at":"2026-09-24T02:30:00+00:00","value":105.65},{"at":"2026-09-24T02:45:00+00:00","value":110.85},{"at":"2026-09-24T03:00:00+00:00","value":118.13},{"at":"2026-09-24T03:15:00+00:00","value":118.67},{"at":"2026-09-24T03:30:00+00:00","value":121.55},{"at":"2026-09-24T03:45:00+00:00","value":128.45},{"at":"2026-09-24T04:00:00+00:00","value":123.98},{"at":"2026-09-24T04:15:00+00:00","value":142.78},{"at":"2026-09-24T04:30:00+00:00","value":156.71},{"at":"2026-09-24T04:45:00+00:00","value":167.77},{"at":"2026-09-24T05:00:00+00:00","value":161.37},{"at":"2026-09-24T05:15:00+00:00","value":167.17},{"at":"2026-09-24T05:30:00+00:00","value":172.69},{"at":"2026-09-24T05:45:00+00:00","value":170.83},{"at":"2026-09-24T06:00:00+00:00","value":185.99},{"at":"2026-09-24T06:15:00+00:00","value":175.9},{"at":"2026-09-24T06:30:00+00:00","value":172.6},{"at":"2026-09-24T06:45:00+00:00","value":160.57},{"at":"2026-09-24T07:00:00+00:00","value":172.79},{"at":"2026-09-24T07:15:00+00:00","value":162.39},{"at":"2026-09-24T07:30:00+00:00","value":144.42},{"at":"2026-09-24T07:45:00+00:00","value":130.04},{"at":"2026-09-24T08:00:00+00:00","value":136.4},{"at":"2026-09-24T08:15:00+00:00","value":122.77},{"at":"2026-09-24T08:30:00+00:00","value":106.24},{"at":"2026-09-24T08:45:00+00:00","value":81.51},{"at":"2026-09-24T09:00:00+00:00","value":98.66},{"at":"2026-09-24T09:15:00+00:00","value":78.86},{"at":"2026-09-24T09:30:00+00:00","value":60.02},{"at":"2026-09-24T09:45:00+00:00","value":36.1},{"at":"2026-09-24T10:00:00+00:00","value":25.01},{"at":"2026-09-24T10:15:00+00:00","value":15.11},{"at":"2026-09-24T10:30:00+00:00","value":13.88},{"at":"2026-09-24T10:45:00+00:00","value":10.0},{"at":"2026-09-24T11:00:00+00:00","value":14.0},{"at":"2026-09-24T11:15:00+00:00","value":10.03},{"at":"2026-09-24T11:30:00+00:00","value":12.32},{"at":"2026-09-24T11:45:00+00:00","value":10.05},{"at":"2026-09-24T12:00:00+00:00","value":8.86},{"at":"2026-09-24T12:15:00+00:00","value":10.9},{"at":"2026-09-24T12:30:00+00:00","value":24.0},{"at":"2026-09-24T12:45:00+00:00","value":34.99},{"at":"2026-09-24T13:00:00+00:00","value":38.66},{"at":"2026-09-24T13:15:00+00:00","value":61.86},{"at":"2026-09-24T13:30:00+00:00","value":95.0},{"at":"2026-09-24T13:45:00+00:00","value":108.0},{"at":"2026-09-24T14:00:00+00:00","value":76.9},{"at":"2026-09-24T14:15:00+00:00","value":108.86},{"at":"2026-09-24T14:30:00+00:00","value":132.15},{"at":"2026-09-24T14:45:00+00:00","value":152.8},{"at":"2026-09-24T15:00:00+00:00","value":141.6},{"at":"2026-09-24T15:15:00+00:00","value":170.89},{"at":"2026-09-24T15:30:00+00:00","value":193.19},{"at":"2026-09-24T15:45:00+00:00","value":214.43},{"at":"2026-09-24T16:00:00+00:00","value":186.47},{"at":"2026-09-24T16:15:00+00:00","value":218.93},{"at":"2026-09-24T16:30:00+00:00","value":236.02},{"at":"2026-09-24T16:45:00+00:00","value":262.74},{"at":"2026-09-24T17:00:00+00:00","value":249.33},{"at":"2026-09-24T17:15:00+00:00","value":263.79},{"at":"2026-09-24T17:30:00+00:00","value":267.94},{"at":"2026-09-24T17:45:00+00:00","value":288.23},{"at":"2026-09-24T18:00:00+00:00","value":272.65},{"at":"2026-09-24T18:15:00+00:00","value":265.8},{"at":"2026-09-24T18:30:00+00:00","value":253.5},{"at":"2026-09-24T18:45:00+00:00","value":248.05},{"at":"2026-09-24T19:00:00+00:00","value":240.29},{"at":"2026-09-24T19:15:00+00:00","value":230.0},{"at":"2026-09-24T19:30:00+00:00","value":223.38},{"at":"2026-09-24T19:45:00+00:00","value":209.62},{"at":"2026-09-24T20:00:00+00:00","value":220.96},{"at":"2026-09-24T20:15:00+00:00","value":204.52},{"at":"2026-09-24T20:30:00+00:00","value":201.0},{"at":"2026-09-24T20:45:00+00:00","value":192.99},{"at":"2026-09-24T21:00:00+00:00","value":196.93},{"at":"2026-09-24T21:15:00+00:00","value":188.32},{"at":"2026-09-24T21:30:00+00:00","value":185.64},{"at":"2026-09-24T21:45:00+00:00","value":181.14},{"at":"2026-09-24T22:00:00+00:00","value":196.99},{"at":"2026-09-24T22:15:00+00:00","value":184.4},{"at":"2026-09-24T22:30:00+00:00","value":175.79},{"at":"2026-09-24T22:45:00+00:00","value":170.59},{"at":"2026-09-24T23:00:00+00:00","value":175.13},{"at":"2026-09-24T23:15:00+00:00","value":171.84},{"at":"2026-09-24T23:30:00+00:00","value":171.43},{"at":"2026-09-24T23:45:00+00:00","value":170.27},{"at":"2026-09-25T00:00:00+00:00","value":167.76},{"at":"2026-09-25T00:15:00+00:00","value":166.49},{"at":"2026-09-25T00:30:00+00:00","value":165.93},{"at":"2026-09-25T00:45:00+00:00","value":162.38},{"at":"2026-09-25T01:00:00+00:00","value":164.46},{"at":"2026-09-25T01:15:00+00:00","value":165.55},{"at":"2026-09-25T01:30:00+00:00","value":169.18},{"at":"2026-09-25T01:45:00+00:00","value":169.27},{"at":"2026-09-25T02:00:00+00:00","value":172.29},{"at":"2026-09-25T02:15:00+00:00","value":170.87},{"at":"2026-09-25T02:30:00+00:00","value":169.82},{"at":"2026-09-25T02:45:00+00:00","value":165.87},{"at":"2026-09-25T03:00:00+00:00","value":168.41},{"at":"2026-09-25T03:15:00+00:00","value":169.79},{"at":"2026-09-25T03:30:00+00:00","value":192.29},{"at":"2026-09-25T03:45:00+00:00","value":221.15},{"at":"2026-09-25T04:00:00+00:00","value":204.38},{"at":"2026-09-25T04:15:00+00:00","value":236.08},{"at":"2026-09-25T04:30:00+00:00","value":236.44},{"at":"2026-09-25T04:45:00+00:00","value":264.16},{"at":"2026-09-25T05:00:00+00:00","value":252.93},{"at":"2026-09-25T05:15:00+00:00","value":266.66},{"at":"2026-09-25T05:30:00+00:00","value":273.61},{"at":"2026-09-25T05:45:00+00:00","value":252.41},{"at":"2026-09-25T06:00:00+00:00","value":290.87},{"at":"2026-09-25T06:15:00+00:00","value":260.69},{"at":"2026-09-25T06:30:00+00:00","value":243.4},{"at":"2026-09-25T06:45:00+00:00","value":203.99},{"at":"2026-09-25T07:00:00+00:00","value":235.46},{"at":"2026-09-25T07:15:00+00:00","value":202.74},{"at":"2026-09-25T07:30:00+00:00","value":189.27},{"at":"2026-09-25T07:45:00+00:00","value":157.5},{"at":"2026-09-25T08:00:00+00:00","value":182.5},{"at":"2026-09-25T08:15:00+00:00","value":165.0},{"at":"2026-09-25T08:30:00+00:00","value":148.66},{"at":"2026-09-25T08:45:00+00:00","value":137.99},{"at":"2026-09-25T09:00:00+00:00","value":137.82},{"at":"2026-09-25T09:15:00+00:00","value":123.02},{"at":"2026-09-25T09:30:00+00:00","value":100.36},{"at":"2026-09-25T09:45:00+00:00","value":72.42},{"at":"2026-09-25T10:00:00+00:00","value":85.78},{"at":"2026-09-25T10:15:00+00:00","value":62.83},{"at":"2026-09-25T10:30:00+00:00","value":49.38},{"at":"2026-09-25T10:45:00+00:00","value":42.75},{"at":"2026-09-25T11:00:00+00:00","value":39.01},{"at":"2026-09-25T11:15:00+00:00","value":36.12},{"at":"2026-09-25T11:30:00+00:00","value":26.14},{"at":"2026-09-25T11:45:00+00:00","value":19.17},{"at":"2026-09-25T12:00:00+00:00","value":23.12},{"at":"2026-09-25T12:15:00+00:00","value":35.0},{"at":"2026-09-25T12:30:00+00:00","value":39.94},{"at":"2026-09-25T12:45:00+00:00","value":61.49},{"at":"2026-09-25T13:00:00+00:00","value":40.0},{"at":"2026-09-25T13:15:00+00:00","value":73.58},{"at":"2026-09-25T13:30:00+00:00","value":107.83},{"at":"2026-09-25T13:45:00+00:00","value":126.76},{"at":"2026-09-25T14:00:00+00:00","value":119.91},{"at":"2026-09-25T14:15:00+00:00","value":142.44},{"at":"2026-09-25T14:30:00+00:00","value":165.0},{"at":"2026-09-25T14:45:00+00:00","value":190.71},{"at":"2026-09-25T15:00:00+00:00","value":157.71},{"at":"2026-09-25T15:15:00+00:00","value":192.8},{"at":"2026-09-25T15:30:00+00:00","value":206.21},{"at":"2026-09-25T15:45:00+00:00","value":239.26},{"at":"2026-09-25T16:00:00+00:00","value":202.24},{"at":"2026-09-25T16:15:00+00:00","value":230.0},{"at":"2026-09-25T16:30:00+00:00","value":248.72},{"at":"2026-09-25T16:45:00+00:00","value":284.74},{"at":"2026-09-25T17:00:00+00:00","value":291.76},{"at":"2026-09-25T17:15:00+00:00","value":305.47},{"at":"2026-09-25T17:30:00+00:00","value":315.78},{"at":"2026-09-25T17:45:00+00:00","value":300.7},{"at":"2026-09-25T18:00:00+00:00","value":270.0},{"at":"2026-09-25T18:15:00+00:00","value":255.0},{"at":"2026-09-25T18:30:00+00:00","value":246.96},{"at":"2026-09-25T18:45:00+00:00","value":236.7},{"at":"2026-09-25T19:00:00+00:00","value":244.18},{"at":"2026-09-25T19:15:00+00:00","value":231.25},{"at":"2026-09-25T19:30:00+00:00","value":218.38},{"at":"2026-09-25T19:45:00+00:00","value":202.89},{"at":"2026-09-25T20:00:00+00:00","value":219.99},{"at":"2026-09-25T20:15:00+00:00","value":208.59},{"at":"2026-09-25T20:30:00+00:00","value":202.11},{"at":"2026-09-25T20:45:00+00:00","value":194.72},{"at":"2026-09-25T21:00:00+00:00","value":199.81},{"at":"2026-09-25T21:15:00+00:00","value":193.53},{"at":"2026-09-25T21:30:00+00:00","value":182.41},{"at":"2026-09-25T21:45:00+00:00","value":171.29},{"at":"2026-09-25T22:00:00+00:00","value":205.94},{"at":"2026-09-25T22:15:00+00:00","value":199.14},{"at":"2026-09-25T22:30:00+00:00","value":194.54},{"at":"2026-09-25T22:45:00+00:00","value":185.56},{"at":"2026-09-25T23:00:00+00:00","value":187.85},{"at":"2026-09-25T23:15:00+00:00","value":184.4},{"at":"2026-09-25T23:30:00+00:00","value":182.86},{"at":"2026-09-25T23:45:00+00:00","value":181.02},{"at":"2026-09-26T00:00:00+00:00","value":181.33},{"at":"2026-09-26T00:15:00+00:00","value":179.17},{"at":"2026-09-26T00:30:00+00:00","value":173.17},{"at":"2026-09-26T00:45:00+00:00","value":166.7},{"at":"2026-09-26T01:00:00+00:00","value":165.93},{"at":"2026-09-26T01:15:00+00:00","value":163.25},{"at":"2026-09-26T01:30:00+00:00","value":162.56},{"at":"2026-09-26T01:45:00+00:00","value":162.47},{"at":"2026-09-26T02:00:00+00:00","value":159.61},{"at":"2026-09-26T02:15:00+00:00","value":160.35},{"at":"2026-09-26T02:30:00+00:00","value":161.3},{"at":"2026-09-26T02:45:00+00:00","value":161.76},{"at":"2026-09-26T03:00:00+00:00","value":159.09},{"at":"2026-09-26T03:15:00+00:00","value":158.03},{"at":"2026-09-26T03:30:00+00:00","value":160.44},{"at":"2026-09-26T03:45:00+00:00","value":164.62},{"at":"2026-09-26T04:00:00+00:00","value":167.7},{"at":"2026-09-26T04:15:00+00:00","value":176.77},{"at":"2026-09-26T04:30:00+00:00","value":181.6},{"at":"2026-09-26T04:45:00+00:00","value":188.88},{"at":"2026-09-26T05:00:00+00:00","value":192.05},{"at":"2026-09-26T05:15:00+00:00","value":194.29},{"at":"2026-09-26T05:30:00+00:00","value":194.14},{"at":"2026-09-26T05:45:00+00:00","value":196.76},{"at":"2026-09-26T06:00:00+00:00","value":210.93},{"at":"2026-09-26T06:15:00+00:00","value":203.0},{"at":"2026-09-26T06:30:00+00:00","value":187.34},{"at":"2026-09-26T06:45:00+00:00","value":166.4},{"at":"2026-09-26T07:00:00+00:00","value":193.17},{"at":"2026-09-26T07:15:00+00:00","value":165.98},{"at":"2026-09-26T07:30:00+00:00","value":139.03},{"at":"2026-09-26T07:45:00+00:00","value":127.59},{"at":"2026-09-26T08:00:00+00:00","value":132.41},{"at":"2026-09-26T08:15:00+00:00","value":120.56},{"at":"2026-09-26T08:30:00+00:00","value":104.99},{"at":"2026-09-26T08:45:00+00:00","value":90.0},{"at":"2026-09-26T09:00:00+00:00","value":78.49},{"at":"2026-09-26T09:15:00+00:00","value":59.07},{"at":"2026-09-26T09:30:00+00:00","value":46.32},{"at":"2026-09-26T09:45:00+00:00","value":28.53},{"at":"2026-09-26T10:00:00+00:00","value":17.33},{"at":"2026-09-26T10:15:00+00:00","value":12.51},{"at":"2026-09-26T10:30:00+00:00","value":9.47},{"at":"2026-09-26T10:45:00+00:00","value":4.71},{"at":"2026-09-26T11:00:00+00:00","value":4.64},{"at":"2026-09-26T11:15:00+00:00","value":3.73},{"at":"2026-09-26T11:30:00+00:00","value":2.43},{"at":"2026-09-26T11:45:00+00:00","value":2.42},{"at":"2026-09-26T12:00:00+00:00","value":9.02},{"at":"2026-09-26T12:15:00+00:00","value":12.51},{"at":"2026-09-26T12:30:00+00:00","value":23.3},{"at":"2026-09-26T12:45:00+00:00","value":28.97},{"at":"2026-09-26T13:00:00+00:00","value":23.0},{"at":"2026-09-26T13:15:00+00:00","value":40.0},{"at":"2026-09-26T13:30:00+00:00","value":59.82},{"at":"2026-09-26T13:45:00+00:00","value":83.28},{"at":"2026-09-26T14:00:00+00:00","value":91.58},{"at":"2026-09-26T14:15:00+00:00","value":122.8},{"at":"2026-09-26T14:30:00+00:00","value":135.09},{"at":"2026-09-26T14:45:00+00:00","value":160.1},{"at":"2026-09-26T15:00:00+00:00","value":154.56},{"at":"2026-09-26T15:15:00+00:00","value":194.8},{"at":"2026-09-26T15:30:00+00:00","value":215.13},{"at":"2026-09-26T15:45:00+00:00","value":203.04},{"at":"2026-09-26T16:00:00+00:00","value":196.0},{"at":"2026-09-26T16:15:00+00:00","value":206.37},{"at":"2026-09-26T16:30:00+00:00","value":220.86},{"at":"2026-09-26T16:45:00+00:00","value":234.23},{"at":"2026-09-26T17:00:00+00:00","value":222.0},{"at":"2026-09-26T17:15:00+00:00","value":230.46},{"at":"2026-09-26T17:30:00+00:00","value":243.61},{"at":"2026-09-26T17:45:00+00:00","value":251.08},{"at":"2026-09-26T18:00:00+00:00","value":238.97},{"at":"2026-09-26T18:15:00+00:00","value":232.0},{"at":"2026-09-26T18:30:00+00:00","value":222.48},{"at":"2026-09-26T18:45:00+00:00","value":211.99},{"at":"2026-09-26T19:00:00+00:00","value":218.18},{"at":"2026-09-26T19:15:00+00:00","value":210.24},{"at":"2026-09-26T19:30:00+00:00","value":205.53},{"at":"2026-09-26T19:45:00+00:00","value":200.0},{"at":"2026-09-26T20:00:00+00:00","value":207.0},{"at":"2026-09-26T20:15:00+00:00","value":200.62},{"at":"2026-09-26T20:30:00+00:00","value":197.73},{"at":"2026-09-26T20:45:00+00:00","value":191.89},{"at":"2026-09-26T21:00:00+00:00","value":195.2},{"at":"2026-09-26T21:15:00+00:00","value":188.45},{"at":"2026-09-26T21:30:00+00:00","value":182.55},{"at":"2026-09-26T21:45:00+00:00","value":177.8},{"at":"2026-09-26T22:00:00+00:00","value":192.07},{"at":"2026-09-26T22:15:00+00:00","value":185.95},{"at":"2026-09-26T22:30:00+00:00","value":182.68},{"at":"2026-09-26T22:45:00+00:00","value":172.18},{"at":"2026-09-26T23:00:00+00:00","value":180.47},{"at":"2026-09-26T23:15:00+00:00","value":178.0},{"at":"2026-09-26T23:30:00+00:00","value":176.62},{"at":"2026-09-26T23:45:00+00:00","value":178.0},{"at":"2026-09-27T00:00:00+00:00","value":176.0},{"at":"2026-09-27T00:15:00+00:00","value":171.31},{"at":"2026-09-27T00:30:00+00:00","value":169.97},{"at":"2026-09-27T00:45:00+00:00","value":168.08},{"at":"2026-09-27T01:00:00+00:00","value":168.16},{"at":"2026-09-27T01:15:00+00:00","value":166.78},{"at":"2026-09-27T01:30:00+00:00","value":165.4},{"at":"2026-09-27T01:45:00+00:00","value":165.39},{"at":"2026-09-27T02:00:00+00:00","value":165.0},{"at":"2026-09-27T02:15:00+00:00","value":160.83},{"at":"2026-09-27T02:30:00+00:00","value":160.44},{"at":"2026-09-27T02:45:00+00:00","value":160.0},{"at":"2026-09-27T03:00:00+00:00","value":160.44},{"at":"2026-09-27T03:15:00+00:00","value":158.08},{"at":"2026-09-27T03:30:00+00:00","value":159.4},{"at":"2026-09-27T03:45:00+00:00","value":156.76},{"at":"2026-09-27T04:00:00+00:00","value":156.03},{"at":"2026-09-27T04:15:00+00:00","value":156.05},{"at":"2026-09-27T04:30:00+00:00","value":162.42},{"at":"2026-09-27T04:45:00+00:00","value":162.85},{"at":"2026-09-27T05:00:00+00:00","value":165.56},{"at":"2026-09-27T05:15:00+00:00","value":157.95},{"at":"2026-09-27T05:30:00+00:00","value":146.68},{"at":"2026-09-27T05:45:00+00:00","value":134.63},{"at":"2026-09-27T06:00:00+00:00","value":160.43},{"at":"2026-09-27T06:15:00+00:00","value":143.86},{"at":"2026-09-27T06:30:00+00:00","value":119.48},{"at":"2026-09-27T06:45:00+00:00","value":87.03},{"at":"2026-09-27T07:00:00+00:00","value":101.36},{"at":"2026-09-27T07:15:00+00:00","value":76.32},{"at":"2026-09-27T07:30:00+00:00","value":30.96},{"at":"2026-09-27T07:45:00+00:00","value":18.32},{"at":"2026-09-27T08:00:00+00:00","value":5.51},{"at":"2026-09-27T08:15:00+00:00","value":0.06},{"at":"2026-09-27T08:30:00+00:00","value":0.0},{"at":"2026-09-27T08:45:00+00:00","value":0.0},{"at":"2026-09-27T09:00:00+00:00","value":0.0},{"at":"2026-09-27T09:15:00+00:00","value":-0.01},{"at":"2026-09-27T09:30:00+00:00","value":-0.09},{"at":"2026-09-27T09:45:00+00:00","value":-0.19},{"at":"2026-09-27T10:00:00+00:00","value":-1.01},{"at":"2026-09-27T10:15:00+00:00","value":-1.76},{"at":"2026-09-27T10:30:00+00:00","value":-2.02},{"at":"2026-09-27T10:45:00+00:00","value":-2.99},{"at":"2026-09-27T11:00:00+00:00","value":-2.21},{"at":"2026-09-27T11:15:00+00:00","value":-2.95},{"at":"2026-09-27T11:30:00+00:00","value":-2.76},{"at":"2026-09-27T11:45:00+00:00","value":-2.02},{"at":"2026-09-27T12:00:00+00:00","value":-2.0},{"at":"2026-09-27T12:15:00+00:00","value":-1.02},{"at":"2026-09-27T12:30:00+00:00","value":-0.21},{"at":"2026-09-27T12:45:00+00:00","value":-0.12},{"at":"2026-09-27T13:00:00+00:00","value":-0.01},{"at":"2026-09-27T13:15:00+00:00","value":-0.01},{"at":"2026-09-27T13:30:00+00:00","value":0.0},{"at":"2026-09-27T13:45:00+00:00","value":0.0},{"at":"2026-09-27T14:00:00+00:00","value":0.0},{"at":"2026-09-27T14:15:00+00:00","value":0.15},{"at":"2026-09-27T14:30:00+00:00","value":7.01},{"at":"2026-09-27T14:45:00+00:00","value":45.25},{"at":"2026-09-27T15:00:00+00:00","value":41.25},{"at":"2026-09-27T15:15:00+00:00","value":92.71},{"at":"2026-09-27T15:30:00+00:00","value":144.61},{"at":"2026-09-27T15:45:00+00:00","value":178.48},{"at":"2026-09-27T16:00:00+00:00","value":168.79},{"at":"2026-09-27T16:15:00+00:00","value":188.35},{"at":"2026-09-27T16:30:00+00:00","value":193.27},{"at":"2026-09-27T16:45:00+00:00","value":194.45},{"at":"2026-09-27T17:00:00+00:00","value":190.84},{"at":"2026-09-27T17:15:00+00:00","value":191.93},{"at":"2026-09-27T17:30:00+00:00","value":198.95},{"at":"2026-09-27T17:45:00+00:00","value":201.28},{"at":"2026-09-27T18:00:00+00:00","value":194.32},{"at":"2026-09-27T18:15:00+00:00","value":188.0},{"at":"2026-09-27T18:30:00+00:00","value":185.68},{"at":"2026-09-27T18:45:00+00:00","value":167.39},{"at":"2026-09-27T19:00:00+00:00","value":174.16},{"at":"2026-09-27T19:15:00+00:00","value":164.44},{"at":"2026-09-27T19:30:00+00:00","value":151.86},{"at":"2026-09-27T19:45:00+00:00","value":148.56},{"at":"2026-09-27T20:00:00+00:00","value":164.94},{"at":"2026-09-27T20:15:00+00:00","value":156.51},{"at":"2026-09-27T20:30:00+00:00","value":152.22},{"at":"2026-09-27T20:45:00+00:00","value":148.03},{"at":"2026-09-27T21:00:00+00:00","value":149.36},{"at":"2026-09-27T21:15:00+00:00","value":147.47},{"at":"2026-09-27T21:30:00+00:00","value":145.18},{"at":"2026-09-27T21:45:00+00:00","value":143.72},{"at":"2026-09-27T22:00:00+00:00","value":150.75},{"at":"2026-09-27T22:15:00+00:00","value":150.76},{"at":"2026-09-27T22:30:00+00:00","value":150.58},{"at":"2026-09-27T22:45:00+00:00","value":150.75},{"at":"2026-09-27T23:00:00+00:00","value":152.64},{"at":"2026-09-27T23:15:00+00:00","value":150.22},{"at":"2026-09-27T23:30:00+00:00","value":151.75},{"at":"2026-09-27T23:45:00+00:00","value":151.03},{"at":"2026-09-28T00:00:00+00:00","value":150.96},{"at":"2026-09-28T00:15:00+00:00","value":151.36},{"at":"2026-09-28T00:30:00+00:00","value":151.75},{"at":"2026-09-28T00:45:00+00:00","value":151.89},{"at":"2026-09-28T01:00:00+00:00","value":152.62},{"at":"2026-09-28T01:15:00+00:00","value":153.8},{"at":"2026-09-28T01:30:00+00:00","value":154.6},{"at":"2026-09-28T01:45:00+00:00","value":157.33},{"at":"2026-09-28T02:00:00+00:00","value":156.68},{"at":"2026-09-28T02:15:00+00:00","value":158.24},{"at":"2026-09-28T02:30:00+00:00","value":162.04},{"at":"2026-09-28T02:45:00+00:00","value":166.87},{"at":"2026-09-28T03:00:00+00:00","value":167.67},{"at":"2026-09-28T03:15:00+00:00","value":170.36},{"at":"2026-09-28T03:30:00+00:00","value":176.77},{"at":"2026-09-28T03:45:00+00:00","value":185.9},{"at":"2026-09-28T04:00:00+00:00","value":193.68},{"at":"2026-09-28T04:15:00+00:00","value":204.99},{"at":"2026-09-28T04:30:00+00:00","value":214.84},{"at":"2026-09-28T04:45:00+00:00","value":231.02},{"at":"2026-09-28T05:00:00+00:00","value":228.23},{"at":"2026-09-28T05:15:00+00:00","value":244.02},{"at":"2026-09-28T05:30:00+00:00","value":246.17},{"at":"2026-09-28T05:45:00+00:00","value":245.5},{"at":"2026-09-28T06:00:00+00:00","value":275.95},{"at":"2026-09-28T06:15:00+00:00","value":250.74},{"at":"2026-09-28T06:30:00+00:00","value":231.15},{"at":"2026-09-28T06:45:00+00:00","value":210.77},{"at":"2026-09-28T07:00:00+00:00","value":235.13},{"at":"2026-09-28T07:15:00+00:00","value":220.36},{"at":"2026-09-28T07:30:00+00:00","value":202.0},{"at":"2026-09-28T07:45:00+00:00","value":182.95},{"at":"2026-09-28T08:00:00+00:00","value":203.48},{"at":"2026-09-28T08:15:00+00:00","value":185.07},{"at":"2026-09-28T08:30:00+00:00","value":172.75},{"at":"2026-09-28T08:45:00+00:00","value":155.95},{"at":"2026-09-28T09:00:00+00:00","value":157.93},{"at":"2026-09-28T09:15:00+00:00","value":158.52},{"at":"2026-09-28T09:30:00+00:00","value":150.4},{"at":"2026-09-28T09:45:00+00:00","value":147.22},{"at":"2026-09-28T10:00:00+00:00","value":145.33},{"at":"2026-09-28T10:15:00+00:00","value":126.73},{"at":"2026-09-28T10:30:00+00:00","value":117.8},{"at":"2026-09-28T10:45:00+00:00","value":114.68},{"at":"2026-09-28T11:00:00+00:00","value":116.98},{"at":"2026-09-28T11:15:00+00:00","value":114.49},{"at":"2026-09-28T11:30:00+00:00","value":126.85},{"at":"2026-09-28T11:45:00+00:00","value":127.03},{"at":"2026-09-28T12:00:00+00:00","value":120.78},{"at":"2026-09-28T12:15:00+00:00","value":134.99},{"at":"2026-09-28T12:30:00+00:00","value":145.51},{"at":"2026-09-28T12:45:00+00:00","value":151.87},{"at":"2026-09-28T13:00:00+00:00","value":146.6},{"at":"2026-09-28T13:15:00+00:00","value":150.9},{"at":"2026-09-28T13:30:00+00:00","value":151.9},{"at":"2026-09-28T13:45:00+00:00","value":165.54},{"at":"2026-09-28T14:00:00+00:00","value":156.69},{"at":"2026-09-28T14:15:00+00:00","value":172.33},{"at":"2026-09-28T14:30:00+00:00","value":198.69},{"at":"2026-09-28T14:45:00+00:00","value":224.59},{"at":"2026-09-28T15:00:00+00:00","value":207.45},{"at":"2026-09-28T15:15:00+00:00","value":231.26},{"at":"2026-09-28T15:30:00+00:00","value":241.07},{"at":"2026-09-28T15:45:00+00:00","value":266.9},{"at":"2026-09-28T16:00:00+00:00","value":247.48},{"at":"2026-09-28T16:15:00+00:00","value":284.36},{"at":"2026-09-28T16:30:00+00:00","value":319.88},{"at":"2026-09-28T16:45:00+00:00","value":390.6},{"at":"2026-09-28T17:00:00+00:00","value":350.0},{"at":"2026-09-28T17:15:00+00:00","value":354.0},{"at":"2026-09-28T17:30:00+00:00","value":349.99},{"at":"2026-09-28T17:45:00+00:00","value":314.86},{"at":"2026-09-28T18:00:00+00:00","value":320.83},{"at":"2026-09-28T18:15:00+00:00","value":280.59},{"at":"2026-09-28T18:30:00+00:00","value":260.91},{"at":"2026-09-28T18:45:00+00:00","value":246.9},{"at":"2026-09-28T19:00:00+00:00","value":252.58},{"at":"2026-09-28T19:15:00+00:00","value":234.44},{"at":"2026-09-28T19:30:00+00:00","value":223.98},{"at":"2026-09-28T19:45:00+00:00","value":205.0},{"at":"2026-09-28T20:00:00+00:00","value":216.93},{"at":"2026-09-28T20:15:00+00:00","value":208.16},{"at":"2026-09-28T20:30:00+00:00","value":201.99},{"at":"2026-09-28T20:45:00+00:00","value":186.32},{"at":"2026-09-28T21:00:00+00:00","value":197.01},{"at":"2026-09-28T21:15:00+00:00","value":187.78},{"at":"2026-09-28T21:30:00+00:00","value":179.24},{"at":"2026-09-28T21:45:00+00:00","value":161.14},{"at":"2026-09-28T22:00:00+00:00","value":191.82},{"at":"2026-09-28T22:15:00+00:00","value":189.19},{"at":"2026-09-28T22:30:00+00:00","value":180.22},{"at":"2026-09-28T22:45:00+00:00","value":174.22},{"at":"2026-09-28T23:00:00+00:00","value":181.81},{"at":"2026-09-28T23:15:00+00:00","value":175.85},{"at":"2026-09-28T23:30:00+00:00","value":171.4},{"at":"2026-09-28T23:45:00+00:00","value":166.79},{"at":"2026-09-29T00:00:00+00:00","value":170.78},{"at":"2026-09-29T00:15:00+00:00","value":168.95},{"at":"2026-09-29T00:30:00+00:00","value":168.78},{"at":"2026-09-29T00:45:00+00:00","value":167.64},{"at":"2026-09-29T01:00:00+00:00","value":164.24},{"at":"2026-09-29T01:15:00+00:00","value":165.16},{"at":"2026-09-29T01:30:00+00:00","value":165.14},{"at":"2026-09-29T01:45:00+00:00","value":165.1},{"at":"2026-09-29T02:00:00+00:00","value":162.1},{"at":"2026-09-29T02:15:00+00:00","value":161.64},{"at":"2026-09-29T02:30:00+00:00","value":159.64},{"at":"2026-09-29T02:45:00+00:00","value":158.22},{"at":"2026-09-29T03:00:00+00:00","value":154.64},{"at":"2026-09-29T03:15:00+00:00","value":158.2},{"at":"2026-09-29T03:30:00+00:00","value":170.54},{"at":"2026-09-29T03:45:00+00:00","value":179.47},{"at":"2026-09-29T04:00:00+00:00","value":191.32},{"at":"2026-09-29T04:15:00+00:00","value":216.62},{"at":"2026-09-29T04:30:00+00:00","value":229.85},{"at":"2026-09-29T04:45:00+00:00","value":226.6},{"at":"2026-09-29T05:00:00+00:00","value":231.37},{"at":"2026-09-29T05:15:00+00:00","value":233.0},{"at":"2026-09-29T05:30:00+00:00","value":226.86},{"at":"2026-09-29T05:45:00+00:00","value":223.25},{"at":"2026-09-29T06:00:00+00:00","value":239.11},{"at":"2026-09-29T06:15:00+00:00","value":230.33},{"at":"2026-09-29T06:30:00+00:00","value":213.57},{"at":"2026-09-29T06:45:00+00:00","value":180.74},{"at":"2026-09-29T07:00:00+00:00","value":212.3},{"at":"2026-09-29T07:15:00+00:00","value":187.84},{"at":"2026-09-29T07:30:00+00:00","value":173.02},{"at":"2026-09-29T07:45:00+00:00","value":163.64},{"at":"2026-09-29T08:00:00+00:00","value":179.29},{"at":"2026-09-29T08:15:00+00:00","value":166.3},{"at":"2026-09-29T08:30:00+00:00","value":158.59},{"at":"2026-09-29T08:45:00+00:00","value":143.09},{"at":"2026-09-29T09:00:00+00:00","value":146.58},{"at":"2026-09-29T09:15:00+00:00","value":137.15},{"at":"2026-09-29T09:30:00+00:00","value":115.77},{"at":"2026-09-29T09:45:00+00:00","value":101.85},{"at":"2026-09-29T10:00:00+00:00","value":98.32},{"at":"2026-09-29T10:15:00+00:00","value":89.79},{"at":"2026-09-29T10:30:00+00:00","value":88.93},{"at":"2026-09-29T10:45:00+00:00","value":76.72},{"at":"2026-09-29T11:00:00+00:00","value":82.26},{"at":"2026-09-29T11:15:00+00:00","value":74.88},{"at":"2026-09-29T11:30:00+00:00","value":68.67},{"at":"2026-09-29T11:45:00+00:00","value":63.94},{"at":"2026-09-29T12:00:00+00:00","value":65.66},{"at":"2026-09-29T12:15:00+00:00","value":79.03},{"at":"2026-09-29T12:30:00+00:00","value":88.03},{"at":"2026-09-29T12:45:00+00:00","value":93.47},{"at":"2026-09-29T13:00:00+00:00","value":89.63},{"at":"2026-09-29T13:15:00+00:00","value":108.68},{"at":"2026-09-29T13:30:00+00:00","value":120.71},{"at":"2026-09-29T13:45:00+00:00","value":130.04},{"at":"2026-09-29T14:00:00+00:00","value":115.21},{"at":"2026-09-29T14:15:00+00:00","value":144.04},{"at":"2026-09-29T14:30:00+00:00","value":161.18},{"at":"2026-09-29T14:45:00+00:00","value":199.62},{"at":"2026-09-29T15:00:00+00:00","value":179.02},{"at":"2026-09-29T15:15:00+00:00","value":201.77},{"at":"2026-09-29T15:30:00+00:00","value":213.69},{"at":"2026-09-29T15:45:00+00:00","value":218.93},{"at":"2026-09-29T16:00:00+00:00","value":219.11},{"at":"2026-09-29T16:15:00+00:00","value":227.88},{"at":"2026-09-29T16:30:00+00:00","value":231.77},{"at":"2026-09-29T16:45:00+00:00","value":244.45},{"at":"2026-09-29T17:00:00+00:00","value":242.68},{"at":"2026-09-29T17:15:00+00:00","value":233.35},{"at":"2026-09-29T17:30:00+00:00","value":227.37},{"at":"2026-09-29T17:45:00+00:00","value":215.79},{"at":"2026-09-29T18:00:00+00:00","value":218.43},{"at":"2026-09-29T18:15:00+00:00","value":207.01},{"at":"2026-09-29T18:30:00+00:00","value":196.85},{"at":"2026-09-29T18:45:00+00:00","value":185.29},{"at":"2026-09-29T19:00:00+00:00","value":183.94},{"at":"2026-09-29T19:15:00+00:00","value":174.47},{"at":"2026-09-29T19:30:00+00:00","value":168.62},{"at":"2026-09-29T19:45:00+00:00","value":152.73},{"at":"2026-09-29T20:00:00+00:00","value":161.51},{"at":"2026-09-29T20:15:00+00:00","value":155.92},{"at":"2026-09-29T20:30:00+00:00","value":153.74},{"at":"2026-09-29T20:45:00+00:00","value":145.44},{"at":"2026-09-29T21:00:00+00:00","value":139.69},{"at":"2026-09-29T21:15:00+00:00","value":134.04},{"at":"2026-09-29T21:30:00+00:00","value":128.69},{"at":"2026-09-29T21:45:00+00:00","value":119.12},{"at":"2026-09-29T22:00:00+00:00","value":112.61},{"at":"2026-09-29T22:15:00+00:00","value":101.44},{"at":"2026-09-29T22:30:00+00:00","value":110.12},{"at":"2026-09-29T22:45:00+00:00","value":114.22},{"at":"2026-09-29T23:00:00+00:00","value":105.64},{"at":"2026-09-29T23:15:00+00:00","value":102.58},{"at":"2026-09-29T23:30:00+00:00","value":103.07},{"at":"2026-09-29T23:45:00+00:00","value":110.7},{"at":"2026-09-30T00:00:00+00:00","value":97.63},{"at":"2026-09-30T00:15:00+00:00","value":101.73},{"at":"2026-09-30T00:30:00+00:00","value":100.05},{"at":"2026-09-30T00:45:00+00:00","value":107.42},{"at":"2026-09-30T01:00:00+00:00","value":100.1},{"at":"2026-09-30T01:15:00+00:00","value":103.65},{"at":"2026-09-30T01:30:00+00:00","value":104.97},{"at":"2026-09-30T01:45:00+00:00","value":102.77},{"at":"2026-09-30T02:00:00+00:00","value":107.32},{"at":"2026-09-30T02:15:00+00:00","value":98.65},{"at":"2026-09-30T02:30:00+00:00","value":101.6},{"at":"2026-09-30T02:45:00+00:00","value":109.62},{"at":"2026-09-30T03:00:00+00:00","value":115.64},{"at":"2026-09-30T03:15:00+00:00","value":119.08},{"at":"2026-09-30T03:30:00+00:00","value":124.14},{"at":"2026-09-30T03:45:00+00:00","value":129.93},{"at":"2026-09-30T04:00:00+00:00","value":144.69},{"at":"2026-09-30T04:15:00+00:00","value":159.42},{"at":"2026-09-30T04:30:00+00:00","value":166.78},{"at":"2026-09-30T04:45:00+00:00","value":170.57},{"at":"2026-09-30T05:00:00+00:00","value":189.56},{"at":"2026-09-30T05:15:00+00:00","value":202.12},{"at":"2026-09-30T05:30:00+00:00","value":204.29},{"at":"2026-09-30T05:45:00+00:00","value":199.67},{"at":"2026-09-30T06:00:00+00:00","value":218.13},{"at":"2026-09-30T06:15:00+00:00","value":203.6},{"at":"2026-09-30T06:30:00+00:00","value":187.45},{"at":"2026-09-30T06:45:00+00:00","value":165.82},{"at":"2026-09-30T07:00:00+00:00","value":189.23},{"at":"2026-09-30T07:15:00+00:00","value":170.85},{"at":"2026-09-30T07:30:00+00:00","value":156.01},{"at":"2026-09-30T07:45:00+00:00","value":144.76},{"at":"2026-09-30T08:00:00+00:00","value":140.0},{"at":"2026-09-30T08:15:00+00:00","value":130.9},{"at":"2026-09-30T08:30:00+00:00","value":123.18},{"at":"2026-09-30T08:45:00+00:00","value":95.15},{"at":"2026-09-30T09:00:00+00:00","value":114.95},{"at":"2026-09-30T09:15:00+00:00","value":90.16},{"at":"2026-09-30T09:30:00+00:00","value":77.97},{"at":"2026-09-30T09:45:00+00:00","value":42.6},{"at":"2026-09-30T10:00:00+00:00","value":60.08},{"at":"2026-09-30T10:15:00+00:00","value":43.85},{"at":"2026-09-30T10:30:00+00:00","value":37.69},{"at":"2026-09-30T10:45:00+00:00","value":30.01},{"at":"2026-09-30T11:00:00+00:00","value":26.32},{"at":"2026-09-30T11:15:00+00:00","value":20.84},{"at":"2026-09-30T11:30:00+00:00","value":13.33},{"at":"2026-09-30T11:45:00+00:00","value":19.51},{"at":"2026-09-30T12:00:00+00:00","value":13.65},{"at":"2026-09-30T12:15:00+00:00","value":24.3},{"at":"2026-09-30T12:30:00+00:00","value":38.14},{"at":"2026-09-30T12:45:00+00:00","value":73.93},{"at":"2026-09-30T13:00:00+00:00","value":43.7},{"at":"2026-09-30T13:15:00+00:00","value":78.46},{"at":"2026-09-30T13:30:00+00:00","value":106.55},{"at":"2026-09-30T13:45:00+00:00","value":111.0},{"at":"2026-09-30T14:00:00+00:00","value":104.98},{"at":"2026-09-30T14:15:00+00:00","value":132.62},{"at":"2026-09-30T14:30:00+00:00","value":169.76},{"at":"2026-09-30T14:45:00+00:00","value":186.5},{"at":"2026-09-30T15:00:00+00:00","value":173.04},{"at":"2026-09-30T15:15:00+00:00","value":194.45},{"at":"2026-09-30T15:30:00+00:00","value":211.78},{"at":"2026-09-30T15:45:00+00:00","value":229.4},{"at":"2026-09-30T16:00:00+00:00","value":213.68},{"at":"2026-09-30T16:15:00+00:00","value":226.5},{"at":"2026-09-30T16:30:00+00:00","value":232.95},{"at":"2026-09-30T16:45:00+00:00","value":248.18},{"at":"2026-09-30T17:00:00+00:00","value":241.78},{"at":"2026-09-30T17:15:00+00:00","value":246.58},{"at":"2026-09-30T17:30:00+00:00","value":255.24},{"at":"2026-09-30T17:45:00+00:00","value":255.37},{"at":"2026-09-30T18:00:00+00:00","value":245.44},{"at":"2026-09-30T18:15:00+00:00","value":242.99},{"at":"2026-09-30T18:30:00+00:00","value":227.16},{"at":"2026-09-30T18:45:00+00:00","value":216.56},{"at":"2026-09-30T19:00:00+00:00","value":235.36},{"at":"2026-09-30T19:15:00+00:00","value":215.39},{"at":"2026-09-30T19:30:00+00:00","value":203.95},{"at":"2026-09-30T19:45:00+00:00","value":170.0},{"at":"2026-09-30T20:00:00+00:00","value":203.49},{"at":"2026-09-30T20:15:00+00:00","value":190.78},{"at":"2026-09-30T20:30:00+00:00","value":184.24},{"at":"2026-09-30T20:45:00+00:00","value":169.04},{"at":"2026-09-30T21:00:00+00:00","value":178.34},{"at":"2026-09-30T21:15:00+00:00","value":164.76},{"at":"2026-09-30T21:30:00+00:00","value":171.04},{"at":"2026-09-30T21:45:00+00:00","value":156.4},{"at":"2026-09-30T22:00:00+00:00","value":166.13},{"at":"2026-09-30T22:15:00+00:00","value":158.82},{"at":"2026-09-30T22:30:00+00:00","value":153.43},{"at":"2026-09-30T22:45:00+00:00","value":153.6},{"at":"2026-09-30T23:00:00+00:00","value":159.4},{"at":"2026-09-30T23:15:00+00:00","value":160.34},{"at":"2026-09-30T23:30:00+00:00","value":159.94},{"at":"2026-09-30T23:45:00+00:00","value":158.79},{"at":"2026-10-01T00:00:00+00:00","value":159.8},{"at":"2026-10-01T00:15:00+00:00","value":158.74},{"at":"2026-10-01T00:30:00+00:00","value":158.79},{"at":"2026-10-01T00:45:00+00:00","value":156.4},{"at":"2026-10-01T01:00:00+00:00","value":161.1},{"at":"2026-10-01T01:15:00+00:00","value":161.11},{"at":"2026-10-01T01:30:00+00:00","value":158.71},{"at":"2026-10-01T01:45:00+00:00","value":157.1},{"at":"2026-10-01T02:00:00+00:00","value":158.59},{"at":"2026-10-01T02:15:00+00:00","value":158.04},{"at":"2026-10-01T02:30:00+00:00","value":155.85},{"at":"2026-10-01T02:45:00+00:00","value":159.72},{"at":"2026-10-01T03:00:00+00:00","value":158.06},{"at":"2026-10-01T03:15:00+00:00","value":158.8},{"at":"2026-10-01T03:30:00+00:00","value":168.39},{"at":"2026-10-01T03:45:00+00:00","value":181.29},{"at":"2026-10-01T04:00:00+00:00","value":177.0},{"at":"2026-10-01T04:15:00+00:00","value":203.11},{"at":"2026-10-01T04:30:00+00:00","value":218.61},{"at":"2026-10-01T04:45:00+00:00","value":233.97},{"at":"2026-10-01T05:00:00+00:00","value":228.14},{"at":"2026-10-01T05:15:00+00:00","value":242.75},{"at":"2026-10-01T05:30:00+00:00","value":243.32},{"at":"2026-10-01T05:45:00+00:00","value":234.76},{"at":"2026-10-01T06:00:00+00:00","value":258.14},{"at":"2026-10-01T06:15:00+00:00","value":235.27},{"at":"2026-10-01T06:30:00+00:00","value":226.0},{"at":"2026-10-01T06:45:00+00:00","value":214.02},{"at":"2026-10-01T07:00:00+00:00","value":238.12},{"at":"2026-10-01T07:15:00+00:00","value":211.99},{"at":"2026-10-01T07:30:00+00:00","value":200.44},{"at":"2026-10-01T07:45:00+00:00","value":182.66},{"at":"2026-10-01T08:00:00+00:00","value":209.53},{"at":"2026-10-01T08:15:00+00:00","value":189.53},{"at":"2026-10-01T08:30:00+00:00","value":173.94},{"at":"2026-10-01T08:45:00+00:00","value":160.6},{"at":"2026-10-01T09:00:00+00:00","value":165.28},{"at":"2026-10-01T09:15:00+00:00","value":158.92},{"at":"2026-10-01T09:30:00+00:00","value":158.8},{"at":"2026-10-01T09:45:00+00:00","value":157.42},{"at":"2026-10-01T10:00:00+00:00","value":160.89},{"at":"2026-10-01T10:15:00+00:00","value":164.01},{"at":"2026-10-01T10:30:00+00:00","value":160.45},{"at":"2026-10-01T10:45:00+00:00","value":163.41},{"at":"2026-10-01T11:00:00+00:00","value":153.31},{"at":"2026-10-01T11:15:00+00:00","value":152.45},{"at":"2026-10-01T11:30:00+00:00","value":151.37},{"at":"2026-10-01T11:45:00+00:00","value":150.96},{"at":"2026-10-01T12:00:00+00:00","value":152.14},{"at":"2026-10-01T12:15:00+00:00","value":147.09},{"at":"2026-10-01T12:30:00+00:00","value":150.64},{"at":"2026-10-01T12:45:00+00:00","value":151.47},{"at":"2026-10-01T13:00:00+00:00","value":150.03},{"at":"2026-10-01T13:15:00+00:00","value":151.34},{"at":"2026-10-01T13:30:00+00:00","value":156.05},{"at":"2026-10-01T13:45:00+00:00","value":170.1},{"at":"2026-10-01T14:00:00+00:00","value":149.7},{"at":"2026-10-01T14:15:00+00:00","value":166.6},{"at":"2026-10-01T14:30:00+00:00","value":196.75},{"at":"2026-10-01T14:45:00+00:00","value":243.68},{"at":"2026-10-01T15:00:00+00:00","value":179.92},{"at":"2026-10-01T15:15:00+00:00","value":224.21},{"at":"2026-10-01T15:30:00+00:00","value":250.0},{"at":"2026-10-01T15:45:00+00:00","value":275.0},{"at":"2026-10-01T16:00:00+00:00","value":246.19},{"at":"2026-10-01T16:15:00+00:00","value":265.01},{"at":"2026-10-01T16:30:00+00:00","value":276.58},{"at":"2026-10-01T16:45:00+00:00","value":310.98},{"at":"2026-10-01T17:00:00+00:00","value":289.7},{"at":"2026-10-01T17:15:00+00:00","value":300.22},{"at":"2026-10-01T17:30:00+00:00","value":314.78},{"at":"2026-10-01T17:45:00+00:00","value":297.47},{"at":"2026-10-01T18:00:00+00:00","value":280.0},{"at":"2026-10-01T18:15:00+00:00","value":268.11},{"at":"2026-10-01T18:30:00+00:00","value":251.93},{"at":"2026-10-01T18:45:00+00:00","value":230.01},{"at":"2026-10-01T19:00:00+00:00","value":250.03},{"at":"2026-10-01T19:15:00+00:00","value":229.97},{"at":"2026-10-01T19:30:00+00:00","value":221.13},{"at":"2026-10-01T19:45:00+00:00","value":204.53},{"at":"2026-10-01T20:00:00+00:00","value":221.64},{"at":"2026-10-01T20:15:00+00:00","value":207.5},{"at":"2026-10-01T20:30:00+00:00","value":203.9},{"at":"2026-10-01T20:45:00+00:00","value":186.95},{"at":"2026-10-01T21:00:00+00:00","value":201.71},{"at":"2026-10-01T21:15:00+00:00","value":190.04},{"at":"2026-10-01T21:30:00+00:00","value":182.58},{"at":"2026-10-01T21:45:00+00:00","value":171.38},{"at":"2026-10-01T22:00:00+00:00","value":185.11},{"at":"2026-10-01T22:15:00+00:00","value":177.65},{"at":"2026-10-01T22:30:00+00:00","value":169.68},{"at":"2026-10-01T22:45:00+00:00","value":167.69},{"at":"2026-10-01T23:00:00+00:00","value":168.19},{"at":"2026-10-01T23:15:00+00:00","value":164.95},{"at":"2026-10-01T23:30:00+00:00","value":162.32},{"at":"2026-10-01T23:45:00+00:00","value":160.15},{"at":"2026-10-02T00:00:00+00:00","value":161.39},{"at":"2026-10-02T00:15:00+00:00","value":160.34},{"at":"2026-10-02T00:30:00+00:00","value":160.93},{"at":"2026-10-02T00:45:00+00:00","value":161.16},{"at":"2026-10-02T01:00:00+00:00","value":159.59},{"at":"2026-10-02T01:15:00+00:00","value":159.07},{"at":"2026-10-02T01:30:00+00:00","value":160.61},{"at":"2026-10-02T01:45:00+00:00","value":160.99},{"at":"2026-10-02T02:00:00+00:00","value":162.92},{"at":"2026-10-02T02:15:00+00:00","value":162.2},{"at":"2026-10-02T02:30:00+00:00","value":161.4},{"at":"2026-10-02T02:45:00+00:00","value":166.02},{"at":"2026-10-02T03:00:00+00:00","value":163.55},{"at":"2026-10-02T03:15:00+00:00","value":170.49},{"at":"2026-10-02T03:30:00+00:00","value":184.83},{"at":"2026-10-02T03:45:00+00:00","value":192.61},{"at":"2026-10-02T04:00:00+00:00","value":195.55},{"at":"2026-10-02T04:15:00+00:00","value":216.11},{"at":"2026-10-02T04:30:00+00:00","value":231.79},{"at":"2026-10-02T04:45:00+00:00","value":243.23},{"at":"2026-10-02T05:00:00+00:00","value":246.83},{"at":"2026-10-02T05:15:00+00:00","value":258.54},{"at":"2026-10-02T05:30:00+00:00","value":266.08},{"at":"2026-10-02T05:45:00+00:00","value":269.89},{"at":"2026-10-02T06:00:00+00:00","value":288.93},{"at":"2026-10-02T06:15:00+00:00","value":270.74},{"at":"2026-10-02T06:30:00+00:00","value":257.21},{"at":"2026-10-02T06:45:00+00:00","value":240.27},{"at":"2026-10-02T07:00:00+00:00","value":261.39},{"at":"2026-10-02T07:15:00+00:00","value":233.97},{"at":"2026-10-02T07:30:00+00:00","value":220.1},{"at":"2026-10-02T07:45:00+00:00","value":186.51},{"at":"2026-10-02T08:00:00+00:00","value":211.67},{"at":"2026-10-02T08:15:00+00:00","value":188.27},{"at":"2026-10-02T08:30:00+00:00","value":175.21},{"at":"2026-10-02T08:45:00+00:00","value":172.25},{"at":"2026-10-02T09:00:00+00:00","value":183.88},{"at":"2026-10-02T09:15:00+00:00","value":173.18},{"at":"2026-10-02T09:30:00+00:00","value":165.69},{"at":"2026-10-02T09:45:00+00:00","value":157.52},{"at":"2026-10-02T10:00:00+00:00","value":154.91},{"at":"2026-10-02T10:15:00+00:00","value":152.2},{"at":"2026-10-02T10:30:00+00:00","value":153.69},{"at":"2026-10-02T10:45:00+00:00","value":149.63},{"at":"2026-10-02T11:00:00+00:00","value":146.07},{"at":"2026-10-02T11:15:00+00:00","value":141.96},{"at":"2026-10-02T11:30:00+00:00","value":140.68},{"at":"2026-10-02T11:45:00+00:00","value":134.72},{"at":"2026-10-02T12:00:00+00:00","value":143.79},{"at":"2026-10-02T12:15:00+00:00","value":140.9},{"at":"2026-10-02T12:30:00+00:00","value":141.41},{"at":"2026-10-02T12:45:00+00:00","value":143.15},{"at":"2026-10-02T13:00:00+00:00","value":141.08},{"at":"2026-10-02T13:15:00+00:00","value":143.59},{"at":"2026-10-02T13:30:00+00:00","value":155.09},{"at":"2026-10-02T13:45:00+00:00","value":160.64},{"at":"2026-10-02T14:00:00+00:00","value":156.21},{"at":"2026-10-02T14:15:00+00:00","value":163.79},{"at":"2026-10-02T14:30:00+00:00","value":187.3},{"at":"2026-10-02T14:45:00+00:00","value":216.81},{"at":"2026-10-02T15:00:00+00:00","value":180.08},{"at":"2026-10-02T15:15:00+00:00","value":219.62},{"at":"2026-10-02T15:30:00+00:00","value":238.22},{"at":"2026-10-02T15:45:00+00:00","value":261.49},{"at":"2026-10-02T16:00:00+00:00","value":239.98},{"at":"2026-10-02T16:15:00+00:00","value":250.44},{"at":"2026-10-02T16:30:00+00:00","value":276.08},{"at":"2026-10-02T16:45:00+00:00","value":299.72},{"at":"2026-10-02T17:00:00+00:00","value":328.58},{"at":"2026-10-02T17:15:00+00:00","value":328.11},{"at":"2026-10-02T17:30:00+00:00","value":315.28},{"at":"2026-10-02T17:45:00+00:00","value":307.27},{"at":"2026-10-02T18:00:00+00:00","value":282.7},{"at":"2026-10-02T18:15:00+00:00","value":279.83},{"at":"2026-10-02T18:30:00+00:00","value":261.82},{"at":"2026-10-02T18:45:00+00:00","value":248.08},{"at":"2026-10-02T19:00:00+00:00","value":244.78},{"at":"2026-10-02T19:15:00+00:00","value":238.14},{"at":"2026-10-02T19:30:00+00:00","value":224.99},{"at":"2026-10-02T19:45:00+00:00","value":211.92},{"at":"2026-10-02T20:00:00+00:00","value":220.23},{"at":"2026-10-02T20:15:00+00:00","value":215.0},{"at":"2026-10-02T20:30:00+00:00","value":209.39},{"at":"2026-10-02T20:45:00+00:00","value":201.39},{"at":"2026-10-02T21:00:00+00:00","value":201.62},{"at":"2026-10-02T21:15:00+00:00","value":197.52},{"at":"2026-10-02T21:30:00+00:00","value":194.55},{"at":"2026-10-02T21:45:00+00:00","value":185.1}]},"licence":{"fr":"CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de","de":"CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"}}
+{"schema":1,"source":"Fraunhofer ISE Energy-Charts","market":"day-ahead auction · France and DE-LU","unit":"EUR/MWh","generated_at":"2026-10-02T09:52:39+00:00","series":{"fr":[{"at":"2026-09-18T22:00:00+00:00","value":144.89},{"at":"2026-09-18T22:15:00+00:00","value":132.57},{"at":"2026-09-18T22:30:00+00:00","value":112.13},{"at":"2026-09-18T22:45:00+00:00","value":81.14},{"at":"2026-09-18T23:00:00+00:00","value":110.55},{"at":"2026-09-18T23:15:00+00:00","value":96.62},{"at":"2026-09-18T23:30:00+00:00","value":94.72},{"at":"2026-09-18T23:45:00+00:00","value":76.14},{"at":"2026-09-19T00:00:00+00:00","value":90.46},{"at":"2026-09-19T00:15:00+00:00","value":79.0},{"at":"2026-09-19T00:30:00+00:00","value":68.56},{"at":"2026-09-19T00:45:00+00:00","value":63.16},{"at":"2026-09-19T01:00:00+00:00","value":60.85},{"at":"2026-09-19T01:15:00+00:00","value":43.73},{"at":"2026-09-19T01:30:00+00:00","value":33.84},{"at":"2026-09-19T01:45:00+00:00","value":28.37},{"at":"2026-09-19T02:00:00+00:00","value":46.01},{"at":"2026-09-19T02:15:00+00:00","value":48.75},{"at":"2026-09-19T02:30:00+00:00","value":45.46},{"at":"2026-09-19T02:45:00+00:00","value":40.76},{"at":"2026-09-19T03:00:00+00:00","value":45.03},{"at":"2026-09-19T03:15:00+00:00","value":44.42},{"at":"2026-09-19T03:30:00+00:00","value":43.69},{"at":"2026-09-19T03:45:00+00:00","value":55.28},{"at":"2026-09-19T04:00:00+00:00","value":51.76},{"at":"2026-09-19T04:15:00+00:00","value":58.11},{"at":"2026-09-19T04:30:00+00:00","value":52.43},{"at":"2026-09-19T04:45:00+00:00","value":56.57},{"at":"2026-09-19T05:00:00+00:00","value":56.08},{"at":"2026-09-19T05:15:00+00:00","value":56.35},{"at":"2026-09-19T05:30:00+00:00","value":57.67},{"at":"2026-09-19T05:45:00+00:00","value":49.21},{"at":"2026-09-19T06:00:00+00:00","value":58.08},{"at":"2026-09-19T06:15:00+00:00","value":38.94},{"at":"2026-09-19T06:30:00+00:00","value":33.77},{"at":"2026-09-19T06:45:00+00:00","value":12.34},{"at":"2026-09-19T07:00:00+00:00","value":29.34},{"at":"2026-09-19T07:15:00+00:00","value":9.32},{"at":"2026-09-19T07:30:00+00:00","value":3.98},{"at":"2026-09-19T07:45:00+00:00","value":0.72},{"at":"2026-09-19T08:00:00+00:00","value":0.51},{"at":"2026-09-19T08:15:00+00:00","value":0.23},{"at":"2026-09-19T08:30:00+00:00","value":0.0},{"at":"2026-09-19T08:45:00+00:00","value":0.0},{"at":"2026-09-19T09:00:00+00:00","value":-0.01},{"at":"2026-09-19T09:15:00+00:00","value":-0.01},{"at":"2026-09-19T09:30:00+00:00","value":-0.01},{"at":"2026-09-19T09:45:00+00:00","value":-0.02},{"at":"2026-09-19T10:00:00+00:00","value":-0.11},{"at":"2026-09-19T10:15:00+00:00","value":-0.11},{"at":"2026-09-19T10:30:00+00:00","value":-0.11},{"at":"2026-09-19T10:45:00+00:00","value":-0.3},{"at":"2026-09-19T11:00:00+00:00","value":-0.7},{"at":"2026-09-19T11:15:00+00:00","value":-0.82},{"at":"2026-09-19T11:30:00+00:00","value":-1.06},{"at":"2026-09-19T11:45:00+00:00","value":-1.29},{"at":"2026-09-19T12:00:00+00:00","value":-1.0},{"at":"2026-09-19T12:15:00+00:00","value":-1.0},{"at":"2026-09-19T12:30:00+00:00","value":-0.91},{"at":"2026-09-19T12:45:00+00:00","value":-0.78},{"at":"2026-09-19T13:00:00+00:00","value":-0.5},{"at":"2026-09-19T13:15:00+00:00","value":-0.19},{"at":"2026-09-19T13:30:00+00:00","value":-0.11},{"at":"2026-09-19T13:45:00+00:00","value":-0.09},{"at":"2026-09-19T14:00:00+00:00","value":-0.1},{"at":"2026-09-19T14:15:00+00:00","value":-0.07},{"at":"2026-09-19T14:30:00+00:00","value":-0.01},{"at":"2026-09-19T14:45:00+00:00","value":-0.01},{"at":"2026-09-19T15:00:00+00:00","value":-0.01},{"at":"2026-09-19T15:15:00+00:00","value":0.0},{"at":"2026-09-19T15:30:00+00:00","value":0.51},{"at":"2026-09-19T15:45:00+00:00","value":2.51},{"at":"2026-09-19T16:00:00+00:00","value":19.17},{"at":"2026-09-19T16:15:00+00:00","value":64.08},{"at":"2026-09-19T16:30:00+00:00","value":94.5},{"at":"2026-09-19T16:45:00+00:00","value":115.03},{"at":"2026-09-19T17:00:00+00:00","value":115.0},{"at":"2026-09-19T17:15:00+00:00","value":136.34},{"at":"2026-09-19T17:30:00+00:00","value":149.32},{"at":"2026-09-19T17:45:00+00:00","value":154.22},{"at":"2026-09-19T18:00:00+00:00","value":147.94},{"at":"2026-09-19T18:15:00+00:00","value":134.32},{"at":"2026-09-19T18:30:00+00:00","value":120.54},{"at":"2026-09-19T18:45:00+00:00","value":110.84},{"at":"2026-09-19T19:00:00+00:00","value":121.37},{"at":"2026-09-19T19:15:00+00:00","value":111.72},{"at":"2026-09-19T19:30:00+00:00","value":107.12},{"at":"2026-09-19T19:45:00+00:00","value":87.06},{"at":"2026-09-19T20:00:00+00:00","value":103.17},{"at":"2026-09-19T20:15:00+00:00","value":102.91},{"at":"2026-09-19T20:30:00+00:00","value":102.44},{"at":"2026-09-19T20:45:00+00:00","value":100.74},{"at":"2026-09-19T21:00:00+00:00","value":103.81},{"at":"2026-09-19T21:15:00+00:00","value":98.49},{"at":"2026-09-19T21:30:00+00:00","value":97.84},{"at":"2026-09-19T21:45:00+00:00","value":89.06},{"at":"2026-09-19T22:00:00+00:00","value":38.91},{"at":"2026-09-19T22:15:00+00:00","value":39.31},{"at":"2026-09-19T22:30:00+00:00","value":36.87},{"at":"2026-09-19T22:45:00+00:00","value":33.78},{"at":"2026-09-19T23:00:00+00:00","value":40.7},{"at":"2026-09-19T23:15:00+00:00","value":35.64},{"at":"2026-09-19T23:30:00+00:00","value":35.19},{"at":"2026-09-19T23:45:00+00:00","value":32.15},{"at":"2026-09-20T00:00:00+00:00","value":30.83},{"at":"2026-09-20T00:15:00+00:00","value":32.73},{"at":"2026-09-20T00:30:00+00:00","value":32.93},{"at":"2026-09-20T00:45:00+00:00","value":28.67},{"at":"2026-09-20T01:00:00+00:00","value":28.29},{"at":"2026-09-20T01:15:00+00:00","value":28.37},{"at":"2026-09-20T01:30:00+00:00","value":27.98},{"at":"2026-09-20T01:45:00+00:00","value":25.51},{"at":"2026-09-20T02:00:00+00:00","value":27.21},{"at":"2026-09-20T02:15:00+00:00","value":24.79},{"at":"2026-09-20T02:30:00+00:00","value":23.69},{"at":"2026-09-20T02:45:00+00:00","value":23.11},{"at":"2026-09-20T03:00:00+00:00","value":27.35},{"at":"2026-09-20T03:15:00+00:00","value":27.48},{"at":"2026-09-20T03:30:00+00:00","value":23.59},{"at":"2026-09-20T03:45:00+00:00","value":24.68},{"at":"2026-09-20T04:00:00+00:00","value":27.51},{"at":"2026-09-20T04:15:00+00:00","value":30.91},{"at":"2026-09-20T04:30:00+00:00","value":31.69},{"at":"2026-09-20T04:45:00+00:00","value":33.31},{"at":"2026-09-20T05:00:00+00:00","value":33.43},{"at":"2026-09-20T05:15:00+00:00","value":32.67},{"at":"2026-09-20T05:30:00+00:00","value":34.73},{"at":"2026-09-20T05:45:00+00:00","value":22.25},{"at":"2026-09-20T06:00:00+00:00","value":40.93},{"at":"2026-09-20T06:15:00+00:00","value":20.4},{"at":"2026-09-20T06:30:00+00:00","value":10.61},{"at":"2026-09-20T06:45:00+00:00","value":5.12},{"at":"2026-09-20T07:00:00+00:00","value":8.98},{"at":"2026-09-20T07:15:00+00:00","value":5.19},{"at":"2026-09-20T07:30:00+00:00","value":1.4},{"at":"2026-09-20T07:45:00+00:00","value":0.01},{"at":"2026-09-20T08:00:00+00:00","value":0.01},{"at":"2026-09-20T08:15:00+00:00","value":0.0},{"at":"2026-09-20T08:30:00+00:00","value":-0.01},{"at":"2026-09-20T08:45:00+00:00","value":-0.03},{"at":"2026-09-20T09:00:00+00:00","value":-0.04},{"at":"2026-09-20T09:15:00+00:00","value":-0.09},{"at":"2026-09-20T09:30:00+00:00","value":-0.11},{"at":"2026-09-20T09:45:00+00:00","value":-0.11},{"at":"2026-09-20T10:00:00+00:00","value":-0.23},{"at":"2026-09-20T10:15:00+00:00","value":-0.23},{"at":"2026-09-20T10:30:00+00:00","value":-0.31},{"at":"2026-09-20T10:45:00+00:00","value":-0.81},{"at":"2026-09-20T11:00:00+00:00","value":-1.0},{"at":"2026-09-20T11:15:00+00:00","value":-1.06},{"at":"2026-09-20T11:30:00+00:00","value":-1.14},{"at":"2026-09-20T11:45:00+00:00","value":-1.11},{"at":"2026-09-20T12:00:00+00:00","value":-1.0},{"at":"2026-09-20T12:15:00+00:00","value":-1.0},{"at":"2026-09-20T12:30:00+00:00","value":-1.0},{"at":"2026-09-20T12:45:00+00:00","value":-1.0},{"at":"2026-09-20T13:00:00+00:00","value":-1.0},{"at":"2026-09-20T13:15:00+00:00","value":-0.82},{"at":"2026-09-20T13:30:00+00:00","value":-0.8},{"at":"2026-09-20T13:45:00+00:00","value":-0.78},{"at":"2026-09-20T14:00:00+00:00","value":-0.01},{"at":"2026-09-20T14:15:00+00:00","value":-0.01},{"at":"2026-09-20T14:30:00+00:00","value":0.0},{"at":"2026-09-20T14:45:00+00:00","value":0.0},{"at":"2026-09-20T15:00:00+00:00","value":7.0},{"at":"2026-09-20T15:15:00+00:00","value":18.8},{"at":"2026-09-20T15:30:00+00:00","value":42.01},{"at":"2026-09-20T15:45:00+00:00","value":72.19},{"at":"2026-09-20T16:00:00+00:00","value":70.23},{"at":"2026-09-20T16:15:00+00:00","value":114.46},{"at":"2026-09-20T16:30:00+00:00","value":148.34},{"at":"2026-09-20T16:45:00+00:00","value":237.8},{"at":"2026-09-20T17:00:00+00:00","value":162.96},{"at":"2026-09-20T17:15:00+00:00","value":230.0},{"at":"2026-09-20T17:30:00+00:00","value":200.74},{"at":"2026-09-20T17:45:00+00:00","value":225.57},{"at":"2026-09-20T18:00:00+00:00","value":198.9},{"at":"2026-09-20T18:15:00+00:00","value":200.74},{"at":"2026-09-20T18:30:00+00:00","value":205.71},{"at":"2026-09-20T18:45:00+00:00","value":200.74},{"at":"2026-09-20T19:00:00+00:00","value":211.13},{"at":"2026-09-20T19:15:00+00:00","value":200.99},{"at":"2026-09-20T19:30:00+00:00","value":191.42},{"at":"2026-09-20T19:45:00+00:00","value":192.36},{"at":"2026-09-20T20:00:00+00:00","value":200.74},{"at":"2026-09-20T20:15:00+00:00","value":189.94},{"at":"2026-09-20T20:30:00+00:00","value":195.87},{"at":"2026-09-20T20:45:00+00:00","value":186.76},{"at":"2026-09-20T21:00:00+00:00","value":180.56},{"at":"2026-09-20T21:15:00+00:00","value":186.76},{"at":"2026-09-20T21:30:00+00:00","value":186.18},{"at":"2026-09-20T21:45:00+00:00","value":166.5},{"at":"2026-09-20T22:00:00+00:00","value":200.76},{"at":"2026-09-20T22:15:00+00:00","value":190.0},{"at":"2026-09-20T22:30:00+00:00","value":165.94},{"at":"2026-09-20T22:45:00+00:00","value":145.17},{"at":"2026-09-20T23:00:00+00:00","value":169.93},{"at":"2026-09-20T23:15:00+00:00","value":148.45},{"at":"2026-09-20T23:30:00+00:00","value":153.27},{"at":"2026-09-20T23:45:00+00:00","value":136.33},{"at":"2026-09-21T00:00:00+00:00","value":150.9},{"at":"2026-09-21T00:15:00+00:00","value":135.56},{"at":"2026-09-21T00:30:00+00:00","value":130.4},{"at":"2026-09-21T00:45:00+00:00","value":139.13},{"at":"2026-09-21T01:00:00+00:00","value":139.24},{"at":"2026-09-21T01:15:00+00:00","value":143.39},{"at":"2026-09-21T01:30:00+00:00","value":136.01},{"at":"2026-09-21T01:45:00+00:00","value":120.87},{"at":"2026-09-21T02:00:00+00:00","value":131.59},{"at":"2026-09-21T02:15:00+00:00","value":134.24},{"at":"2026-09-21T02:30:00+00:00","value":137.99},{"at":"2026-09-21T02:45:00+00:00","value":129.67},{"at":"2026-09-21T03:00:00+00:00","value":124.48},{"at":"2026-09-21T03:15:00+00:00","value":149.01},{"at":"2026-09-21T03:30:00+00:00","value":141.87},{"at":"2026-09-21T03:45:00+00:00","value":158.0},{"at":"2026-09-21T04:00:00+00:00","value":163.14},{"at":"2026-09-21T04:15:00+00:00","value":186.53},{"at":"2026-09-21T04:30:00+00:00","value":182.99},{"at":"2026-09-21T04:45:00+00:00","value":187.69},{"at":"2026-09-21T05:00:00+00:00","value":211.7},{"at":"2026-09-21T05:15:00+00:00","value":224.0},{"at":"2026-09-21T05:30:00+00:00","value":227.0},{"at":"2026-09-21T05:45:00+00:00","value":230.57},{"at":"2026-09-21T06:00:00+00:00","value":263.9},{"at":"2026-09-21T06:15:00+00:00","value":246.23},{"at":"2026-09-21T06:30:00+00:00","value":226.0},{"at":"2026-09-21T06:45:00+00:00","value":195.0},{"at":"2026-09-21T07:00:00+00:00","value":212.25},{"at":"2026-09-21T07:15:00+00:00","value":186.25},{"at":"2026-09-21T07:30:00+00:00","value":167.52},{"at":"2026-09-21T07:45:00+00:00","value":110.77},{"at":"2026-09-21T08:00:00+00:00","value":131.12},{"at":"2026-09-21T08:15:00+00:00","value":91.6},{"at":"2026-09-21T08:30:00+00:00","value":83.6},{"at":"2026-09-21T08:45:00+00:00","value":48.5},{"at":"2026-09-21T09:00:00+00:00","value":55.68},{"at":"2026-09-21T09:15:00+00:00","value":46.38},{"at":"2026-09-21T09:30:00+00:00","value":35.94},{"at":"2026-09-21T09:45:00+00:00","value":33.22},{"at":"2026-09-21T10:00:00+00:00","value":32.17},{"at":"2026-09-21T10:15:00+00:00","value":28.15},{"at":"2026-09-21T10:30:00+00:00","value":28.0},{"at":"2026-09-21T10:45:00+00:00","value":23.34},{"at":"2026-09-21T11:00:00+00:00","value":23.47},{"at":"2026-09-21T11:15:00+00:00","value":20.17},{"at":"2026-09-21T11:30:00+00:00","value":16.75},{"at":"2026-09-21T11:45:00+00:00","value":16.38},{"at":"2026-09-21T12:00:00+00:00","value":20.02},{"at":"2026-09-21T12:15:00+00:00","value":22.08},{"at":"2026-09-21T12:30:00+00:00","value":22.54},{"at":"2026-09-21T12:45:00+00:00","value":26.11},{"at":"2026-09-21T13:00:00+00:00","value":25.67},{"at":"2026-09-21T13:15:00+00:00","value":31.3},{"at":"2026-09-21T13:30:00+00:00","value":20.24},{"at":"2026-09-21T13:45:00+00:00","value":17.24},{"at":"2026-09-21T14:00:00+00:00","value":37.19},{"at":"2026-09-21T14:15:00+00:00","value":76.19},{"at":"2026-09-21T14:30:00+00:00","value":54.27},{"at":"2026-09-21T14:45:00+00:00","value":52.38},{"at":"2026-09-21T15:00:00+00:00","value":75.23},{"at":"2026-09-21T15:15:00+00:00","value":111.75},{"at":"2026-09-21T15:30:00+00:00","value":163.93},{"at":"2026-09-21T15:45:00+00:00","value":208.84},{"at":"2026-09-21T16:00:00+00:00","value":174.12},{"at":"2026-09-21T16:15:00+00:00","value":202.94},{"at":"2026-09-21T16:30:00+00:00","value":224.23},{"at":"2026-09-21T16:45:00+00:00","value":261.77},{"at":"2026-09-21T17:00:00+00:00","value":221.71},{"at":"2026-09-21T17:15:00+00:00","value":224.92},{"at":"2026-09-21T17:30:00+00:00","value":251.9},{"at":"2026-09-21T17:45:00+00:00","value":276.54},{"at":"2026-09-21T18:00:00+00:00","value":251.3},{"at":"2026-09-21T18:15:00+00:00","value":250.28},{"at":"2026-09-21T18:30:00+00:00","value":243.48},{"at":"2026-09-21T18:45:00+00:00","value":219.04},{"at":"2026-09-21T19:00:00+00:00","value":232.7},{"at":"2026-09-21T19:15:00+00:00","value":219.22},{"at":"2026-09-21T19:30:00+00:00","value":215.05},{"at":"2026-09-21T19:45:00+00:00","value":207.8},{"at":"2026-09-21T20:00:00+00:00","value":216.63},{"at":"2026-09-21T20:15:00+00:00","value":205.54},{"at":"2026-09-21T20:30:00+00:00","value":206.93},{"at":"2026-09-21T20:45:00+00:00","value":197.26},{"at":"2026-09-21T21:00:00+00:00","value":199.01},{"at":"2026-09-21T21:15:00+00:00","value":185.42},{"at":"2026-09-21T21:30:00+00:00","value":187.25},{"at":"2026-09-21T21:45:00+00:00","value":172.4},{"at":"2026-09-21T22:00:00+00:00","value":191.21},{"at":"2026-09-21T22:15:00+00:00","value":184.04},{"at":"2026-09-21T22:30:00+00:00","value":177.73},{"at":"2026-09-21T22:45:00+00:00","value":176.79},{"at":"2026-09-21T23:00:00+00:00","value":178.2},{"at":"2026-09-21T23:15:00+00:00","value":175.61},{"at":"2026-09-21T23:30:00+00:00","value":177.48},{"at":"2026-09-21T23:45:00+00:00","value":176.66},{"at":"2026-09-22T00:00:00+00:00","value":176.87},{"at":"2026-09-22T00:15:00+00:00","value":175.45},{"at":"2026-09-22T00:30:00+00:00","value":173.57},{"at":"2026-09-22T00:45:00+00:00","value":172.68},{"at":"2026-09-22T01:00:00+00:00","value":174.62},{"at":"2026-09-22T01:15:00+00:00","value":171.86},{"at":"2026-09-22T01:30:00+00:00","value":171.27},{"at":"2026-09-22T01:45:00+00:00","value":172.25},{"at":"2026-09-22T02:00:00+00:00","value":175.15},{"at":"2026-09-22T02:15:00+00:00","value":174.73},{"at":"2026-09-22T02:30:00+00:00","value":176.45},{"at":"2026-09-22T02:45:00+00:00","value":181.0},{"at":"2026-09-22T03:00:00+00:00","value":170.03},{"at":"2026-09-22T03:15:00+00:00","value":181.47},{"at":"2026-09-22T03:30:00+00:00","value":192.99},{"at":"2026-09-22T03:45:00+00:00","value":185.53},{"at":"2026-09-22T04:00:00+00:00","value":199.28},{"at":"2026-09-22T04:15:00+00:00","value":201.5},{"at":"2026-09-22T04:30:00+00:00","value":202.1},{"at":"2026-09-22T04:45:00+00:00","value":210.0},{"at":"2026-09-22T05:00:00+00:00","value":226.0},{"at":"2026-09-22T05:15:00+00:00","value":228.72},{"at":"2026-09-22T05:30:00+00:00","value":237.23},{"at":"2026-09-22T05:45:00+00:00","value":244.71},{"at":"2026-09-22T06:00:00+00:00","value":282.29},{"at":"2026-09-22T06:15:00+00:00","value":268.06},{"at":"2026-09-22T06:30:00+00:00","value":240.76},{"at":"2026-09-22T06:45:00+00:00","value":204.98},{"at":"2026-09-22T07:00:00+00:00","value":215.0},{"at":"2026-09-22T07:15:00+00:00","value":193.91},{"at":"2026-09-22T07:30:00+00:00","value":186.93},{"at":"2026-09-22T07:45:00+00:00","value":166.18},{"at":"2026-09-22T08:00:00+00:00","value":163.0},{"at":"2026-09-22T08:15:00+00:00","value":120.5},{"at":"2026-09-22T08:30:00+00:00","value":95.06},{"at":"2026-09-22T08:45:00+00:00","value":40.0},{"at":"2026-09-22T09:00:00+00:00","value":52.0},{"at":"2026-09-22T09:15:00+00:00","value":38.99},{"at":"2026-09-22T09:30:00+00:00","value":38.66},{"at":"2026-09-22T09:45:00+00:00","value":27.0},{"at":"2026-09-22T10:00:00+00:00","value":20.01},{"at":"2026-09-22T10:15:00+00:00","value":19.64},{"at":"2026-09-22T10:30:00+00:00","value":12.96},{"at":"2026-09-22T10:45:00+00:00","value":10.01},{"at":"2026-09-22T11:00:00+00:00","value":4.61},{"at":"2026-09-22T11:15:00+00:00","value":3.43},{"at":"2026-09-22T11:30:00+00:00","value":1.99},{"at":"2026-09-22T11:45:00+00:00","value":2.0},{"at":"2026-09-22T12:00:00+00:00","value":6.07},{"at":"2026-09-22T12:15:00+00:00","value":15.1},{"at":"2026-09-22T12:30:00+00:00","value":20.17},{"at":"2026-09-22T12:45:00+00:00","value":24.11},{"at":"2026-09-22T13:00:00+00:00","value":25.0},{"at":"2026-09-22T13:15:00+00:00","value":24.01},{"at":"2026-09-22T13:30:00+00:00","value":22.14},{"at":"2026-09-22T13:45:00+00:00","value":24.01},{"at":"2026-09-22T14:00:00+00:00","value":32.5},{"at":"2026-09-22T14:15:00+00:00","value":39.09},{"at":"2026-09-22T14:30:00+00:00","value":54.41},{"at":"2026-09-22T14:45:00+00:00","value":70.0},{"at":"2026-09-22T15:00:00+00:00","value":92.55},{"at":"2026-09-22T15:15:00+00:00","value":107.32},{"at":"2026-09-22T15:30:00+00:00","value":156.64},{"at":"2026-09-22T15:45:00+00:00","value":169.11},{"at":"2026-09-22T16:00:00+00:00","value":207.24},{"at":"2026-09-22T16:15:00+00:00","value":218.14},{"at":"2026-09-22T16:30:00+00:00","value":244.63},{"at":"2026-09-22T16:45:00+00:00","value":268.06},{"at":"2026-09-22T17:00:00+00:00","value":250.0},{"at":"2026-09-22T17:15:00+00:00","value":268.06},{"at":"2026-09-22T17:30:00+00:00","value":287.94},{"at":"2026-09-22T17:45:00+00:00","value":300.0},{"at":"2026-09-22T18:00:00+00:00","value":285.0},{"at":"2026-09-22T18:15:00+00:00","value":290.01},{"at":"2026-09-22T18:30:00+00:00","value":278.18},{"at":"2026-09-22T18:45:00+00:00","value":276.51},{"at":"2026-09-22T19:00:00+00:00","value":272.51},{"at":"2026-09-22T19:15:00+00:00","value":251.44},{"at":"2026-09-22T19:30:00+00:00","value":255.83},{"at":"2026-09-22T19:45:00+00:00","value":227.5},{"at":"2026-09-22T20:00:00+00:00","value":253.01},{"at":"2026-09-22T20:15:00+00:00","value":231.8},{"at":"2026-09-22T20:30:00+00:00","value":232.19},{"at":"2026-09-22T20:45:00+00:00","value":224.41},{"at":"2026-09-22T21:00:00+00:00","value":224.0},{"at":"2026-09-22T21:15:00+00:00","value":214.54},{"at":"2026-09-22T21:30:00+00:00","value":210.21},{"at":"2026-09-22T21:45:00+00:00","value":201.18},{"at":"2026-09-22T22:00:00+00:00","value":194.55},{"at":"2026-09-22T22:15:00+00:00","value":188.51},{"at":"2026-09-22T22:30:00+00:00","value":186.39},{"at":"2026-09-22T22:45:00+00:00","value":166.66},{"at":"2026-09-22T23:00:00+00:00","value":175.28},{"at":"2026-09-22T23:15:00+00:00","value":174.88},{"at":"2026-09-22T23:30:00+00:00","value":173.68},{"at":"2026-09-22T23:45:00+00:00","value":179.76},{"at":"2026-09-23T00:00:00+00:00","value":174.52},{"at":"2026-09-23T00:15:00+00:00","value":171.1},{"at":"2026-09-23T00:30:00+00:00","value":164.07},{"at":"2026-09-23T00:45:00+00:00","value":161.89},{"at":"2026-09-23T01:00:00+00:00","value":152.23},{"at":"2026-09-23T01:15:00+00:00","value":156.85},{"at":"2026-09-23T01:30:00+00:00","value":155.77},{"at":"2026-09-23T01:45:00+00:00","value":160.27},{"at":"2026-09-23T02:00:00+00:00","value":151.49},{"at":"2026-09-23T02:15:00+00:00","value":155.69},{"at":"2026-09-23T02:30:00+00:00","value":157.22},{"at":"2026-09-23T02:45:00+00:00","value":161.57},{"at":"2026-09-23T03:00:00+00:00","value":161.23},{"at":"2026-09-23T03:15:00+00:00","value":167.04},{"at":"2026-09-23T03:30:00+00:00","value":175.01},{"at":"2026-09-23T03:45:00+00:00","value":157.83},{"at":"2026-09-23T04:00:00+00:00","value":179.66},{"at":"2026-09-23T04:15:00+00:00","value":205.12},{"at":"2026-09-23T04:30:00+00:00","value":170.94},{"at":"2026-09-23T04:45:00+00:00","value":197.13},{"at":"2026-09-23T05:00:00+00:00","value":206.5},{"at":"2026-09-23T05:15:00+00:00","value":219.88},{"at":"2026-09-23T05:30:00+00:00","value":225.0},{"at":"2026-09-23T05:45:00+00:00","value":226.9},{"at":"2026-09-23T06:00:00+00:00","value":257.65},{"at":"2026-09-23T06:15:00+00:00","value":240.5},{"at":"2026-09-23T06:30:00+00:00","value":224.31},{"at":"2026-09-23T06:45:00+00:00","value":189.12},{"at":"2026-09-23T07:00:00+00:00","value":207.12},{"at":"2026-09-23T07:15:00+00:00","value":193.88},{"at":"2026-09-23T07:30:00+00:00","value":170.82},{"at":"2026-09-23T07:45:00+00:00","value":146.46},{"at":"2026-09-23T08:00:00+00:00","value":166.24},{"at":"2026-09-23T08:15:00+00:00","value":148.1},{"at":"2026-09-23T08:30:00+00:00","value":134.95},{"at":"2026-09-23T08:45:00+00:00","value":93.3},{"at":"2026-09-23T09:00:00+00:00","value":90.0},{"at":"2026-09-23T09:15:00+00:00","value":73.59},{"at":"2026-09-23T09:30:00+00:00","value":57.59},{"at":"2026-09-23T09:45:00+00:00","value":38.99},{"at":"2026-09-23T10:00:00+00:00","value":40.0},{"at":"2026-09-23T10:15:00+00:00","value":35.0},{"at":"2026-09-23T10:30:00+00:00","value":35.0},{"at":"2026-09-23T10:45:00+00:00","value":30.0},{"at":"2026-09-23T11:00:00+00:00","value":24.01},{"at":"2026-09-23T11:15:00+00:00","value":15.0},{"at":"2026-09-23T11:30:00+00:00","value":11.1},{"at":"2026-09-23T11:45:00+00:00","value":10.02},{"at":"2026-09-23T12:00:00+00:00","value":24.01},{"at":"2026-09-23T12:15:00+00:00","value":23.38},{"at":"2026-09-23T12:30:00+00:00","value":25.58},{"at":"2026-09-23T12:45:00+00:00","value":27.23},{"at":"2026-09-23T13:00:00+00:00","value":25.71},{"at":"2026-09-23T13:15:00+00:00","value":28.28},{"at":"2026-09-23T13:30:00+00:00","value":34.08},{"at":"2026-09-23T13:45:00+00:00","value":38.77},{"at":"2026-09-23T14:00:00+00:00","value":38.77},{"at":"2026-09-23T14:15:00+00:00","value":51.51},{"at":"2026-09-23T14:30:00+00:00","value":74.0},{"at":"2026-09-23T14:45:00+00:00","value":107.72},{"at":"2026-09-23T15:00:00+00:00","value":114.94},{"at":"2026-09-23T15:15:00+00:00","value":111.65},{"at":"2026-09-23T15:30:00+00:00","value":141.64},{"at":"2026-09-23T15:45:00+00:00","value":152.38},{"at":"2026-09-23T16:00:00+00:00","value":175.05},{"at":"2026-09-23T16:15:00+00:00","value":187.45},{"at":"2026-09-23T16:30:00+00:00","value":191.65},{"at":"2026-09-23T16:45:00+00:00","value":230.21},{"at":"2026-09-23T17:00:00+00:00","value":240.5},{"at":"2026-09-23T17:15:00+00:00","value":255.32},{"at":"2026-09-23T17:30:00+00:00","value":264.47},{"at":"2026-09-23T17:45:00+00:00","value":274.36},{"at":"2026-09-23T18:00:00+00:00","value":266.17},{"at":"2026-09-23T18:15:00+00:00","value":252.97},{"at":"2026-09-23T18:30:00+00:00","value":237.18},{"at":"2026-09-23T18:45:00+00:00","value":212.96},{"at":"2026-09-23T19:00:00+00:00","value":219.26},{"at":"2026-09-23T19:15:00+00:00","value":210.39},{"at":"2026-09-23T19:30:00+00:00","value":196.79},{"at":"2026-09-23T19:45:00+00:00","value":184.9},{"at":"2026-09-23T20:00:00+00:00","value":189.38},{"at":"2026-09-23T20:15:00+00:00","value":181.48},{"at":"2026-09-23T20:30:00+00:00","value":179.9},{"at":"2026-09-23T20:45:00+00:00","value":172.87},{"at":"2026-09-23T21:00:00+00:00","value":176.08},{"at":"2026-09-23T21:15:00+00:00","value":164.18},{"at":"2026-09-23T21:30:00+00:00","value":166.93},{"at":"2026-09-23T21:45:00+00:00","value":161.77},{"at":"2026-09-23T22:00:00+00:00","value":194.36},{"at":"2026-09-23T22:15:00+00:00","value":177.51},{"at":"2026-09-23T22:30:00+00:00","value":173.33},{"at":"2026-09-23T22:45:00+00:00","value":179.6},{"at":"2026-09-23T23:00:00+00:00","value":186.71},{"at":"2026-09-23T23:15:00+00:00","value":177.91},{"at":"2026-09-23T23:30:00+00:00","value":180.46},{"at":"2026-09-23T23:45:00+00:00","value":160.68},{"at":"2026-09-24T00:00:00+00:00","value":156.42},{"at":"2026-09-24T00:15:00+00:00","value":147.84},{"at":"2026-09-24T00:30:00+00:00","value":142.51},{"at":"2026-09-24T00:45:00+00:00","value":134.99},{"at":"2026-09-24T01:00:00+00:00","value":141.93},{"at":"2026-09-24T01:15:00+00:00","value":135.29},{"at":"2026-09-24T01:30:00+00:00","value":141.99},{"at":"2026-09-24T01:45:00+00:00","value":136.17},{"at":"2026-09-24T02:00:00+00:00","value":147.26},{"at":"2026-09-24T02:15:00+00:00","value":147.99},{"at":"2026-09-24T02:30:00+00:00","value":149.37},{"at":"2026-09-24T02:45:00+00:00","value":158.24},{"at":"2026-09-24T03:00:00+00:00","value":174.82},{"at":"2026-09-24T03:15:00+00:00","value":149.98},{"at":"2026-09-24T03:30:00+00:00","value":153.0},{"at":"2026-09-24T03:45:00+00:00","value":169.69},{"at":"2026-09-24T04:00:00+00:00","value":164.62},{"at":"2026-09-24T04:15:00+00:00","value":179.25},{"at":"2026-09-24T04:30:00+00:00","value":196.3},{"at":"2026-09-24T04:45:00+00:00","value":200.0},{"at":"2026-09-24T05:00:00+00:00","value":200.0},{"at":"2026-09-24T05:15:00+00:00","value":210.0},{"at":"2026-09-24T05:30:00+00:00","value":215.37},{"at":"2026-09-24T05:45:00+00:00","value":220.42},{"at":"2026-09-24T06:00:00+00:00","value":250.0},{"at":"2026-09-24T06:15:00+00:00","value":238.03},{"at":"2026-09-24T06:30:00+00:00","value":214.97},{"at":"2026-09-24T06:45:00+00:00","value":195.98},{"at":"2026-09-24T07:00:00+00:00","value":221.84},{"at":"2026-09-24T07:15:00+00:00","value":194.99},{"at":"2026-09-24T07:30:00+00:00","value":174.0},{"at":"2026-09-24T07:45:00+00:00","value":161.75},{"at":"2026-09-24T08:00:00+00:00","value":165.1},{"at":"2026-09-24T08:15:00+00:00","value":167.14},{"at":"2026-09-24T08:30:00+00:00","value":147.56},{"at":"2026-09-24T08:45:00+00:00","value":116.36},{"at":"2026-09-24T09:00:00+00:00","value":126.36},{"at":"2026-09-24T09:15:00+00:00","value":78.86},{"at":"2026-09-24T09:30:00+00:00","value":60.02},{"at":"2026-09-24T09:45:00+00:00","value":53.68},{"at":"2026-09-24T10:00:00+00:00","value":50.1},{"at":"2026-09-24T10:15:00+00:00","value":38.55},{"at":"2026-09-24T10:30:00+00:00","value":35.48},{"at":"2026-09-24T10:45:00+00:00","value":38.55},{"at":"2026-09-24T11:00:00+00:00","value":27.0},{"at":"2026-09-24T11:15:00+00:00","value":23.5},{"at":"2026-09-24T11:30:00+00:00","value":17.62},{"at":"2026-09-24T11:45:00+00:00","value":20.0},{"at":"2026-09-24T12:00:00+00:00","value":30.0},{"at":"2026-09-24T12:15:00+00:00","value":34.99},{"at":"2026-09-24T12:30:00+00:00","value":38.66},{"at":"2026-09-24T12:45:00+00:00","value":38.55},{"at":"2026-09-24T13:00:00+00:00","value":38.66},{"at":"2026-09-24T13:15:00+00:00","value":38.77},{"at":"2026-09-24T13:30:00+00:00","value":38.99},{"at":"2026-09-24T13:45:00+00:00","value":73.61},{"at":"2026-09-24T14:00:00+00:00","value":74.07},{"at":"2026-09-24T14:15:00+00:00","value":95.13},{"at":"2026-09-24T14:30:00+00:00","value":118.13},{"at":"2026-09-24T14:45:00+00:00","value":152.8},{"at":"2026-09-24T15:00:00+00:00","value":141.6},{"at":"2026-09-24T15:15:00+00:00","value":170.89},{"at":"2026-09-24T15:30:00+00:00","value":171.17},{"at":"2026-09-24T15:45:00+00:00","value":214.43},{"at":"2026-09-24T16:00:00+00:00","value":169.37},{"at":"2026-09-24T16:15:00+00:00","value":218.93},{"at":"2026-09-24T16:30:00+00:00","value":233.27},{"at":"2026-09-24T16:45:00+00:00","value":261.0},{"at":"2026-09-24T17:00:00+00:00","value":251.4},{"at":"2026-09-24T17:15:00+00:00","value":265.8},{"at":"2026-09-24T17:30:00+00:00","value":267.94},{"at":"2026-09-24T17:45:00+00:00","value":288.23},{"at":"2026-09-24T18:00:00+00:00","value":272.65},{"at":"2026-09-24T18:15:00+00:00","value":265.8},{"at":"2026-09-24T18:30:00+00:00","value":253.5},{"at":"2026-09-24T18:45:00+00:00","value":248.05},{"at":"2026-09-24T19:00:00+00:00","value":240.29},{"at":"2026-09-24T19:15:00+00:00","value":230.9},{"at":"2026-09-24T19:30:00+00:00","value":224.17},{"at":"2026-09-24T19:45:00+00:00","value":210.4},{"at":"2026-09-24T20:00:00+00:00","value":222.09},{"at":"2026-09-24T20:15:00+00:00","value":205.95},{"at":"2026-09-24T20:30:00+00:00","value":202.67},{"at":"2026-09-24T20:45:00+00:00","value":194.87},{"at":"2026-09-24T21:00:00+00:00","value":198.86},{"at":"2026-09-24T21:15:00+00:00","value":190.36},{"at":"2026-09-24T21:30:00+00:00","value":187.58},{"at":"2026-09-24T21:45:00+00:00","value":182.5},{"at":"2026-09-24T22:00:00+00:00","value":197.12},{"at":"2026-09-24T22:15:00+00:00","value":184.82},{"at":"2026-09-24T22:30:00+00:00","value":176.3},{"at":"2026-09-24T22:45:00+00:00","value":170.83},{"at":"2026-09-24T23:00:00+00:00","value":175.34},{"at":"2026-09-24T23:15:00+00:00","value":171.96},{"at":"2026-09-24T23:30:00+00:00","value":171.6},{"at":"2026-09-24T23:45:00+00:00","value":170.96},{"at":"2026-09-25T00:00:00+00:00","value":168.83},{"at":"2026-09-25T00:15:00+00:00","value":167.62},{"at":"2026-09-25T00:30:00+00:00","value":166.96},{"at":"2026-09-25T00:45:00+00:00","value":162.32},{"at":"2026-09-25T01:00:00+00:00","value":165.48},{"at":"2026-09-25T01:15:00+00:00","value":163.57},{"at":"2026-09-25T01:30:00+00:00","value":163.99},{"at":"2026-09-25T01:45:00+00:00","value":169.14},{"at":"2026-09-25T02:00:00+00:00","value":158.58},{"at":"2026-09-25T02:15:00+00:00","value":155.25},{"at":"2026-09-25T02:30:00+00:00","value":157.09},{"at":"2026-09-25T02:45:00+00:00","value":164.94},{"at":"2026-09-25T03:00:00+00:00","value":167.4},{"at":"2026-09-25T03:15:00+00:00","value":169.26},{"at":"2026-09-25T03:30:00+00:00","value":187.11},{"at":"2026-09-25T03:45:00+00:00","value":177.6},{"at":"2026-09-25T04:00:00+00:00","value":196.18},{"at":"2026-09-25T04:15:00+00:00","value":197.12},{"at":"2026-09-25T04:30:00+00:00","value":199.56},{"at":"2026-09-25T04:45:00+00:00","value":210.94},{"at":"2026-09-25T05:00:00+00:00","value":219.93},{"at":"2026-09-25T05:15:00+00:00","value":237.02},{"at":"2026-09-25T05:30:00+00:00","value":243.97},{"at":"2026-09-25T05:45:00+00:00","value":246.06},{"at":"2026-09-25T06:00:00+00:00","value":261.99},{"at":"2026-09-25T06:15:00+00:00","value":251.3},{"at":"2026-09-25T06:30:00+00:00","value":235.0},{"at":"2026-09-25T06:45:00+00:00","value":200.0},{"at":"2026-09-25T07:00:00+00:00","value":201.18},{"at":"2026-09-25T07:15:00+00:00","value":199.3},{"at":"2026-09-25T07:30:00+00:00","value":189.27},{"at":"2026-09-25T07:45:00+00:00","value":157.5},{"at":"2026-09-25T08:00:00+00:00","value":163.0},{"at":"2026-09-25T08:15:00+00:00","value":148.0},{"at":"2026-09-25T08:30:00+00:00","value":140.99},{"at":"2026-09-25T08:45:00+00:00","value":100.01},{"at":"2026-09-25T09:00:00+00:00","value":97.06},{"at":"2026-09-25T09:15:00+00:00","value":85.2},{"at":"2026-09-25T09:30:00+00:00","value":72.89},{"at":"2026-09-25T09:45:00+00:00","value":55.88},{"at":"2026-09-25T10:00:00+00:00","value":52.88},{"at":"2026-09-25T10:15:00+00:00","value":38.99},{"at":"2026-09-25T10:30:00+00:00","value":47.76},{"at":"2026-09-25T10:45:00+00:00","value":42.75},{"at":"2026-09-25T11:00:00+00:00","value":38.99},{"at":"2026-09-25T11:15:00+00:00","value":36.12},{"at":"2026-09-25T11:30:00+00:00","value":26.14},{"at":"2026-09-25T11:45:00+00:00","value":19.17},{"at":"2026-09-25T12:00:00+00:00","value":23.12},{"at":"2026-09-25T12:15:00+00:00","value":35.0},{"at":"2026-09-25T12:30:00+00:00","value":38.99},{"at":"2026-09-25T12:45:00+00:00","value":39.1},{"at":"2026-09-25T13:00:00+00:00","value":39.1},{"at":"2026-09-25T13:15:00+00:00","value":39.1},{"at":"2026-09-25T13:30:00+00:00","value":38.66},{"at":"2026-09-25T13:45:00+00:00","value":44.01},{"at":"2026-09-25T14:00:00+00:00","value":65.0},{"at":"2026-09-25T14:15:00+00:00","value":69.0},{"at":"2026-09-25T14:30:00+00:00","value":74.61},{"at":"2026-09-25T14:45:00+00:00","value":106.82},{"at":"2026-09-25T15:00:00+00:00","value":142.48},{"at":"2026-09-25T15:15:00+00:00","value":171.9},{"at":"2026-09-25T15:30:00+00:00","value":178.75},{"at":"2026-09-25T15:45:00+00:00","value":204.01},{"at":"2026-09-25T16:00:00+00:00","value":202.24},{"at":"2026-09-25T16:15:00+00:00","value":229.77},{"at":"2026-09-25T16:30:00+00:00","value":239.54},{"at":"2026-09-25T16:45:00+00:00","value":272.29},{"at":"2026-09-25T17:00:00+00:00","value":242.5},{"at":"2026-09-25T17:15:00+00:00","value":248.58},{"at":"2026-09-25T17:30:00+00:00","value":255.1},{"at":"2026-09-25T17:45:00+00:00","value":287.13},{"at":"2026-09-25T18:00:00+00:00","value":270.0},{"at":"2026-09-25T18:15:00+00:00","value":255.0},{"at":"2026-09-25T18:30:00+00:00","value":247.73},{"at":"2026-09-25T18:45:00+00:00","value":237.51},{"at":"2026-09-25T19:00:00+00:00","value":244.81},{"at":"2026-09-25T19:15:00+00:00","value":232.14},{"at":"2026-09-25T19:30:00+00:00","value":219.97},{"at":"2026-09-25T19:45:00+00:00","value":204.46},{"at":"2026-09-25T20:00:00+00:00","value":220.92},{"at":"2026-09-25T20:15:00+00:00","value":210.0},{"at":"2026-09-25T20:30:00+00:00","value":203.67},{"at":"2026-09-25T20:45:00+00:00","value":196.65},{"at":"2026-09-25T21:00:00+00:00","value":201.18},{"at":"2026-09-25T21:15:00+00:00","value":198.5},{"at":"2026-09-25T21:30:00+00:00","value":194.86},{"at":"2026-09-25T21:45:00+00:00","value":185.3},{"at":"2026-09-25T22:00:00+00:00","value":207.72},{"at":"2026-09-25T22:15:00+00:00","value":201.51},{"at":"2026-09-25T22:30:00+00:00","value":194.81},{"at":"2026-09-25T22:45:00+00:00","value":186.47},{"at":"2026-09-25T23:00:00+00:00","value":189.42},{"at":"2026-09-25T23:15:00+00:00","value":185.76},{"at":"2026-09-25T23:30:00+00:00","value":184.41},{"at":"2026-09-25T23:45:00+00:00","value":182.59},{"at":"2026-09-26T00:00:00+00:00","value":183.13},{"at":"2026-09-26T00:15:00+00:00","value":181.63},{"at":"2026-09-26T00:30:00+00:00","value":176.13},{"at":"2026-09-26T00:45:00+00:00","value":169.87},{"at":"2026-09-26T01:00:00+00:00","value":169.43},{"at":"2026-09-26T01:15:00+00:00","value":166.35},{"at":"2026-09-26T01:30:00+00:00","value":165.51},{"at":"2026-09-26T01:45:00+00:00","value":165.12},{"at":"2026-09-26T02:00:00+00:00","value":163.01},{"at":"2026-09-26T02:15:00+00:00","value":163.56},{"at":"2026-09-26T02:30:00+00:00","value":163.56},{"at":"2026-09-26T02:45:00+00:00","value":164.07},{"at":"2026-09-26T03:00:00+00:00","value":161.62},{"at":"2026-09-26T03:15:00+00:00","value":161.59},{"at":"2026-09-26T03:30:00+00:00","value":163.54},{"at":"2026-09-26T03:45:00+00:00","value":168.06},{"at":"2026-09-26T04:00:00+00:00","value":170.16},{"at":"2026-09-26T04:15:00+00:00","value":178.75},{"at":"2026-09-26T04:30:00+00:00","value":184.15},{"at":"2026-09-26T04:45:00+00:00","value":190.61},{"at":"2026-09-26T05:00:00+00:00","value":194.92},{"at":"2026-09-26T05:15:00+00:00","value":196.88},{"at":"2026-09-26T05:30:00+00:00","value":195.6},{"at":"2026-09-26T05:45:00+00:00","value":196.76},{"at":"2026-09-26T06:00:00+00:00","value":211.34},{"at":"2026-09-26T06:15:00+00:00","value":203.0},{"at":"2026-09-26T06:30:00+00:00","value":187.34},{"at":"2026-09-26T06:45:00+00:00","value":166.4},{"at":"2026-09-26T07:00:00+00:00","value":193.17},{"at":"2026-09-26T07:15:00+00:00","value":165.98},{"at":"2026-09-26T07:30:00+00:00","value":139.03},{"at":"2026-09-26T07:45:00+00:00","value":127.59},{"at":"2026-09-26T08:00:00+00:00","value":132.41},{"at":"2026-09-26T08:15:00+00:00","value":120.56},{"at":"2026-09-26T08:30:00+00:00","value":104.99},{"at":"2026-09-26T08:45:00+00:00","value":97.54},{"at":"2026-09-26T09:00:00+00:00","value":78.49},{"at":"2026-09-26T09:15:00+00:00","value":59.02},{"at":"2026-09-26T09:30:00+00:00","value":46.32},{"at":"2026-09-26T09:45:00+00:00","value":39.62},{"at":"2026-09-26T10:00:00+00:00","value":30.3},{"at":"2026-09-26T10:15:00+00:00","value":26.93},{"at":"2026-09-26T10:30:00+00:00","value":22.31},{"at":"2026-09-26T10:45:00+00:00","value":16.15},{"at":"2026-09-26T11:00:00+00:00","value":11.42},{"at":"2026-09-26T11:15:00+00:00","value":2.22},{"at":"2026-09-26T11:30:00+00:00","value":0.76},{"at":"2026-09-26T11:45:00+00:00","value":0.76},{"at":"2026-09-26T12:00:00+00:00","value":8.99},{"at":"2026-09-26T12:15:00+00:00","value":12.51},{"at":"2026-09-26T12:30:00+00:00","value":23.3},{"at":"2026-09-26T12:45:00+00:00","value":25.02},{"at":"2026-09-26T13:00:00+00:00","value":23.0},{"at":"2026-09-26T13:15:00+00:00","value":40.0},{"at":"2026-09-26T13:30:00+00:00","value":35.93},{"at":"2026-09-26T13:45:00+00:00","value":59.07},{"at":"2026-09-26T14:00:00+00:00","value":62.43},{"at":"2026-09-26T14:15:00+00:00","value":95.77},{"at":"2026-09-26T14:30:00+00:00","value":106.77},{"at":"2026-09-26T14:45:00+00:00","value":160.1},{"at":"2026-09-26T15:00:00+00:00","value":141.25},{"at":"2026-09-26T15:15:00+00:00","value":158.98},{"at":"2026-09-26T15:30:00+00:00","value":128.03},{"at":"2026-09-26T15:45:00+00:00","value":181.76},{"at":"2026-09-26T16:00:00+00:00","value":169.94},{"at":"2026-09-26T16:15:00+00:00","value":202.75},{"at":"2026-09-26T16:30:00+00:00","value":219.48},{"at":"2026-09-26T16:45:00+00:00","value":234.23},{"at":"2026-09-26T17:00:00+00:00","value":222.0},{"at":"2026-09-26T17:15:00+00:00","value":230.46},{"at":"2026-09-26T17:30:00+00:00","value":243.61},{"at":"2026-09-26T17:45:00+00:00","value":251.08},{"at":"2026-09-26T18:00:00+00:00","value":238.97},{"at":"2026-09-26T18:15:00+00:00","value":232.0},{"at":"2026-09-26T18:30:00+00:00","value":222.48},{"at":"2026-09-26T18:45:00+00:00","value":211.99},{"at":"2026-09-26T19:00:00+00:00","value":218.18},{"at":"2026-09-26T19:15:00+00:00","value":210.24},{"at":"2026-09-26T19:30:00+00:00","value":205.53},{"at":"2026-09-26T19:45:00+00:00","value":200.0},{"at":"2026-09-26T20:00:00+00:00","value":207.0},{"at":"2026-09-26T20:15:00+00:00","value":200.62},{"at":"2026-09-26T20:30:00+00:00","value":197.73},{"at":"2026-09-26T20:45:00+00:00","value":191.89},{"at":"2026-09-26T21:00:00+00:00","value":195.2},{"at":"2026-09-26T21:15:00+00:00","value":188.45},{"at":"2026-09-26T21:30:00+00:00","value":182.55},{"at":"2026-09-26T21:45:00+00:00","value":177.8},{"at":"2026-09-26T22:00:00+00:00","value":192.07},{"at":"2026-09-26T22:15:00+00:00","value":187.0},{"at":"2026-09-26T22:30:00+00:00","value":183.34},{"at":"2026-09-26T22:45:00+00:00","value":172.83},{"at":"2026-09-26T23:00:00+00:00","value":180.7},{"at":"2026-09-26T23:15:00+00:00","value":178.0},{"at":"2026-09-26T23:30:00+00:00","value":176.62},{"at":"2026-09-26T23:45:00+00:00","value":178.0},{"at":"2026-09-27T00:00:00+00:00","value":176.0},{"at":"2026-09-27T00:15:00+00:00","value":171.31},{"at":"2026-09-27T00:30:00+00:00","value":169.97},{"at":"2026-09-27T00:45:00+00:00","value":168.08},{"at":"2026-09-27T01:00:00+00:00","value":168.16},{"at":"2026-09-27T01:15:00+00:00","value":166.78},{"at":"2026-09-27T01:30:00+00:00","value":165.4},{"at":"2026-09-27T01:45:00+00:00","value":165.39},{"at":"2026-09-27T02:00:00+00:00","value":165.0},{"at":"2026-09-27T02:15:00+00:00","value":160.83},{"at":"2026-09-27T02:30:00+00:00","value":160.44},{"at":"2026-09-27T02:45:00+00:00","value":160.0},{"at":"2026-09-27T03:00:00+00:00","value":160.44},{"at":"2026-09-27T03:15:00+00:00","value":158.08},{"at":"2026-09-27T03:30:00+00:00","value":159.4},{"at":"2026-09-27T03:45:00+00:00","value":156.76},{"at":"2026-09-27T04:00:00+00:00","value":156.25},{"at":"2026-09-27T04:15:00+00:00","value":156.79},{"at":"2026-09-27T04:30:00+00:00","value":163.19},{"at":"2026-09-27T04:45:00+00:00","value":163.77},{"at":"2026-09-27T05:00:00+00:00","value":169.21},{"at":"2026-09-27T05:15:00+00:00","value":160.68},{"at":"2026-09-27T05:30:00+00:00","value":147.95},{"at":"2026-09-27T05:45:00+00:00","value":134.63},{"at":"2026-09-27T06:00:00+00:00","value":160.43},{"at":"2026-09-27T06:15:00+00:00","value":143.86},{"at":"2026-09-27T06:30:00+00:00","value":119.48},{"at":"2026-09-27T06:45:00+00:00","value":95.84},{"at":"2026-09-27T07:00:00+00:00","value":110.16},{"at":"2026-09-27T07:15:00+00:00","value":80.97},{"at":"2026-09-27T07:30:00+00:00","value":37.22},{"at":"2026-09-27T07:45:00+00:00","value":23.14},{"at":"2026-09-27T08:00:00+00:00","value":36.14},{"at":"2026-09-27T08:15:00+00:00","value":15.85},{"at":"2026-09-27T08:30:00+00:00","value":4.47},{"at":"2026-09-27T08:45:00+00:00","value":1.5},{"at":"2026-09-27T09:00:00+00:00","value":0.89},{"at":"2026-09-27T09:15:00+00:00","value":0.0},{"at":"2026-09-27T09:30:00+00:00","value":0.0},{"at":"2026-09-27T09:45:00+00:00","value":0.0},{"at":"2026-09-27T10:00:00+00:00","value":-0.01},{"at":"2026-09-27T10:15:00+00:00","value":-0.01},{"at":"2026-09-27T10:30:00+00:00","value":-0.01},{"at":"2026-09-27T10:45:00+00:00","value":-0.01},{"at":"2026-09-27T11:00:00+00:00","value":-0.11},{"at":"2026-09-27T11:15:00+00:00","value":-0.11},{"at":"2026-09-27T11:30:00+00:00","value":-1.24},{"at":"2026-09-27T11:45:00+00:00","value":-2.03},{"at":"2026-09-27T12:00:00+00:00","value":-0.11},{"at":"2026-09-27T12:15:00+00:00","value":-0.11},{"at":"2026-09-27T12:30:00+00:00","value":-0.11},{"at":"2026-09-27T12:45:00+00:00","value":-0.11},{"at":"2026-09-27T13:00:00+00:00","value":-0.01},{"at":"2026-09-27T13:15:00+00:00","value":-0.01},{"at":"2026-09-27T13:30:00+00:00","value":0.0},{"at":"2026-09-27T13:45:00+00:00","value":0.0},{"at":"2026-09-27T14:00:00+00:00","value":0.0},{"at":"2026-09-27T14:15:00+00:00","value":0.15},{"at":"2026-09-27T14:30:00+00:00","value":7.01},{"at":"2026-09-27T14:45:00+00:00","value":45.25},{"at":"2026-09-27T15:00:00+00:00","value":41.25},{"at":"2026-09-27T15:15:00+00:00","value":92.71},{"at":"2026-09-27T15:30:00+00:00","value":144.61},{"at":"2026-09-27T15:45:00+00:00","value":179.2},{"at":"2026-09-27T16:00:00+00:00","value":168.79},{"at":"2026-09-27T16:15:00+00:00","value":189.78},{"at":"2026-09-27T16:30:00+00:00","value":198.61},{"at":"2026-09-27T16:45:00+00:00","value":202.34},{"at":"2026-09-27T17:00:00+00:00","value":195.34},{"at":"2026-09-27T17:15:00+00:00","value":196.64},{"at":"2026-09-27T17:30:00+00:00","value":205.0},{"at":"2026-09-27T17:45:00+00:00","value":210.26},{"at":"2026-09-27T18:00:00+00:00","value":201.21},{"at":"2026-09-27T18:15:00+00:00","value":201.0},{"at":"2026-09-27T18:30:00+00:00","value":197.33},{"at":"2026-09-27T18:45:00+00:00","value":186.26},{"at":"2026-09-27T19:00:00+00:00","value":191.66},{"at":"2026-09-27T19:15:00+00:00","value":185.6},{"at":"2026-09-27T19:30:00+00:00","value":175.53},{"at":"2026-09-27T19:45:00+00:00","value":168.22},{"at":"2026-09-27T20:00:00+00:00","value":181.92},{"at":"2026-09-27T20:15:00+00:00","value":173.66},{"at":"2026-09-27T20:30:00+00:00","value":172.32},{"at":"2026-09-27T20:45:00+00:00","value":163.89},{"at":"2026-09-27T21:00:00+00:00","value":168.36},{"at":"2026-09-27T21:15:00+00:00","value":162.42},{"at":"2026-09-27T21:30:00+00:00","value":159.91},{"at":"2026-09-27T21:45:00+00:00","value":153.85},{"at":"2026-09-27T22:00:00+00:00","value":162.9},{"at":"2026-09-27T22:15:00+00:00","value":163.01},{"at":"2026-09-27T22:30:00+00:00","value":163.54},{"at":"2026-09-27T22:45:00+00:00","value":162.51},{"at":"2026-09-27T23:00:00+00:00","value":168.03},{"at":"2026-09-27T23:15:00+00:00","value":163.02},{"at":"2026-09-27T23:30:00+00:00","value":163.54},{"at":"2026-09-27T23:45:00+00:00","value":162.2},{"at":"2026-09-28T00:00:00+00:00","value":160.05},{"at":"2026-09-28T00:15:00+00:00","value":157.65},{"at":"2026-09-28T00:30:00+00:00","value":156.03},{"at":"2026-09-28T00:45:00+00:00","value":154.49},{"at":"2026-09-28T01:00:00+00:00","value":155.15},{"at":"2026-09-28T01:15:00+00:00","value":157.06},{"at":"2026-09-28T01:30:00+00:00","value":157.44},{"at":"2026-09-28T01:45:00+00:00","value":159.56},{"at":"2026-09-28T02:00:00+00:00","value":158.58},{"at":"2026-09-28T02:15:00+00:00","value":160.0},{"at":"2026-09-28T02:30:00+00:00","value":163.54},{"at":"2026-09-28T02:45:00+00:00","value":168.69},{"at":"2026-09-28T03:00:00+00:00","value":169.26},{"at":"2026-09-28T03:15:00+00:00","value":173.1},{"at":"2026-09-28T03:30:00+00:00","value":178.08},{"at":"2026-09-28T03:45:00+00:00","value":185.9},{"at":"2026-09-28T04:00:00+00:00","value":193.68},{"at":"2026-09-28T04:15:00+00:00","value":204.99},{"at":"2026-09-28T04:30:00+00:00","value":214.84},{"at":"2026-09-28T04:45:00+00:00","value":231.02},{"at":"2026-09-28T05:00:00+00:00","value":229.39},{"at":"2026-09-28T05:15:00+00:00","value":244.02},{"at":"2026-09-28T05:30:00+00:00","value":246.3},{"at":"2026-09-28T05:45:00+00:00","value":245.84},{"at":"2026-09-28T06:00:00+00:00","value":275.95},{"at":"2026-09-28T06:15:00+00:00","value":254.9},{"at":"2026-09-28T06:30:00+00:00","value":241.63},{"at":"2026-09-28T06:45:00+00:00","value":227.52},{"at":"2026-09-28T07:00:00+00:00","value":255.75},{"at":"2026-09-28T07:15:00+00:00","value":241.6},{"at":"2026-09-28T07:30:00+00:00","value":233.16},{"at":"2026-09-28T07:45:00+00:00","value":213.58},{"at":"2026-09-28T08:00:00+00:00","value":225.99},{"at":"2026-09-28T08:15:00+00:00","value":210.02},{"at":"2026-09-28T08:30:00+00:00","value":201.81},{"at":"2026-09-28T08:45:00+00:00","value":177.7},{"at":"2026-09-28T09:00:00+00:00","value":181.66},{"at":"2026-09-28T09:15:00+00:00","value":177.98},{"at":"2026-09-28T09:30:00+00:00","value":180.8},{"at":"2026-09-28T09:45:00+00:00","value":175.58},{"at":"2026-09-28T10:00:00+00:00","value":175.43},{"at":"2026-09-28T10:15:00+00:00","value":155.0},{"at":"2026-09-28T10:30:00+00:00","value":153.75},{"at":"2026-09-28T10:45:00+00:00","value":148.56},{"at":"2026-09-28T11:00:00+00:00","value":151.94},{"at":"2026-09-28T11:15:00+00:00","value":147.32},{"at":"2026-09-28T11:30:00+00:00","value":149.5},{"at":"2026-09-28T11:45:00+00:00","value":152.53},{"at":"2026-09-28T12:00:00+00:00","value":152.4},{"at":"2026-09-28T12:15:00+00:00","value":155.42},{"at":"2026-09-28T12:30:00+00:00","value":159.0},{"at":"2026-09-28T12:45:00+00:00","value":163.58},{"at":"2026-09-28T13:00:00+00:00","value":158.1},{"at":"2026-09-28T13:15:00+00:00","value":164.76},{"at":"2026-09-28T13:30:00+00:00","value":165.0},{"at":"2026-09-28T13:45:00+00:00","value":182.0},{"at":"2026-09-28T14:00:00+00:00","value":169.95},{"at":"2026-09-28T14:15:00+00:00","value":186.87},{"at":"2026-09-28T14:30:00+00:00","value":201.93},{"at":"2026-09-28T14:45:00+00:00","value":217.88},{"at":"2026-09-28T15:00:00+00:00","value":207.45},{"at":"2026-09-28T15:15:00+00:00","value":231.26},{"at":"2026-09-28T15:30:00+00:00","value":241.07},{"at":"2026-09-28T15:45:00+00:00","value":266.9},{"at":"2026-09-28T16:00:00+00:00","value":234.14},{"at":"2026-09-28T16:15:00+00:00","value":252.66},{"at":"2026-09-28T16:30:00+00:00","value":294.11},{"at":"2026-09-28T16:45:00+00:00","value":390.6},{"at":"2026-09-28T17:00:00+00:00","value":350.0},{"at":"2026-09-28T17:15:00+00:00","value":354.0},{"at":"2026-09-28T17:30:00+00:00","value":349.99},{"at":"2026-09-28T17:45:00+00:00","value":314.86},{"at":"2026-09-28T18:00:00+00:00","value":320.83},{"at":"2026-09-28T18:15:00+00:00","value":280.59},{"at":"2026-09-28T18:30:00+00:00","value":260.91},{"at":"2026-09-28T18:45:00+00:00","value":246.9},{"at":"2026-09-28T19:00:00+00:00","value":252.58},{"at":"2026-09-28T19:15:00+00:00","value":234.44},{"at":"2026-09-28T19:30:00+00:00","value":223.98},{"at":"2026-09-28T19:45:00+00:00","value":205.0},{"at":"2026-09-28T20:00:00+00:00","value":216.93},{"at":"2026-09-28T20:15:00+00:00","value":208.16},{"at":"2026-09-28T20:30:00+00:00","value":201.99},{"at":"2026-09-28T20:45:00+00:00","value":186.32},{"at":"2026-09-28T21:00:00+00:00","value":197.01},{"at":"2026-09-28T21:15:00+00:00","value":187.78},{"at":"2026-09-28T21:30:00+00:00","value":179.24},{"at":"2026-09-28T21:45:00+00:00","value":168.66},{"at":"2026-09-28T22:00:00+00:00","value":201.22},{"at":"2026-09-28T22:15:00+00:00","value":191.39},{"at":"2026-09-28T22:30:00+00:00","value":181.38},{"at":"2026-09-28T22:45:00+00:00","value":175.18},{"at":"2026-09-28T23:00:00+00:00","value":183.46},{"at":"2026-09-28T23:15:00+00:00","value":177.19},{"at":"2026-09-28T23:30:00+00:00","value":174.89},{"at":"2026-09-28T23:45:00+00:00","value":169.09},{"at":"2026-09-29T00:00:00+00:00","value":173.53},{"at":"2026-09-29T00:15:00+00:00","value":171.98},{"at":"2026-09-29T00:30:00+00:00","value":170.98},{"at":"2026-09-29T00:45:00+00:00","value":169.56},{"at":"2026-09-29T01:00:00+00:00","value":166.26},{"at":"2026-09-29T01:15:00+00:00","value":167.06},{"at":"2026-09-29T01:30:00+00:00","value":165.29},{"at":"2026-09-29T01:45:00+00:00","value":166.9},{"at":"2026-09-29T02:00:00+00:00","value":163.39},{"at":"2026-09-29T02:15:00+00:00","value":163.53},{"at":"2026-09-29T02:30:00+00:00","value":161.95},{"at":"2026-09-29T02:45:00+00:00","value":158.41},{"at":"2026-09-29T03:00:00+00:00","value":157.1},{"at":"2026-09-29T03:15:00+00:00","value":160.7},{"at":"2026-09-29T03:30:00+00:00","value":172.94},{"at":"2026-09-29T03:45:00+00:00","value":180.0},{"at":"2026-09-29T04:00:00+00:00","value":172.8},{"at":"2026-09-29T04:15:00+00:00","value":185.0},{"at":"2026-09-29T04:30:00+00:00","value":194.62},{"at":"2026-09-29T04:45:00+00:00","value":210.37},{"at":"2026-09-29T05:00:00+00:00","value":211.75},{"at":"2026-09-29T05:15:00+00:00","value":228.1},{"at":"2026-09-29T05:30:00+00:00","value":228.64},{"at":"2026-09-29T05:45:00+00:00","value":228.1},{"at":"2026-09-29T06:00:00+00:00","value":239.17},{"at":"2026-09-29T06:15:00+00:00","value":231.15},{"at":"2026-09-29T06:30:00+00:00","value":216.12},{"at":"2026-09-29T06:45:00+00:00","value":193.96},{"at":"2026-09-29T07:00:00+00:00","value":215.83},{"at":"2026-09-29T07:15:00+00:00","value":189.43},{"at":"2026-09-29T07:30:00+00:00","value":178.12},{"at":"2026-09-29T07:45:00+00:00","value":169.02},{"at":"2026-09-29T08:00:00+00:00","value":200.25},{"at":"2026-09-29T08:15:00+00:00","value":187.45},{"at":"2026-09-29T08:30:00+00:00","value":180.36},{"at":"2026-09-29T08:45:00+00:00","value":161.46},{"at":"2026-09-29T09:00:00+00:00","value":157.73},{"at":"2026-09-29T09:15:00+00:00","value":143.77},{"at":"2026-09-29T09:30:00+00:00","value":119.08},{"at":"2026-09-29T09:45:00+00:00","value":106.43},{"at":"2026-09-29T10:00:00+00:00","value":103.05},{"at":"2026-09-29T10:15:00+00:00","value":93.72},{"at":"2026-09-29T10:30:00+00:00","value":93.45},{"at":"2026-09-29T10:45:00+00:00","value":79.93},{"at":"2026-09-29T11:00:00+00:00","value":86.38},{"at":"2026-09-29T11:15:00+00:00","value":77.99},{"at":"2026-09-29T11:30:00+00:00","value":70.21},{"at":"2026-09-29T11:45:00+00:00","value":64.07},{"at":"2026-09-29T12:00:00+00:00","value":65.66},{"at":"2026-09-29T12:15:00+00:00","value":79.03},{"at":"2026-09-29T12:30:00+00:00","value":88.03},{"at":"2026-09-29T12:45:00+00:00","value":93.47},{"at":"2026-09-29T13:00:00+00:00","value":89.63},{"at":"2026-09-29T13:15:00+00:00","value":105.31},{"at":"2026-09-29T13:30:00+00:00","value":96.11},{"at":"2026-09-29T13:45:00+00:00","value":110.73},{"at":"2026-09-29T14:00:00+00:00","value":95.83},{"at":"2026-09-29T14:15:00+00:00","value":127.17},{"at":"2026-09-29T14:30:00+00:00","value":143.77},{"at":"2026-09-29T14:45:00+00:00","value":181.17},{"at":"2026-09-29T15:00:00+00:00","value":167.13},{"at":"2026-09-29T15:15:00+00:00","value":171.48},{"at":"2026-09-29T15:30:00+00:00","value":160.52},{"at":"2026-09-29T15:45:00+00:00","value":205.22},{"at":"2026-09-29T16:00:00+00:00","value":182.9},{"at":"2026-09-29T16:15:00+00:00","value":222.41},{"at":"2026-09-29T16:30:00+00:00","value":232.88},{"at":"2026-09-29T16:45:00+00:00","value":250.12},{"at":"2026-09-29T17:00:00+00:00","value":243.54},{"at":"2026-09-29T17:15:00+00:00","value":240.44},{"at":"2026-09-29T17:30:00+00:00","value":243.03},{"at":"2026-09-29T17:45:00+00:00","value":236.24},{"at":"2026-09-29T18:00:00+00:00","value":238.94},{"at":"2026-09-29T18:15:00+00:00","value":227.55},{"at":"2026-09-29T18:30:00+00:00","value":213.58},{"at":"2026-09-29T18:45:00+00:00","value":198.14},{"at":"2026-09-29T19:00:00+00:00","value":189.14},{"at":"2026-09-29T19:15:00+00:00","value":187.65},{"at":"2026-09-29T19:30:00+00:00","value":180.22},{"at":"2026-09-29T19:45:00+00:00","value":168.64},{"at":"2026-09-29T20:00:00+00:00","value":176.0},{"at":"2026-09-29T20:15:00+00:00","value":168.49},{"at":"2026-09-29T20:30:00+00:00","value":173.0},{"at":"2026-09-29T20:45:00+00:00","value":153.89},{"at":"2026-09-29T21:00:00+00:00","value":151.87},{"at":"2026-09-29T21:15:00+00:00","value":144.36},{"at":"2026-09-29T21:30:00+00:00","value":140.33},{"at":"2026-09-29T21:45:00+00:00","value":128.83},{"at":"2026-09-29T22:00:00+00:00","value":122.15},{"at":"2026-09-29T22:15:00+00:00","value":107.57},{"at":"2026-09-29T22:30:00+00:00","value":94.26},{"at":"2026-09-29T22:45:00+00:00","value":40.96},{"at":"2026-09-29T23:00:00+00:00","value":100.0},{"at":"2026-09-29T23:15:00+00:00","value":73.01},{"at":"2026-09-29T23:30:00+00:00","value":75.91},{"at":"2026-09-29T23:45:00+00:00","value":32.72},{"at":"2026-09-30T00:00:00+00:00","value":90.0},{"at":"2026-09-30T00:15:00+00:00","value":101.94},{"at":"2026-09-30T00:30:00+00:00","value":55.41},{"at":"2026-09-30T00:45:00+00:00","value":20.59},{"at":"2026-09-30T01:00:00+00:00","value":80.76},{"at":"2026-09-30T01:15:00+00:00","value":34.54},{"at":"2026-09-30T01:30:00+00:00","value":30.53},{"at":"2026-09-30T01:45:00+00:00","value":44.95},{"at":"2026-09-30T02:00:00+00:00","value":32.45},{"at":"2026-09-30T02:15:00+00:00","value":53.12},{"at":"2026-09-30T02:30:00+00:00","value":55.0},{"at":"2026-09-30T02:45:00+00:00","value":60.67},{"at":"2026-09-30T03:00:00+00:00","value":20.95},{"at":"2026-09-30T03:15:00+00:00","value":40.04},{"at":"2026-09-30T03:30:00+00:00","value":38.56},{"at":"2026-09-30T03:45:00+00:00","value":114.24},{"at":"2026-09-30T04:00:00+00:00","value":150.0},{"at":"2026-09-30T04:15:00+00:00","value":164.0},{"at":"2026-09-30T04:30:00+00:00","value":171.59},{"at":"2026-09-30T04:45:00+00:00","value":174.0},{"at":"2026-09-30T05:00:00+00:00","value":192.88},{"at":"2026-09-30T05:15:00+00:00","value":207.0},{"at":"2026-09-30T05:30:00+00:00","value":211.81},{"at":"2026-09-30T05:45:00+00:00","value":207.07},{"at":"2026-09-30T06:00:00+00:00","value":223.94},{"at":"2026-09-30T06:15:00+00:00","value":208.48},{"at":"2026-09-30T06:30:00+00:00","value":189.98},{"at":"2026-09-30T06:45:00+00:00","value":169.59},{"at":"2026-09-30T07:00:00+00:00","value":201.94},{"at":"2026-09-30T07:15:00+00:00","value":184.99},{"at":"2026-09-30T07:30:00+00:00","value":173.54},{"at":"2026-09-30T07:45:00+00:00","value":162.41},{"at":"2026-09-30T08:00:00+00:00","value":185.87},{"at":"2026-09-30T08:15:00+00:00","value":175.5},{"at":"2026-09-30T08:30:00+00:00","value":145.1},{"at":"2026-09-30T08:45:00+00:00","value":132.08},{"at":"2026-09-30T09:00:00+00:00","value":132.35},{"at":"2026-09-30T09:15:00+00:00","value":130.0},{"at":"2026-09-30T09:30:00+00:00","value":124.79},{"at":"2026-09-30T09:45:00+00:00","value":115.15},{"at":"2026-09-30T10:00:00+00:00","value":103.41},{"at":"2026-09-30T10:15:00+00:00","value":108.7},{"at":"2026-09-30T10:30:00+00:00","value":108.7},{"at":"2026-09-30T10:45:00+00:00","value":100.0},{"at":"2026-09-30T11:00:00+00:00","value":89.99},{"at":"2026-09-30T11:15:00+00:00","value":90.7},{"at":"2026-09-30T11:30:00+00:00","value":90.0},{"at":"2026-09-30T11:45:00+00:00","value":85.6},{"at":"2026-09-30T12:00:00+00:00","value":89.4},{"at":"2026-09-30T12:15:00+00:00","value":94.99},{"at":"2026-09-30T12:30:00+00:00","value":100.0},{"at":"2026-09-30T12:45:00+00:00","value":118.55},{"at":"2026-09-30T13:00:00+00:00","value":112.93},{"at":"2026-09-30T13:15:00+00:00","value":121.87},{"at":"2026-09-30T13:30:00+00:00","value":127.87},{"at":"2026-09-30T13:45:00+00:00","value":123.68},{"at":"2026-09-30T14:00:00+00:00","value":120.68},{"at":"2026-09-30T14:15:00+00:00","value":135.59},{"at":"2026-09-30T14:30:00+00:00","value":171.38},{"at":"2026-09-30T14:45:00+00:00","value":191.47},{"at":"2026-09-30T15:00:00+00:00","value":174.62},{"at":"2026-09-30T15:15:00+00:00","value":196.78},{"at":"2026-09-30T15:30:00+00:00","value":213.58},{"at":"2026-09-30T15:45:00+00:00","value":233.17},{"at":"2026-09-30T16:00:00+00:00","value":214.87},{"at":"2026-09-30T16:15:00+00:00","value":228.7},{"at":"2026-09-30T16:30:00+00:00","value":235.0},{"at":"2026-09-30T16:45:00+00:00","value":251.77},{"at":"2026-09-30T17:00:00+00:00","value":243.77},{"at":"2026-09-30T17:15:00+00:00","value":250.0},{"at":"2026-09-30T17:30:00+00:00","value":260.0},{"at":"2026-09-30T17:45:00+00:00","value":261.03},{"at":"2026-09-30T18:00:00+00:00","value":249.79},{"at":"2026-09-30T18:15:00+00:00","value":248.59},{"at":"2026-09-30T18:30:00+00:00","value":232.14},{"at":"2026-09-30T18:45:00+00:00","value":221.41},{"at":"2026-09-30T19:00:00+00:00","value":243.15},{"at":"2026-09-30T19:15:00+00:00","value":230.45},{"at":"2026-09-30T19:30:00+00:00","value":212.76},{"at":"2026-09-30T19:45:00+00:00","value":175.86},{"at":"2026-09-30T20:00:00+00:00","value":223.49},{"at":"2026-09-30T20:15:00+00:00","value":201.93},{"at":"2026-09-30T20:30:00+00:00","value":200.96},{"at":"2026-09-30T20:45:00+00:00","value":190.0},{"at":"2026-09-30T21:00:00+00:00","value":202.38},{"at":"2026-09-30T21:15:00+00:00","value":184.3},{"at":"2026-09-30T21:30:00+00:00","value":199.6},{"at":"2026-09-30T21:45:00+00:00","value":173.72},{"at":"2026-09-30T22:00:00+00:00","value":190.18},{"at":"2026-09-30T22:15:00+00:00","value":176.95},{"at":"2026-09-30T22:30:00+00:00","value":160.18},{"at":"2026-09-30T22:45:00+00:00","value":159.07},{"at":"2026-09-30T23:00:00+00:00","value":165.58},{"at":"2026-09-30T23:15:00+00:00","value":166.16},{"at":"2026-09-30T23:30:00+00:00","value":167.47},{"at":"2026-09-30T23:45:00+00:00","value":167.47},{"at":"2026-10-01T00:00:00+00:00","value":169.18},{"at":"2026-10-01T00:15:00+00:00","value":165.4},{"at":"2026-10-01T00:30:00+00:00","value":163.69},{"at":"2026-10-01T00:45:00+00:00","value":160.83},{"at":"2026-10-01T01:00:00+00:00","value":165.32},{"at":"2026-10-01T01:15:00+00:00","value":165.39},{"at":"2026-10-01T01:30:00+00:00","value":163.26},{"at":"2026-10-01T01:45:00+00:00","value":161.58},{"at":"2026-10-01T02:00:00+00:00","value":162.32},{"at":"2026-10-01T02:15:00+00:00","value":162.19},{"at":"2026-10-01T02:30:00+00:00","value":159.74},{"at":"2026-10-01T02:45:00+00:00","value":163.84},{"at":"2026-10-01T03:00:00+00:00","value":161.85},{"at":"2026-10-01T03:15:00+00:00","value":163.0},{"at":"2026-10-01T03:30:00+00:00","value":172.54},{"at":"2026-10-01T03:45:00+00:00","value":185.1},{"at":"2026-10-01T04:00:00+00:00","value":179.67},{"at":"2026-10-01T04:15:00+00:00","value":205.24},{"at":"2026-10-01T04:30:00+00:00","value":219.13},{"at":"2026-10-01T04:45:00+00:00","value":233.76},{"at":"2026-10-01T05:00:00+00:00","value":229.21},{"at":"2026-10-01T05:15:00+00:00","value":243.11},{"at":"2026-10-01T05:30:00+00:00","value":246.58},{"at":"2026-10-01T05:45:00+00:00","value":238.18},{"at":"2026-10-01T06:00:00+00:00","value":261.71},{"at":"2026-10-01T06:15:00+00:00","value":238.11},{"at":"2026-10-01T06:30:00+00:00","value":226.94},{"at":"2026-10-01T06:45:00+00:00","value":214.79},{"at":"2026-10-01T07:00:00+00:00","value":238.12},{"at":"2026-10-01T07:15:00+00:00","value":231.84},{"at":"2026-10-01T07:30:00+00:00","value":228.3},{"at":"2026-10-01T07:45:00+00:00","value":212.82},{"at":"2026-10-01T08:00:00+00:00","value":248.23},{"at":"2026-10-01T08:15:00+00:00","value":224.14},{"at":"2026-10-01T08:30:00+00:00","value":205.61},{"at":"2026-10-01T08:45:00+00:00","value":192.49},{"at":"2026-10-01T09:00:00+00:00","value":180.71},{"at":"2026-10-01T09:15:00+00:00","value":176.63},{"at":"2026-10-01T09:30:00+00:00","value":184.6},{"at":"2026-10-01T09:45:00+00:00","value":191.85},{"at":"2026-10-01T10:00:00+00:00","value":185.54},{"at":"2026-10-01T10:15:00+00:00","value":179.0},{"at":"2026-10-01T10:30:00+00:00","value":178.56},{"at":"2026-10-01T10:45:00+00:00","value":160.98},{"at":"2026-10-01T11:00:00+00:00","value":169.22},{"at":"2026-10-01T11:15:00+00:00","value":168.25},{"at":"2026-10-01T11:30:00+00:00","value":166.65},{"at":"2026-10-01T11:45:00+00:00","value":165.54},{"at":"2026-10-01T12:00:00+00:00","value":172.44},{"at":"2026-10-01T12:15:00+00:00","value":166.67},{"at":"2026-10-01T12:30:00+00:00","value":169.32},{"at":"2026-10-01T12:45:00+00:00","value":169.07},{"at":"2026-10-01T13:00:00+00:00","value":159.74},{"at":"2026-10-01T13:15:00+00:00","value":157.65},{"at":"2026-10-01T13:30:00+00:00","value":159.0},{"at":"2026-10-01T13:45:00+00:00","value":170.1},{"at":"2026-10-01T14:00:00+00:00","value":149.7},{"at":"2026-10-01T14:15:00+00:00","value":166.6},{"at":"2026-10-01T14:30:00+00:00","value":196.75},{"at":"2026-10-01T14:45:00+00:00","value":243.68},{"at":"2026-10-01T15:00:00+00:00","value":179.92},{"at":"2026-10-01T15:15:00+00:00","value":211.92},{"at":"2026-10-01T15:30:00+00:00","value":250.0},{"at":"2026-10-01T15:45:00+00:00","value":275.0},{"at":"2026-10-01T16:00:00+00:00","value":246.19},{"at":"2026-10-01T16:15:00+00:00","value":265.01},{"at":"2026-10-01T16:30:00+00:00","value":276.58},{"at":"2026-10-01T16:45:00+00:00","value":310.98},{"at":"2026-10-01T17:00:00+00:00","value":289.7},{"at":"2026-10-01T17:15:00+00:00","value":300.22},{"at":"2026-10-01T17:30:00+00:00","value":314.78},{"at":"2026-10-01T17:45:00+00:00","value":297.47},{"at":"2026-10-01T18:00:00+00:00","value":280.0},{"at":"2026-10-01T18:15:00+00:00","value":268.11},{"at":"2026-10-01T18:30:00+00:00","value":251.93},{"at":"2026-10-01T18:45:00+00:00","value":230.01},{"at":"2026-10-01T19:00:00+00:00","value":250.03},{"at":"2026-10-01T19:15:00+00:00","value":229.97},{"at":"2026-10-01T19:30:00+00:00","value":221.01},{"at":"2026-10-01T19:45:00+00:00","value":204.42},{"at":"2026-10-01T20:00:00+00:00","value":221.64},{"at":"2026-10-01T20:15:00+00:00","value":207.5},{"at":"2026-10-01T20:30:00+00:00","value":203.9},{"at":"2026-10-01T20:45:00+00:00","value":186.95},{"at":"2026-10-01T21:00:00+00:00","value":201.71},{"at":"2026-10-01T21:15:00+00:00","value":190.04},{"at":"2026-10-01T21:30:00+00:00","value":182.58},{"at":"2026-10-01T21:45:00+00:00","value":171.38},{"at":"2026-10-01T22:00:00+00:00","value":185.11},{"at":"2026-10-01T22:15:00+00:00","value":180.76},{"at":"2026-10-01T22:30:00+00:00","value":171.32},{"at":"2026-10-01T22:45:00+00:00","value":168.45},{"at":"2026-10-01T23:00:00+00:00","value":169.0},{"at":"2026-10-01T23:15:00+00:00","value":166.71},{"at":"2026-10-01T23:30:00+00:00","value":164.72},{"at":"2026-10-01T23:45:00+00:00","value":161.45},{"at":"2026-10-02T00:00:00+00:00","value":162.95},{"at":"2026-10-02T00:15:00+00:00","value":161.0},{"at":"2026-10-02T00:30:00+00:00","value":161.43},{"at":"2026-10-02T00:45:00+00:00","value":161.47},{"at":"2026-10-02T01:00:00+00:00","value":160.29},{"at":"2026-10-02T01:15:00+00:00","value":159.51},{"at":"2026-10-02T01:30:00+00:00","value":161.62},{"at":"2026-10-02T01:45:00+00:00","value":161.2},{"at":"2026-10-02T02:00:00+00:00","value":162.92},{"at":"2026-10-02T02:15:00+00:00","value":163.12},{"at":"2026-10-02T02:30:00+00:00","value":162.05},{"at":"2026-10-02T02:45:00+00:00","value":166.6},{"at":"2026-10-02T03:00:00+00:00","value":163.55},{"at":"2026-10-02T03:15:00+00:00","value":170.49},{"at":"2026-10-02T03:30:00+00:00","value":184.84},{"at":"2026-10-02T03:45:00+00:00","value":192.61},{"at":"2026-10-02T04:00:00+00:00","value":195.55},{"at":"2026-10-02T04:15:00+00:00","value":216.11},{"at":"2026-10-02T04:30:00+00:00","value":229.62},{"at":"2026-10-02T04:45:00+00:00","value":242.53},{"at":"2026-10-02T05:00:00+00:00","value":246.83},{"at":"2026-10-02T05:15:00+00:00","value":258.53},{"at":"2026-10-02T05:30:00+00:00","value":265.5},{"at":"2026-10-02T05:45:00+00:00","value":268.82},{"at":"2026-10-02T06:00:00+00:00","value":288.93},{"at":"2026-10-02T06:15:00+00:00","value":269.79},{"at":"2026-10-02T06:30:00+00:00","value":255.8},{"at":"2026-10-02T06:45:00+00:00","value":232.9},{"at":"2026-10-02T07:00:00+00:00","value":259.45},{"at":"2026-10-02T07:15:00+00:00","value":229.15},{"at":"2026-10-02T07:30:00+00:00","value":215.16},{"at":"2026-10-02T07:45:00+00:00","value":181.4},{"at":"2026-10-02T08:00:00+00:00","value":206.8},{"at":"2026-10-02T08:15:00+00:00","value":184.27},{"at":"2026-10-02T08:30:00+00:00","value":172.76},{"at":"2026-10-02T08:45:00+00:00","value":167.74},{"at":"2026-10-02T09:00:00+00:00","value":182.1},{"at":"2026-10-02T09:15:00+00:00","value":171.42},{"at":"2026-10-02T09:30:00+00:00","value":163.46},{"at":"2026-10-02T09:45:00+00:00","value":149.73},{"at":"2026-10-02T10:00:00+00:00","value":150.71},{"at":"2026-10-02T10:15:00+00:00","value":147.1},{"at":"2026-10-02T10:30:00+00:00","value":147.83},{"at":"2026-10-02T10:45:00+00:00","value":144.41},{"at":"2026-10-02T11:00:00+00:00","value":142.7},{"at":"2026-10-02T11:15:00+00:00","value":136.42},{"at":"2026-10-02T11:30:00+00:00","value":127.56},{"at":"2026-10-02T11:45:00+00:00","value":130.46},{"at":"2026-10-02T12:00:00+00:00","value":137.04},{"at":"2026-10-02T12:15:00+00:00","value":136.14},{"at":"2026-10-02T12:30:00+00:00","value":139.27},{"at":"2026-10-02T12:45:00+00:00","value":140.04},{"at":"2026-10-02T13:00:00+00:00","value":141.04},{"at":"2026-10-02T13:15:00+00:00","value":142.71},{"at":"2026-10-02T13:30:00+00:00","value":140.71},{"at":"2026-10-02T13:45:00+00:00","value":144.16},{"at":"2026-10-02T14:00:00+00:00","value":127.49},{"at":"2026-10-02T14:15:00+00:00","value":148.1},{"at":"2026-10-02T14:30:00+00:00","value":157.44},{"at":"2026-10-02T14:45:00+00:00","value":152.3},{"at":"2026-10-02T15:00:00+00:00","value":164.12},{"at":"2026-10-02T15:15:00+00:00","value":194.4},{"at":"2026-10-02T15:30:00+00:00","value":189.59},{"at":"2026-10-02T15:45:00+00:00","value":231.89},{"at":"2026-10-02T16:00:00+00:00","value":239.98},{"at":"2026-10-02T16:15:00+00:00","value":250.44},{"at":"2026-10-02T16:30:00+00:00","value":275.42},{"at":"2026-10-02T16:45:00+00:00","value":294.16},{"at":"2026-10-02T17:00:00+00:00","value":282.7},{"at":"2026-10-02T17:15:00+00:00","value":301.3},{"at":"2026-10-02T17:30:00+00:00","value":315.28},{"at":"2026-10-02T17:45:00+00:00","value":307.27},{"at":"2026-10-02T18:00:00+00:00","value":282.7},{"at":"2026-10-02T18:15:00+00:00","value":279.83},{"at":"2026-10-02T18:30:00+00:00","value":261.82},{"at":"2026-10-02T18:45:00+00:00","value":248.08},{"at":"2026-10-02T19:00:00+00:00","value":244.78},{"at":"2026-10-02T19:15:00+00:00","value":238.14},{"at":"2026-10-02T19:30:00+00:00","value":224.99},{"at":"2026-10-02T19:45:00+00:00","value":211.92},{"at":"2026-10-02T20:00:00+00:00","value":220.23},{"at":"2026-10-02T20:15:00+00:00","value":215.0},{"at":"2026-10-02T20:30:00+00:00","value":209.39},{"at":"2026-10-02T20:45:00+00:00","value":201.39},{"at":"2026-10-02T21:00:00+00:00","value":201.62},{"at":"2026-10-02T21:15:00+00:00","value":197.52},{"at":"2026-10-02T21:30:00+00:00","value":194.55},{"at":"2026-10-02T21:45:00+00:00","value":185.1}],"de":[{"at":"2026-09-18T22:00:00+00:00","value":132.52},{"at":"2026-09-18T22:15:00+00:00","value":117.76},{"at":"2026-09-18T22:30:00+00:00","value":97.43},{"at":"2026-09-18T22:45:00+00:00","value":65.83},{"at":"2026-09-18T23:00:00+00:00","value":96.05},{"at":"2026-09-18T23:15:00+00:00","value":82.44},{"at":"2026-09-18T23:30:00+00:00","value":79.18},{"at":"2026-09-18T23:45:00+00:00","value":60.43},{"at":"2026-09-19T00:00:00+00:00","value":73.77},{"at":"2026-09-19T00:15:00+00:00","value":62.38},{"at":"2026-09-19T00:30:00+00:00","value":52.75},{"at":"2026-09-19T00:45:00+00:00","value":48.02},{"at":"2026-09-19T01:00:00+00:00","value":45.15},{"at":"2026-09-19T01:15:00+00:00","value":32.75},{"at":"2026-09-19T01:30:00+00:00","value":26.48},{"at":"2026-09-19T01:45:00+00:00","value":23.16},{"at":"2026-09-19T02:00:00+00:00","value":33.57},{"at":"2026-09-19T02:15:00+00:00","value":36.04},{"at":"2026-09-19T02:30:00+00:00","value":36.9},{"at":"2026-09-19T02:45:00+00:00","value":36.66},{"at":"2026-09-19T03:00:00+00:00","value":34.79},{"at":"2026-09-19T03:15:00+00:00","value":34.41},{"at":"2026-09-19T03:30:00+00:00","value":34.03},{"at":"2026-09-19T03:45:00+00:00","value":39.94},{"at":"2026-09-19T04:00:00+00:00","value":40.74},{"at":"2026-09-19T04:15:00+00:00","value":46.66},{"at":"2026-09-19T04:30:00+00:00","value":40.08},{"at":"2026-09-19T04:45:00+00:00","value":43.47},{"at":"2026-09-19T05:00:00+00:00","value":41.38},{"at":"2026-09-19T05:15:00+00:00","value":41.99},{"at":"2026-09-19T05:30:00+00:00","value":45.07},{"at":"2026-09-19T05:45:00+00:00","value":40.1},{"at":"2026-09-19T06:00:00+00:00","value":47.71},{"at":"2026-09-19T06:15:00+00:00","value":36.53},{"at":"2026-09-19T06:30:00+00:00","value":27.96},{"at":"2026-09-19T06:45:00+00:00","value":11.8},{"at":"2026-09-19T07:00:00+00:00","value":16.9},{"at":"2026-09-19T07:15:00+00:00","value":6.55},{"at":"2026-09-19T07:30:00+00:00","value":2.74},{"at":"2026-09-19T07:45:00+00:00","value":0.01},{"at":"2026-09-19T08:00:00+00:00","value":0.1},{"at":"2026-09-19T08:15:00+00:00","value":0.0},{"at":"2026-09-19T08:30:00+00:00","value":-0.03},{"at":"2026-09-19T08:45:00+00:00","value":-0.09},{"at":"2026-09-19T09:00:00+00:00","value":-0.13},{"at":"2026-09-19T09:15:00+00:00","value":-0.16},{"at":"2026-09-19T09:30:00+00:00","value":-0.21},{"at":"2026-09-19T09:45:00+00:00","value":-0.74},{"at":"2026-09-19T10:00:00+00:00","value":-0.78},{"at":"2026-09-19T10:15:00+00:00","value":-0.65},{"at":"2026-09-19T10:30:00+00:00","value":-0.71},{"at":"2026-09-19T10:45:00+00:00","value":-0.86},{"at":"2026-09-19T11:00:00+00:00","value":-1.01},{"at":"2026-09-19T11:15:00+00:00","value":-1.06},{"at":"2026-09-19T11:30:00+00:00","value":-1.34},{"at":"2026-09-19T11:45:00+00:00","value":-1.62},{"at":"2026-09-19T12:00:00+00:00","value":-1.27},{"at":"2026-09-19T12:15:00+00:00","value":-1.26},{"at":"2026-09-19T12:30:00+00:00","value":-1.21},{"at":"2026-09-19T12:45:00+00:00","value":-1.46},{"at":"2026-09-19T13:00:00+00:00","value":-1.85},{"at":"2026-09-19T13:15:00+00:00","value":-1.5},{"at":"2026-09-19T13:30:00+00:00","value":-1.43},{"at":"2026-09-19T13:45:00+00:00","value":-1.94},{"at":"2026-09-19T14:00:00+00:00","value":-0.1},{"at":"2026-09-19T14:15:00+00:00","value":-0.07},{"at":"2026-09-19T14:30:00+00:00","value":-0.01},{"at":"2026-09-19T14:45:00+00:00","value":0.0},{"at":"2026-09-19T15:00:00+00:00","value":0.0},{"at":"2026-09-19T15:15:00+00:00","value":0.0},{"at":"2026-09-19T15:30:00+00:00","value":8.2},{"at":"2026-09-19T15:45:00+00:00","value":25.0},{"at":"2026-09-19T16:00:00+00:00","value":30.0},{"at":"2026-09-19T16:15:00+00:00","value":51.74},{"at":"2026-09-19T16:30:00+00:00","value":79.66},{"at":"2026-09-19T16:45:00+00:00","value":100.43},{"at":"2026-09-19T17:00:00+00:00","value":99.98},{"at":"2026-09-19T17:15:00+00:00","value":119.52},{"at":"2026-09-19T17:30:00+00:00","value":129.37},{"at":"2026-09-19T17:45:00+00:00","value":134.25},{"at":"2026-09-19T18:00:00+00:00","value":133.07},{"at":"2026-09-19T18:15:00+00:00","value":119.19},{"at":"2026-09-19T18:30:00+00:00","value":107.0},{"at":"2026-09-19T18:45:00+00:00","value":99.94},{"at":"2026-09-19T19:00:00+00:00","value":101.57},{"at":"2026-09-19T19:15:00+00:00","value":99.95},{"at":"2026-09-19T19:30:00+00:00","value":91.05},{"at":"2026-09-19T19:45:00+00:00","value":67.32},{"at":"2026-09-19T20:00:00+00:00","value":88.87},{"at":"2026-09-19T20:15:00+00:00","value":86.21},{"at":"2026-09-19T20:30:00+00:00","value":83.64},{"at":"2026-09-19T20:45:00+00:00","value":75.7},{"at":"2026-09-19T21:00:00+00:00","value":85.0},{"at":"2026-09-19T21:15:00+00:00","value":80.0},{"at":"2026-09-19T21:30:00+00:00","value":77.65},{"at":"2026-09-19T21:45:00+00:00","value":70.82},{"at":"2026-09-19T22:00:00+00:00","value":18.2},{"at":"2026-09-19T22:15:00+00:00","value":16.37},{"at":"2026-09-19T22:30:00+00:00","value":14.99},{"at":"2026-09-19T22:45:00+00:00","value":13.61},{"at":"2026-09-19T23:00:00+00:00","value":14.85},{"at":"2026-09-19T23:15:00+00:00","value":13.05},{"at":"2026-09-19T23:30:00+00:00","value":12.49},{"at":"2026-09-19T23:45:00+00:00","value":11.04},{"at":"2026-09-20T00:00:00+00:00","value":8.57},{"at":"2026-09-20T00:15:00+00:00","value":11.25},{"at":"2026-09-20T00:30:00+00:00","value":12.2},{"at":"2026-09-20T00:45:00+00:00","value":8.0},{"at":"2026-09-20T01:00:00+00:00","value":8.19},{"at":"2026-09-20T01:15:00+00:00","value":7.92},{"at":"2026-09-20T01:30:00+00:00","value":8.05},{"at":"2026-09-20T01:45:00+00:00","value":7.09},{"at":"2026-09-20T02:00:00+00:00","value":9.69},{"at":"2026-09-20T02:15:00+00:00","value":8.95},{"at":"2026-09-20T02:30:00+00:00","value":8.75},{"at":"2026-09-20T02:45:00+00:00","value":8.6},{"at":"2026-09-20T03:00:00+00:00","value":10.12},{"at":"2026-09-20T03:15:00+00:00","value":9.62},{"at":"2026-09-20T03:30:00+00:00","value":9.47},{"at":"2026-09-20T03:45:00+00:00","value":10.81},{"at":"2026-09-20T04:00:00+00:00","value":8.13},{"at":"2026-09-20T04:15:00+00:00","value":8.96},{"at":"2026-09-20T04:30:00+00:00","value":10.37},{"at":"2026-09-20T04:45:00+00:00","value":12.55},{"at":"2026-09-20T05:00:00+00:00","value":11.51},{"at":"2026-09-20T05:15:00+00:00","value":12.74},{"at":"2026-09-20T05:30:00+00:00","value":13.34},{"at":"2026-09-20T05:45:00+00:00","value":11.49},{"at":"2026-09-20T06:00:00+00:00","value":13.4},{"at":"2026-09-20T06:15:00+00:00","value":12.51},{"at":"2026-09-20T06:30:00+00:00","value":8.34},{"at":"2026-09-20T06:45:00+00:00","value":5.12},{"at":"2026-09-20T07:00:00+00:00","value":8.15},{"at":"2026-09-20T07:15:00+00:00","value":5.06},{"at":"2026-09-20T07:30:00+00:00","value":1.4},{"at":"2026-09-20T07:45:00+00:00","value":0.01},{"at":"2026-09-20T08:00:00+00:00","value":0.01},{"at":"2026-09-20T08:15:00+00:00","value":0.0},{"at":"2026-09-20T08:30:00+00:00","value":-0.01},{"at":"2026-09-20T08:45:00+00:00","value":-0.04},{"at":"2026-09-20T09:00:00+00:00","value":-0.04},{"at":"2026-09-20T09:15:00+00:00","value":-0.1},{"at":"2026-09-20T09:30:00+00:00","value":-0.12},{"at":"2026-09-20T09:45:00+00:00","value":-0.17},{"at":"2026-09-20T10:00:00+00:00","value":-1.0},{"at":"2026-09-20T10:15:00+00:00","value":-1.0},{"at":"2026-09-20T10:30:00+00:00","value":-1.05},{"at":"2026-09-20T10:45:00+00:00","value":-1.59},{"at":"2026-09-20T11:00:00+00:00","value":-1.92},{"at":"2026-09-20T11:15:00+00:00","value":-1.97},{"at":"2026-09-20T11:30:00+00:00","value":-2.02},{"at":"2026-09-20T11:45:00+00:00","value":-2.02},{"at":"2026-09-20T12:00:00+00:00","value":-1.94},{"at":"2026-09-20T12:15:00+00:00","value":-1.95},{"at":"2026-09-20T12:30:00+00:00","value":-1.94},{"at":"2026-09-20T12:45:00+00:00","value":-1.91},{"at":"2026-09-20T13:00:00+00:00","value":-1.56},{"at":"2026-09-20T13:15:00+00:00","value":-1.39},{"at":"2026-09-20T13:30:00+00:00","value":-1.01},{"at":"2026-09-20T13:45:00+00:00","value":-1.0},{"at":"2026-09-20T14:00:00+00:00","value":-0.18},{"at":"2026-09-20T14:15:00+00:00","value":-0.1},{"at":"2026-09-20T14:30:00+00:00","value":-0.08},{"at":"2026-09-20T14:45:00+00:00","value":-0.01},{"at":"2026-09-20T15:00:00+00:00","value":-0.03},{"at":"2026-09-20T15:15:00+00:00","value":0.0},{"at":"2026-09-20T15:30:00+00:00","value":0.01},{"at":"2026-09-20T15:45:00+00:00","value":10.72},{"at":"2026-09-20T16:00:00+00:00","value":15.13},{"at":"2026-09-20T16:15:00+00:00","value":35.62},{"at":"2026-09-20T16:30:00+00:00","value":58.37},{"at":"2026-09-20T16:45:00+00:00","value":92.51},{"at":"2026-09-20T17:00:00+00:00","value":61.64},{"at":"2026-09-20T17:15:00+00:00","value":79.14},{"at":"2026-09-20T17:30:00+00:00","value":86.21},{"at":"2026-09-20T17:45:00+00:00","value":102.24},{"at":"2026-09-20T18:00:00+00:00","value":86.69},{"at":"2026-09-20T18:15:00+00:00","value":88.42},{"at":"2026-09-20T18:30:00+00:00","value":82.02},{"at":"2026-09-20T18:45:00+00:00","value":89.48},{"at":"2026-09-20T19:00:00+00:00","value":90.08},{"at":"2026-09-20T19:15:00+00:00","value":79.26},{"at":"2026-09-20T19:30:00+00:00","value":67.9},{"at":"2026-09-20T19:45:00+00:00","value":65.36},{"at":"2026-09-20T20:00:00+00:00","value":76.2},{"at":"2026-09-20T20:15:00+00:00","value":80.07},{"at":"2026-09-20T20:30:00+00:00","value":67.31},{"at":"2026-09-20T20:45:00+00:00","value":61.68},{"at":"2026-09-20T21:00:00+00:00","value":63.74},{"at":"2026-09-20T21:15:00+00:00","value":60.09},{"at":"2026-09-20T21:30:00+00:00","value":57.78},{"at":"2026-09-20T21:45:00+00:00","value":51.76},{"at":"2026-09-20T22:00:00+00:00","value":50.68},{"at":"2026-09-20T22:15:00+00:00","value":50.29},{"at":"2026-09-20T22:30:00+00:00","value":45.28},{"at":"2026-09-20T22:45:00+00:00","value":40.81},{"at":"2026-09-20T23:00:00+00:00","value":45.61},{"at":"2026-09-20T23:15:00+00:00","value":41.88},{"at":"2026-09-20T23:30:00+00:00","value":42.85},{"at":"2026-09-20T23:45:00+00:00","value":40.01},{"at":"2026-09-21T00:00:00+00:00","value":41.33},{"at":"2026-09-21T00:15:00+00:00","value":37.85},{"at":"2026-09-21T00:30:00+00:00","value":38.38},{"at":"2026-09-21T00:45:00+00:00","value":39.82},{"at":"2026-09-21T01:00:00+00:00","value":40.85},{"at":"2026-09-21T01:15:00+00:00","value":41.02},{"at":"2026-09-21T01:30:00+00:00","value":39.9},{"at":"2026-09-21T01:45:00+00:00","value":37.99},{"at":"2026-09-21T02:00:00+00:00","value":37.53},{"at":"2026-09-21T02:15:00+00:00","value":39.24},{"at":"2026-09-21T02:30:00+00:00","value":43.76},{"at":"2026-09-21T02:45:00+00:00","value":47.2},{"at":"2026-09-21T03:00:00+00:00","value":43.27},{"at":"2026-09-21T03:15:00+00:00","value":54.93},{"at":"2026-09-21T03:30:00+00:00","value":60.38},{"at":"2026-09-21T03:45:00+00:00","value":76.69},{"at":"2026-09-21T04:00:00+00:00","value":91.43},{"at":"2026-09-21T04:15:00+00:00","value":124.61},{"at":"2026-09-21T04:30:00+00:00","value":130.5},{"at":"2026-09-21T04:45:00+00:00","value":148.88},{"at":"2026-09-21T05:00:00+00:00","value":160.88},{"at":"2026-09-21T05:15:00+00:00","value":187.01},{"at":"2026-09-21T05:30:00+00:00","value":194.48},{"at":"2026-09-21T05:45:00+00:00","value":170.08},{"at":"2026-09-21T06:00:00+00:00","value":257.09},{"at":"2026-09-21T06:15:00+00:00","value":195.49},{"at":"2026-09-21T06:30:00+00:00","value":154.11},{"at":"2026-09-21T06:45:00+00:00","value":108.01},{"at":"2026-09-21T07:00:00+00:00","value":121.74},{"at":"2026-09-21T07:15:00+00:00","value":103.29},{"at":"2026-09-21T07:30:00+00:00","value":63.51},{"at":"2026-09-21T07:45:00+00:00","value":43.74},{"at":"2026-09-21T08:00:00+00:00","value":62.15},{"at":"2026-09-21T08:15:00+00:00","value":33.39},{"at":"2026-09-21T08:30:00+00:00","value":28.43},{"at":"2026-09-21T08:45:00+00:00","value":11.39},{"at":"2026-09-21T09:00:00+00:00","value":19.82},{"at":"2026-09-21T09:15:00+00:00","value":13.13},{"at":"2026-09-21T09:30:00+00:00","value":2.66},{"at":"2026-09-21T09:45:00+00:00","value":0.03},{"at":"2026-09-21T10:00:00+00:00","value":0.76},{"at":"2026-09-21T10:15:00+00:00","value":0.01},{"at":"2026-09-21T10:30:00+00:00","value":0.02},{"at":"2026-09-21T10:45:00+00:00","value":0.01},{"at":"2026-09-21T11:00:00+00:00","value":0.0},{"at":"2026-09-21T11:15:00+00:00","value":0.0},{"at":"2026-09-21T11:30:00+00:00","value":0.0},{"at":"2026-09-21T11:45:00+00:00","value":0.0},{"at":"2026-09-21T12:00:00+00:00","value":0.0},{"at":"2026-09-21T12:15:00+00:00","value":0.0},{"at":"2026-09-21T12:30:00+00:00","value":0.01},{"at":"2026-09-21T12:45:00+00:00","value":0.03},{"at":"2026-09-21T13:00:00+00:00","value":0.0},{"at":"2026-09-21T13:15:00+00:00","value":0.03},{"at":"2026-09-21T13:30:00+00:00","value":0.1},{"at":"2026-09-21T13:45:00+00:00","value":5.47},{"at":"2026-09-21T14:00:00+00:00","value":0.08},{"at":"2026-09-21T14:15:00+00:00","value":20.95},{"at":"2026-09-21T14:30:00+00:00","value":33.95},{"at":"2026-09-21T14:45:00+00:00","value":59.32},{"at":"2026-09-21T15:00:00+00:00","value":22.71},{"at":"2026-09-21T15:15:00+00:00","value":67.08},{"at":"2026-09-21T15:30:00+00:00","value":135.63},{"at":"2026-09-21T15:45:00+00:00","value":203.34},{"at":"2026-09-21T16:00:00+00:00","value":166.62},{"at":"2026-09-21T16:15:00+00:00","value":198.79},{"at":"2026-09-21T16:30:00+00:00","value":222.59},{"at":"2026-09-21T16:45:00+00:00","value":261.72},{"at":"2026-09-21T17:00:00+00:00","value":220.8},{"at":"2026-09-21T17:15:00+00:00","value":223.97},{"at":"2026-09-21T17:30:00+00:00","value":251.23},{"at":"2026-09-21T17:45:00+00:00","value":275.9},{"at":"2026-09-21T18:00:00+00:00","value":251.3},{"at":"2026-09-21T18:15:00+00:00","value":250.28},{"at":"2026-09-21T18:30:00+00:00","value":243.48},{"at":"2026-09-21T18:45:00+00:00","value":219.04},{"at":"2026-09-21T19:00:00+00:00","value":232.28},{"at":"2026-09-21T19:15:00+00:00","value":218.15},{"at":"2026-09-21T19:30:00+00:00","value":213.93},{"at":"2026-09-21T19:45:00+00:00","value":206.68},{"at":"2026-09-21T20:00:00+00:00","value":216.0},{"at":"2026-09-21T20:15:00+00:00","value":204.58},{"at":"2026-09-21T20:30:00+00:00","value":206.08},{"at":"2026-09-21T20:45:00+00:00","value":196.23},{"at":"2026-09-21T21:00:00+00:00","value":197.98},{"at":"2026-09-21T21:15:00+00:00","value":184.14},{"at":"2026-09-21T21:30:00+00:00","value":186.58},{"at":"2026-09-21T21:45:00+00:00","value":172.11},{"at":"2026-09-21T22:00:00+00:00","value":189.97},{"at":"2026-09-21T22:15:00+00:00","value":183.05},{"at":"2026-09-21T22:30:00+00:00","value":176.66},{"at":"2026-09-21T22:45:00+00:00","value":175.81},{"at":"2026-09-21T23:00:00+00:00","value":177.29},{"at":"2026-09-21T23:15:00+00:00","value":174.96},{"at":"2026-09-21T23:30:00+00:00","value":176.55},{"at":"2026-09-21T23:45:00+00:00","value":175.61},{"at":"2026-09-22T00:00:00+00:00","value":175.89},{"at":"2026-09-22T00:15:00+00:00","value":174.39},{"at":"2026-09-22T00:30:00+00:00","value":172.41},{"at":"2026-09-22T00:45:00+00:00","value":171.52},{"at":"2026-09-22T01:00:00+00:00","value":173.57},{"at":"2026-09-22T01:15:00+00:00","value":170.91},{"at":"2026-09-22T01:30:00+00:00","value":170.42},{"at":"2026-09-22T01:45:00+00:00","value":171.42},{"at":"2026-09-22T02:00:00+00:00","value":172.65},{"at":"2026-09-22T02:15:00+00:00","value":172.33},{"at":"2026-09-22T02:30:00+00:00","value":174.19},{"at":"2026-09-22T02:45:00+00:00","value":180.34},{"at":"2026-09-22T03:00:00+00:00","value":167.7},{"at":"2026-09-22T03:15:00+00:00","value":180.53},{"at":"2026-09-22T03:30:00+00:00","value":193.44},{"at":"2026-09-22T03:45:00+00:00","value":224.33},{"at":"2026-09-22T04:00:00+00:00","value":198.34},{"at":"2026-09-22T04:15:00+00:00","value":225.83},{"at":"2026-09-22T04:30:00+00:00","value":253.32},{"at":"2026-09-22T04:45:00+00:00","value":277.03},{"at":"2026-09-22T05:00:00+00:00","value":289.86},{"at":"2026-09-22T05:15:00+00:00","value":302.05},{"at":"2026-09-22T05:30:00+00:00","value":293.4},{"at":"2026-09-22T05:45:00+00:00","value":276.47},{"at":"2026-09-22T06:00:00+00:00","value":282.29},{"at":"2026-09-22T06:15:00+00:00","value":268.06},{"at":"2026-09-22T06:30:00+00:00","value":240.76},{"at":"2026-09-22T06:45:00+00:00","value":204.98},{"at":"2026-09-22T07:00:00+00:00","value":247.86},{"at":"2026-09-22T07:15:00+00:00","value":217.86},{"at":"2026-09-22T07:30:00+00:00","value":191.48},{"at":"2026-09-22T07:45:00+00:00","value":166.18},{"at":"2026-09-22T08:00:00+00:00","value":186.02},{"at":"2026-09-22T08:15:00+00:00","value":173.99},{"at":"2026-09-22T08:30:00+00:00","value":167.25},{"at":"2026-09-22T08:45:00+00:00","value":161.83},{"at":"2026-09-22T09:00:00+00:00","value":162.63},{"at":"2026-09-22T09:15:00+00:00","value":151.03},{"at":"2026-09-22T09:30:00+00:00","value":144.7},{"at":"2026-09-22T09:45:00+00:00","value":135.85},{"at":"2026-09-22T10:00:00+00:00","value":128.76},{"at":"2026-09-22T10:15:00+00:00","value":130.54},{"at":"2026-09-22T10:30:00+00:00","value":125.51},{"at":"2026-09-22T10:45:00+00:00","value":118.22},{"at":"2026-09-22T11:00:00+00:00","value":119.31},{"at":"2026-09-22T11:15:00+00:00","value":117.72},{"at":"2026-09-22T11:30:00+00:00","value":114.92},{"at":"2026-09-22T11:45:00+00:00","value":112.14},{"at":"2026-09-22T12:00:00+00:00","value":115.15},{"at":"2026-09-22T12:15:00+00:00","value":119.39},{"at":"2026-09-22T12:30:00+00:00","value":119.08},{"at":"2026-09-22T12:45:00+00:00","value":122.93},{"at":"2026-09-22T13:00:00+00:00","value":124.89},{"at":"2026-09-22T13:15:00+00:00","value":130.22},{"at":"2026-09-22T13:30:00+00:00","value":139.62},{"at":"2026-09-22T13:45:00+00:00","value":151.71},{"at":"2026-09-22T14:00:00+00:00","value":147.3},{"at":"2026-09-22T14:15:00+00:00","value":161.28},{"at":"2026-09-22T14:30:00+00:00","value":185.78},{"at":"2026-09-22T14:45:00+00:00","value":213.13},{"at":"2026-09-22T15:00:00+00:00","value":164.68},{"at":"2026-09-22T15:15:00+00:00","value":211.86},{"at":"2026-09-22T15:30:00+00:00","value":241.96},{"at":"2026-09-22T15:45:00+00:00","value":289.06},{"at":"2026-09-22T16:00:00+00:00","value":253.0},{"at":"2026-09-22T16:15:00+00:00","value":317.94},{"at":"2026-09-22T16:30:00+00:00","value":417.93},{"at":"2026-09-22T16:45:00+00:00","value":510.34},{"at":"2026-09-22T17:00:00+00:00","value":564.09},{"at":"2026-09-22T17:15:00+00:00","value":647.5},{"at":"2026-09-22T17:30:00+00:00","value":640.67},{"at":"2026-09-22T17:45:00+00:00","value":533.26},{"at":"2026-09-22T18:00:00+00:00","value":543.39},{"at":"2026-09-22T18:15:00+00:00","value":442.38},{"at":"2026-09-22T18:30:00+00:00","value":389.22},{"at":"2026-09-22T18:45:00+00:00","value":357.66},{"at":"2026-09-22T19:00:00+00:00","value":315.72},{"at":"2026-09-22T19:15:00+00:00","value":292.8},{"at":"2026-09-22T19:30:00+00:00","value":291.88},{"at":"2026-09-22T19:45:00+00:00","value":256.14},{"at":"2026-09-22T20:00:00+00:00","value":258.79},{"at":"2026-09-22T20:15:00+00:00","value":252.99},{"at":"2026-09-22T20:30:00+00:00","value":249.35},{"at":"2026-09-22T20:45:00+00:00","value":225.58},{"at":"2026-09-22T21:00:00+00:00","value":226.09},{"at":"2026-09-22T21:15:00+00:00","value":214.54},{"at":"2026-09-22T21:30:00+00:00","value":210.21},{"at":"2026-09-22T21:45:00+00:00","value":201.18},{"at":"2026-09-22T22:00:00+00:00","value":194.51},{"at":"2026-09-22T22:15:00+00:00","value":188.57},{"at":"2026-09-22T22:30:00+00:00","value":190.3},{"at":"2026-09-22T22:45:00+00:00","value":182.46},{"at":"2026-09-22T23:00:00+00:00","value":181.76},{"at":"2026-09-22T23:15:00+00:00","value":174.93},{"at":"2026-09-22T23:30:00+00:00","value":173.68},{"at":"2026-09-22T23:45:00+00:00","value":179.0},{"at":"2026-09-23T00:00:00+00:00","value":174.52},{"at":"2026-09-23T00:15:00+00:00","value":171.11},{"at":"2026-09-23T00:30:00+00:00","value":177.24},{"at":"2026-09-23T00:45:00+00:00","value":183.06},{"at":"2026-09-23T01:00:00+00:00","value":176.72},{"at":"2026-09-23T01:15:00+00:00","value":178.53},{"at":"2026-09-23T01:30:00+00:00","value":178.72},{"at":"2026-09-23T01:45:00+00:00","value":173.43},{"at":"2026-09-23T02:00:00+00:00","value":173.39},{"at":"2026-09-23T02:15:00+00:00","value":178.13},{"at":"2026-09-23T02:30:00+00:00","value":178.35},{"at":"2026-09-23T02:45:00+00:00","value":173.94},{"at":"2026-09-23T03:00:00+00:00","value":171.61},{"at":"2026-09-23T03:15:00+00:00","value":188.0},{"at":"2026-09-23T03:30:00+00:00","value":202.0},{"at":"2026-09-23T03:45:00+00:00","value":232.86},{"at":"2026-09-23T04:00:00+00:00","value":236.07},{"at":"2026-09-23T04:15:00+00:00","value":260.63},{"at":"2026-09-23T04:30:00+00:00","value":355.5},{"at":"2026-09-23T04:45:00+00:00","value":347.79},{"at":"2026-09-23T05:00:00+00:00","value":370.63},{"at":"2026-09-23T05:15:00+00:00","value":385.35},{"at":"2026-09-23T05:30:00+00:00","value":348.25},{"at":"2026-09-23T05:45:00+00:00","value":280.09},{"at":"2026-09-23T06:00:00+00:00","value":274.32},{"at":"2026-09-23T06:15:00+00:00","value":240.5},{"at":"2026-09-23T06:30:00+00:00","value":224.31},{"at":"2026-09-23T06:45:00+00:00","value":189.12},{"at":"2026-09-23T07:00:00+00:00","value":217.94},{"at":"2026-09-23T07:15:00+00:00","value":193.88},{"at":"2026-09-23T07:30:00+00:00","value":170.82},{"at":"2026-09-23T07:45:00+00:00","value":146.46},{"at":"2026-09-23T08:00:00+00:00","value":166.24},{"at":"2026-09-23T08:15:00+00:00","value":148.1},{"at":"2026-09-23T08:30:00+00:00","value":134.95},{"at":"2026-09-23T08:45:00+00:00","value":116.12},{"at":"2026-09-23T09:00:00+00:00","value":119.82},{"at":"2026-09-23T09:15:00+00:00","value":107.13},{"at":"2026-09-23T09:30:00+00:00","value":86.82},{"at":"2026-09-23T09:45:00+00:00","value":75.87},{"at":"2026-09-23T10:00:00+00:00","value":85.87},{"at":"2026-09-23T10:15:00+00:00","value":73.37},{"at":"2026-09-23T10:30:00+00:00","value":69.72},{"at":"2026-09-23T10:45:00+00:00","value":63.26},{"at":"2026-09-23T11:00:00+00:00","value":64.74},{"at":"2026-09-23T11:15:00+00:00","value":60.02},{"at":"2026-09-23T11:30:00+00:00","value":55.07},{"at":"2026-09-23T11:45:00+00:00","value":49.47},{"at":"2026-09-23T12:00:00+00:00","value":41.99},{"at":"2026-09-23T12:15:00+00:00","value":64.85},{"at":"2026-09-23T12:30:00+00:00","value":85.33},{"at":"2026-09-23T12:45:00+00:00","value":108.18},{"at":"2026-09-23T13:00:00+00:00","value":72.09},{"at":"2026-09-23T13:15:00+00:00","value":101.31},{"at":"2026-09-23T13:30:00+00:00","value":126.3},{"at":"2026-09-23T13:45:00+00:00","value":141.93},{"at":"2026-09-23T14:00:00+00:00","value":124.17},{"at":"2026-09-23T14:15:00+00:00","value":148.07},{"at":"2026-09-23T14:30:00+00:00","value":165.54},{"at":"2026-09-23T14:45:00+00:00","value":189.45},{"at":"2026-09-23T15:00:00+00:00","value":158.94},{"at":"2026-09-23T15:15:00+00:00","value":186.1},{"at":"2026-09-23T15:30:00+00:00","value":211.46},{"at":"2026-09-23T15:45:00+00:00","value":239.54},{"at":"2026-09-23T16:00:00+00:00","value":206.0},{"at":"2026-09-23T16:15:00+00:00","value":225.83},{"at":"2026-09-23T16:30:00+00:00","value":267.94},{"at":"2026-09-23T16:45:00+00:00","value":275.11},{"at":"2026-09-23T17:00:00+00:00","value":271.83},{"at":"2026-09-23T17:15:00+00:00","value":257.33},{"at":"2026-09-23T17:30:00+00:00","value":272.89},{"at":"2026-09-23T17:45:00+00:00","value":284.31},{"at":"2026-09-23T18:00:00+00:00","value":262.21},{"at":"2026-09-23T18:15:00+00:00","value":249.7},{"at":"2026-09-23T18:30:00+00:00","value":223.83},{"at":"2026-09-23T18:45:00+00:00","value":210.76},{"at":"2026-09-23T19:00:00+00:00","value":213.26},{"at":"2026-09-23T19:15:00+00:00","value":205.96},{"at":"2026-09-23T19:30:00+00:00","value":190.73},{"at":"2026-09-23T19:45:00+00:00","value":170.84},{"at":"2026-09-23T20:00:00+00:00","value":182.87},{"at":"2026-09-23T20:15:00+00:00","value":170.36},{"at":"2026-09-23T20:30:00+00:00","value":165.74},{"at":"2026-09-23T20:45:00+00:00","value":161.5},{"at":"2026-09-23T21:00:00+00:00","value":166.95},{"at":"2026-09-23T21:15:00+00:00","value":154.16},{"at":"2026-09-23T21:30:00+00:00","value":150.68},{"at":"2026-09-23T21:45:00+00:00","value":144.2},{"at":"2026-09-23T22:00:00+00:00","value":124.78},{"at":"2026-09-23T22:15:00+00:00","value":136.68},{"at":"2026-09-23T22:30:00+00:00","value":130.6},{"at":"2026-09-23T22:45:00+00:00","value":129.4},{"at":"2026-09-23T23:00:00+00:00","value":121.01},{"at":"2026-09-23T23:15:00+00:00","value":118.29},{"at":"2026-09-23T23:30:00+00:00","value":119.7},{"at":"2026-09-23T23:45:00+00:00","value":116.49},{"at":"2026-09-24T00:00:00+00:00","value":117.38},{"at":"2026-09-24T00:15:00+00:00","value":114.96},{"at":"2026-09-24T00:30:00+00:00","value":114.36},{"at":"2026-09-24T00:45:00+00:00","value":111.35},{"at":"2026-09-24T01:00:00+00:00","value":109.27},{"at":"2026-09-24T01:15:00+00:00","value":107.97},{"at":"2026-09-24T01:30:00+00:00","value":106.5},{"at":"2026-09-24T01:45:00+00:00","value":104.39},{"at":"2026-09-24T02:00:00+00:00","value":106.36},{"at":"2026-09-24T02:15:00+00:00","value":106.43},{"at":"2026-09-24T02:30:00+00:00","value":105.65},{"at":"2026-09-24T02:45:00+00:00","value":110.85},{"at":"2026-09-24T03:00:00+00:00","value":118.13},{"at":"2026-09-24T03:15:00+00:00","value":118.67},{"at":"2026-09-24T03:30:00+00:00","value":121.55},{"at":"2026-09-24T03:45:00+00:00","value":128.45},{"at":"2026-09-24T04:00:00+00:00","value":123.98},{"at":"2026-09-24T04:15:00+00:00","value":142.78},{"at":"2026-09-24T04:30:00+00:00","value":156.71},{"at":"2026-09-24T04:45:00+00:00","value":167.77},{"at":"2026-09-24T05:00:00+00:00","value":161.37},{"at":"2026-09-24T05:15:00+00:00","value":167.17},{"at":"2026-09-24T05:30:00+00:00","value":172.69},{"at":"2026-09-24T05:45:00+00:00","value":170.83},{"at":"2026-09-24T06:00:00+00:00","value":185.99},{"at":"2026-09-24T06:15:00+00:00","value":175.9},{"at":"2026-09-24T06:30:00+00:00","value":172.6},{"at":"2026-09-24T06:45:00+00:00","value":160.57},{"at":"2026-09-24T07:00:00+00:00","value":172.79},{"at":"2026-09-24T07:15:00+00:00","value":162.39},{"at":"2026-09-24T07:30:00+00:00","value":144.42},{"at":"2026-09-24T07:45:00+00:00","value":130.04},{"at":"2026-09-24T08:00:00+00:00","value":136.4},{"at":"2026-09-24T08:15:00+00:00","value":122.77},{"at":"2026-09-24T08:30:00+00:00","value":106.24},{"at":"2026-09-24T08:45:00+00:00","value":81.51},{"at":"2026-09-24T09:00:00+00:00","value":98.66},{"at":"2026-09-24T09:15:00+00:00","value":78.86},{"at":"2026-09-24T09:30:00+00:00","value":60.02},{"at":"2026-09-24T09:45:00+00:00","value":36.1},{"at":"2026-09-24T10:00:00+00:00","value":25.01},{"at":"2026-09-24T10:15:00+00:00","value":15.11},{"at":"2026-09-24T10:30:00+00:00","value":13.88},{"at":"2026-09-24T10:45:00+00:00","value":10.0},{"at":"2026-09-24T11:00:00+00:00","value":14.0},{"at":"2026-09-24T11:15:00+00:00","value":10.03},{"at":"2026-09-24T11:30:00+00:00","value":12.32},{"at":"2026-09-24T11:45:00+00:00","value":10.05},{"at":"2026-09-24T12:00:00+00:00","value":8.86},{"at":"2026-09-24T12:15:00+00:00","value":10.9},{"at":"2026-09-24T12:30:00+00:00","value":24.0},{"at":"2026-09-24T12:45:00+00:00","value":34.99},{"at":"2026-09-24T13:00:00+00:00","value":38.66},{"at":"2026-09-24T13:15:00+00:00","value":61.86},{"at":"2026-09-24T13:30:00+00:00","value":95.0},{"at":"2026-09-24T13:45:00+00:00","value":108.0},{"at":"2026-09-24T14:00:00+00:00","value":76.9},{"at":"2026-09-24T14:15:00+00:00","value":108.86},{"at":"2026-09-24T14:30:00+00:00","value":132.15},{"at":"2026-09-24T14:45:00+00:00","value":152.8},{"at":"2026-09-24T15:00:00+00:00","value":141.6},{"at":"2026-09-24T15:15:00+00:00","value":170.89},{"at":"2026-09-24T15:30:00+00:00","value":193.19},{"at":"2026-09-24T15:45:00+00:00","value":214.43},{"at":"2026-09-24T16:00:00+00:00","value":186.47},{"at":"2026-09-24T16:15:00+00:00","value":218.93},{"at":"2026-09-24T16:30:00+00:00","value":236.02},{"at":"2026-09-24T16:45:00+00:00","value":262.74},{"at":"2026-09-24T17:00:00+00:00","value":249.33},{"at":"2026-09-24T17:15:00+00:00","value":263.79},{"at":"2026-09-24T17:30:00+00:00","value":267.94},{"at":"2026-09-24T17:45:00+00:00","value":288.23},{"at":"2026-09-24T18:00:00+00:00","value":272.65},{"at":"2026-09-24T18:15:00+00:00","value":265.8},{"at":"2026-09-24T18:30:00+00:00","value":253.5},{"at":"2026-09-24T18:45:00+00:00","value":248.05},{"at":"2026-09-24T19:00:00+00:00","value":240.29},{"at":"2026-09-24T19:15:00+00:00","value":230.0},{"at":"2026-09-24T19:30:00+00:00","value":223.38},{"at":"2026-09-24T19:45:00+00:00","value":209.62},{"at":"2026-09-24T20:00:00+00:00","value":220.96},{"at":"2026-09-24T20:15:00+00:00","value":204.52},{"at":"2026-09-24T20:30:00+00:00","value":201.0},{"at":"2026-09-24T20:45:00+00:00","value":192.99},{"at":"2026-09-24T21:00:00+00:00","value":196.93},{"at":"2026-09-24T21:15:00+00:00","value":188.32},{"at":"2026-09-24T21:30:00+00:00","value":185.64},{"at":"2026-09-24T21:45:00+00:00","value":181.14},{"at":"2026-09-24T22:00:00+00:00","value":196.99},{"at":"2026-09-24T22:15:00+00:00","value":184.4},{"at":"2026-09-24T22:30:00+00:00","value":175.79},{"at":"2026-09-24T22:45:00+00:00","value":170.59},{"at":"2026-09-24T23:00:00+00:00","value":175.13},{"at":"2026-09-24T23:15:00+00:00","value":171.84},{"at":"2026-09-24T23:30:00+00:00","value":171.43},{"at":"2026-09-24T23:45:00+00:00","value":170.27},{"at":"2026-09-25T00:00:00+00:00","value":167.76},{"at":"2026-09-25T00:15:00+00:00","value":166.49},{"at":"2026-09-25T00:30:00+00:00","value":165.93},{"at":"2026-09-25T00:45:00+00:00","value":162.38},{"at":"2026-09-25T01:00:00+00:00","value":164.46},{"at":"2026-09-25T01:15:00+00:00","value":165.55},{"at":"2026-09-25T01:30:00+00:00","value":169.18},{"at":"2026-09-25T01:45:00+00:00","value":169.27},{"at":"2026-09-25T02:00:00+00:00","value":172.29},{"at":"2026-09-25T02:15:00+00:00","value":170.87},{"at":"2026-09-25T02:30:00+00:00","value":169.82},{"at":"2026-09-25T02:45:00+00:00","value":165.87},{"at":"2026-09-25T03:00:00+00:00","value":168.41},{"at":"2026-09-25T03:15:00+00:00","value":169.79},{"at":"2026-09-25T03:30:00+00:00","value":192.29},{"at":"2026-09-25T03:45:00+00:00","value":221.15},{"at":"2026-09-25T04:00:00+00:00","value":204.38},{"at":"2026-09-25T04:15:00+00:00","value":236.08},{"at":"2026-09-25T04:30:00+00:00","value":236.44},{"at":"2026-09-25T04:45:00+00:00","value":264.16},{"at":"2026-09-25T05:00:00+00:00","value":252.93},{"at":"2026-09-25T05:15:00+00:00","value":266.66},{"at":"2026-09-25T05:30:00+00:00","value":273.61},{"at":"2026-09-25T05:45:00+00:00","value":252.41},{"at":"2026-09-25T06:00:00+00:00","value":290.87},{"at":"2026-09-25T06:15:00+00:00","value":260.69},{"at":"2026-09-25T06:30:00+00:00","value":243.4},{"at":"2026-09-25T06:45:00+00:00","value":203.99},{"at":"2026-09-25T07:00:00+00:00","value":235.46},{"at":"2026-09-25T07:15:00+00:00","value":202.74},{"at":"2026-09-25T07:30:00+00:00","value":189.27},{"at":"2026-09-25T07:45:00+00:00","value":157.5},{"at":"2026-09-25T08:00:00+00:00","value":182.5},{"at":"2026-09-25T08:15:00+00:00","value":165.0},{"at":"2026-09-25T08:30:00+00:00","value":148.66},{"at":"2026-09-25T08:45:00+00:00","value":137.99},{"at":"2026-09-25T09:00:00+00:00","value":137.82},{"at":"2026-09-25T09:15:00+00:00","value":123.02},{"at":"2026-09-25T09:30:00+00:00","value":100.36},{"at":"2026-09-25T09:45:00+00:00","value":72.42},{"at":"2026-09-25T10:00:00+00:00","value":85.78},{"at":"2026-09-25T10:15:00+00:00","value":62.83},{"at":"2026-09-25T10:30:00+00:00","value":49.38},{"at":"2026-09-25T10:45:00+00:00","value":42.75},{"at":"2026-09-25T11:00:00+00:00","value":39.01},{"at":"2026-09-25T11:15:00+00:00","value":36.12},{"at":"2026-09-25T11:30:00+00:00","value":26.14},{"at":"2026-09-25T11:45:00+00:00","value":19.17},{"at":"2026-09-25T12:00:00+00:00","value":23.12},{"at":"2026-09-25T12:15:00+00:00","value":35.0},{"at":"2026-09-25T12:30:00+00:00","value":39.94},{"at":"2026-09-25T12:45:00+00:00","value":61.49},{"at":"2026-09-25T13:00:00+00:00","value":40.0},{"at":"2026-09-25T13:15:00+00:00","value":73.58},{"at":"2026-09-25T13:30:00+00:00","value":107.83},{"at":"2026-09-25T13:45:00+00:00","value":126.76},{"at":"2026-09-25T14:00:00+00:00","value":119.91},{"at":"2026-09-25T14:15:00+00:00","value":142.44},{"at":"2026-09-25T14:30:00+00:00","value":165.0},{"at":"2026-09-25T14:45:00+00:00","value":190.71},{"at":"2026-09-25T15:00:00+00:00","value":157.71},{"at":"2026-09-25T15:15:00+00:00","value":192.8},{"at":"2026-09-25T15:30:00+00:00","value":206.21},{"at":"2026-09-25T15:45:00+00:00","value":239.26},{"at":"2026-09-25T16:00:00+00:00","value":202.24},{"at":"2026-09-25T16:15:00+00:00","value":230.0},{"at":"2026-09-25T16:30:00+00:00","value":248.72},{"at":"2026-09-25T16:45:00+00:00","value":284.74},{"at":"2026-09-25T17:00:00+00:00","value":291.76},{"at":"2026-09-25T17:15:00+00:00","value":305.47},{"at":"2026-09-25T17:30:00+00:00","value":315.78},{"at":"2026-09-25T17:45:00+00:00","value":300.7},{"at":"2026-09-25T18:00:00+00:00","value":270.0},{"at":"2026-09-25T18:15:00+00:00","value":255.0},{"at":"2026-09-25T18:30:00+00:00","value":246.96},{"at":"2026-09-25T18:45:00+00:00","value":236.7},{"at":"2026-09-25T19:00:00+00:00","value":244.18},{"at":"2026-09-25T19:15:00+00:00","value":231.25},{"at":"2026-09-25T19:30:00+00:00","value":218.38},{"at":"2026-09-25T19:45:00+00:00","value":202.89},{"at":"2026-09-25T20:00:00+00:00","value":219.99},{"at":"2026-09-25T20:15:00+00:00","value":208.59},{"at":"2026-09-25T20:30:00+00:00","value":202.11},{"at":"2026-09-25T20:45:00+00:00","value":194.72},{"at":"2026-09-25T21:00:00+00:00","value":199.81},{"at":"2026-09-25T21:15:00+00:00","value":193.53},{"at":"2026-09-25T21:30:00+00:00","value":182.41},{"at":"2026-09-25T21:45:00+00:00","value":171.29},{"at":"2026-09-25T22:00:00+00:00","value":205.94},{"at":"2026-09-25T22:15:00+00:00","value":199.14},{"at":"2026-09-25T22:30:00+00:00","value":194.54},{"at":"2026-09-25T22:45:00+00:00","value":185.56},{"at":"2026-09-25T23:00:00+00:00","value":187.85},{"at":"2026-09-25T23:15:00+00:00","value":184.4},{"at":"2026-09-25T23:30:00+00:00","value":182.86},{"at":"2026-09-25T23:45:00+00:00","value":181.02},{"at":"2026-09-26T00:00:00+00:00","value":181.33},{"at":"2026-09-26T00:15:00+00:00","value":179.17},{"at":"2026-09-26T00:30:00+00:00","value":173.17},{"at":"2026-09-26T00:45:00+00:00","value":166.7},{"at":"2026-09-26T01:00:00+00:00","value":165.93},{"at":"2026-09-26T01:15:00+00:00","value":163.25},{"at":"2026-09-26T01:30:00+00:00","value":162.56},{"at":"2026-09-26T01:45:00+00:00","value":162.47},{"at":"2026-09-26T02:00:00+00:00","value":159.61},{"at":"2026-09-26T02:15:00+00:00","value":160.35},{"at":"2026-09-26T02:30:00+00:00","value":161.3},{"at":"2026-09-26T02:45:00+00:00","value":161.76},{"at":"2026-09-26T03:00:00+00:00","value":159.09},{"at":"2026-09-26T03:15:00+00:00","value":158.03},{"at":"2026-09-26T03:30:00+00:00","value":160.44},{"at":"2026-09-26T03:45:00+00:00","value":164.62},{"at":"2026-09-26T04:00:00+00:00","value":167.7},{"at":"2026-09-26T04:15:00+00:00","value":176.77},{"at":"2026-09-26T04:30:00+00:00","value":181.6},{"at":"2026-09-26T04:45:00+00:00","value":188.88},{"at":"2026-09-26T05:00:00+00:00","value":192.05},{"at":"2026-09-26T05:15:00+00:00","value":194.29},{"at":"2026-09-26T05:30:00+00:00","value":194.14},{"at":"2026-09-26T05:45:00+00:00","value":196.76},{"at":"2026-09-26T06:00:00+00:00","value":210.93},{"at":"2026-09-26T06:15:00+00:00","value":203.0},{"at":"2026-09-26T06:30:00+00:00","value":187.34},{"at":"2026-09-26T06:45:00+00:00","value":166.4},{"at":"2026-09-26T07:00:00+00:00","value":193.17},{"at":"2026-09-26T07:15:00+00:00","value":165.98},{"at":"2026-09-26T07:30:00+00:00","value":139.03},{"at":"2026-09-26T07:45:00+00:00","value":127.59},{"at":"2026-09-26T08:00:00+00:00","value":132.41},{"at":"2026-09-26T08:15:00+00:00","value":120.56},{"at":"2026-09-26T08:30:00+00:00","value":104.99},{"at":"2026-09-26T08:45:00+00:00","value":90.0},{"at":"2026-09-26T09:00:00+00:00","value":78.49},{"at":"2026-09-26T09:15:00+00:00","value":59.07},{"at":"2026-09-26T09:30:00+00:00","value":46.32},{"at":"2026-09-26T09:45:00+00:00","value":28.53},{"at":"2026-09-26T10:00:00+00:00","value":17.33},{"at":"2026-09-26T10:15:00+00:00","value":12.51},{"at":"2026-09-26T10:30:00+00:00","value":9.47},{"at":"2026-09-26T10:45:00+00:00","value":4.71},{"at":"2026-09-26T11:00:00+00:00","value":4.64},{"at":"2026-09-26T11:15:00+00:00","value":3.73},{"at":"2026-09-26T11:30:00+00:00","value":2.43},{"at":"2026-09-26T11:45:00+00:00","value":2.42},{"at":"2026-09-26T12:00:00+00:00","value":9.02},{"at":"2026-09-26T12:15:00+00:00","value":12.51},{"at":"2026-09-26T12:30:00+00:00","value":23.3},{"at":"2026-09-26T12:45:00+00:00","value":28.97},{"at":"2026-09-26T13:00:00+00:00","value":23.0},{"at":"2026-09-26T13:15:00+00:00","value":40.0},{"at":"2026-09-26T13:30:00+00:00","value":59.82},{"at":"2026-09-26T13:45:00+00:00","value":83.28},{"at":"2026-09-26T14:00:00+00:00","value":91.58},{"at":"2026-09-26T14:15:00+00:00","value":122.8},{"at":"2026-09-26T14:30:00+00:00","value":135.09},{"at":"2026-09-26T14:45:00+00:00","value":160.1},{"at":"2026-09-26T15:00:00+00:00","value":154.56},{"at":"2026-09-26T15:15:00+00:00","value":194.8},{"at":"2026-09-26T15:30:00+00:00","value":215.13},{"at":"2026-09-26T15:45:00+00:00","value":203.04},{"at":"2026-09-26T16:00:00+00:00","value":196.0},{"at":"2026-09-26T16:15:00+00:00","value":206.37},{"at":"2026-09-26T16:30:00+00:00","value":220.86},{"at":"2026-09-26T16:45:00+00:00","value":234.23},{"at":"2026-09-26T17:00:00+00:00","value":222.0},{"at":"2026-09-26T17:15:00+00:00","value":230.46},{"at":"2026-09-26T17:30:00+00:00","value":243.61},{"at":"2026-09-26T17:45:00+00:00","value":251.08},{"at":"2026-09-26T18:00:00+00:00","value":238.97},{"at":"2026-09-26T18:15:00+00:00","value":232.0},{"at":"2026-09-26T18:30:00+00:00","value":222.48},{"at":"2026-09-26T18:45:00+00:00","value":211.99},{"at":"2026-09-26T19:00:00+00:00","value":218.18},{"at":"2026-09-26T19:15:00+00:00","value":210.24},{"at":"2026-09-26T19:30:00+00:00","value":205.53},{"at":"2026-09-26T19:45:00+00:00","value":200.0},{"at":"2026-09-26T20:00:00+00:00","value":207.0},{"at":"2026-09-26T20:15:00+00:00","value":200.62},{"at":"2026-09-26T20:30:00+00:00","value":197.73},{"at":"2026-09-26T20:45:00+00:00","value":191.89},{"at":"2026-09-26T21:00:00+00:00","value":195.2},{"at":"2026-09-26T21:15:00+00:00","value":188.45},{"at":"2026-09-26T21:30:00+00:00","value":182.55},{"at":"2026-09-26T21:45:00+00:00","value":177.8},{"at":"2026-09-26T22:00:00+00:00","value":192.07},{"at":"2026-09-26T22:15:00+00:00","value":185.95},{"at":"2026-09-26T22:30:00+00:00","value":182.68},{"at":"2026-09-26T22:45:00+00:00","value":172.18},{"at":"2026-09-26T23:00:00+00:00","value":180.47},{"at":"2026-09-26T23:15:00+00:00","value":178.0},{"at":"2026-09-26T23:30:00+00:00","value":176.62},{"at":"2026-09-26T23:45:00+00:00","value":178.0},{"at":"2026-09-27T00:00:00+00:00","value":176.0},{"at":"2026-09-27T00:15:00+00:00","value":171.31},{"at":"2026-09-27T00:30:00+00:00","value":169.97},{"at":"2026-09-27T00:45:00+00:00","value":168.08},{"at":"2026-09-27T01:00:00+00:00","value":168.16},{"at":"2026-09-27T01:15:00+00:00","value":166.78},{"at":"2026-09-27T01:30:00+00:00","value":165.4},{"at":"2026-09-27T01:45:00+00:00","value":165.39},{"at":"2026-09-27T02:00:00+00:00","value":165.0},{"at":"2026-09-27T02:15:00+00:00","value":160.83},{"at":"2026-09-27T02:30:00+00:00","value":160.44},{"at":"2026-09-27T02:45:00+00:00","value":160.0},{"at":"2026-09-27T03:00:00+00:00","value":160.44},{"at":"2026-09-27T03:15:00+00:00","value":158.08},{"at":"2026-09-27T03:30:00+00:00","value":159.4},{"at":"2026-09-27T03:45:00+00:00","value":156.76},{"at":"2026-09-27T04:00:00+00:00","value":156.03},{"at":"2026-09-27T04:15:00+00:00","value":156.05},{"at":"2026-09-27T04:30:00+00:00","value":162.42},{"at":"2026-09-27T04:45:00+00:00","value":162.85},{"at":"2026-09-27T05:00:00+00:00","value":165.56},{"at":"2026-09-27T05:15:00+00:00","value":157.95},{"at":"2026-09-27T05:30:00+00:00","value":146.68},{"at":"2026-09-27T05:45:00+00:00","value":134.63},{"at":"2026-09-27T06:00:00+00:00","value":160.43},{"at":"2026-09-27T06:15:00+00:00","value":143.86},{"at":"2026-09-27T06:30:00+00:00","value":119.48},{"at":"2026-09-27T06:45:00+00:00","value":87.03},{"at":"2026-09-27T07:00:00+00:00","value":101.36},{"at":"2026-09-27T07:15:00+00:00","value":76.32},{"at":"2026-09-27T07:30:00+00:00","value":30.96},{"at":"2026-09-27T07:45:00+00:00","value":18.32},{"at":"2026-09-27T08:00:00+00:00","value":5.51},{"at":"2026-09-27T08:15:00+00:00","value":0.06},{"at":"2026-09-27T08:30:00+00:00","value":0.0},{"at":"2026-09-27T08:45:00+00:00","value":0.0},{"at":"2026-09-27T09:00:00+00:00","value":0.0},{"at":"2026-09-27T09:15:00+00:00","value":-0.01},{"at":"2026-09-27T09:30:00+00:00","value":-0.09},{"at":"2026-09-27T09:45:00+00:00","value":-0.19},{"at":"2026-09-27T10:00:00+00:00","value":-1.01},{"at":"2026-09-27T10:15:00+00:00","value":-1.76},{"at":"2026-09-27T10:30:00+00:00","value":-2.02},{"at":"2026-09-27T10:45:00+00:00","value":-2.99},{"at":"2026-09-27T11:00:00+00:00","value":-2.21},{"at":"2026-09-27T11:15:00+00:00","value":-2.95},{"at":"2026-09-27T11:30:00+00:00","value":-2.76},{"at":"2026-09-27T11:45:00+00:00","value":-2.02},{"at":"2026-09-27T12:00:00+00:00","value":-2.0},{"at":"2026-09-27T12:15:00+00:00","value":-1.02},{"at":"2026-09-27T12:30:00+00:00","value":-0.21},{"at":"2026-09-27T12:45:00+00:00","value":-0.12},{"at":"2026-09-27T13:00:00+00:00","value":-0.01},{"at":"2026-09-27T13:15:00+00:00","value":-0.01},{"at":"2026-09-27T13:30:00+00:00","value":0.0},{"at":"2026-09-27T13:45:00+00:00","value":0.0},{"at":"2026-09-27T14:00:00+00:00","value":0.0},{"at":"2026-09-27T14:15:00+00:00","value":0.15},{"at":"2026-09-27T14:30:00+00:00","value":7.01},{"at":"2026-09-27T14:45:00+00:00","value":45.25},{"at":"2026-09-27T15:00:00+00:00","value":41.25},{"at":"2026-09-27T15:15:00+00:00","value":92.71},{"at":"2026-09-27T15:30:00+00:00","value":144.61},{"at":"2026-09-27T15:45:00+00:00","value":178.48},{"at":"2026-09-27T16:00:00+00:00","value":168.79},{"at":"2026-09-27T16:15:00+00:00","value":188.35},{"at":"2026-09-27T16:30:00+00:00","value":193.27},{"at":"2026-09-27T16:45:00+00:00","value":194.45},{"at":"2026-09-27T17:00:00+00:00","value":190.84},{"at":"2026-09-27T17:15:00+00:00","value":191.93},{"at":"2026-09-27T17:30:00+00:00","value":198.95},{"at":"2026-09-27T17:45:00+00:00","value":201.28},{"at":"2026-09-27T18:00:00+00:00","value":194.32},{"at":"2026-09-27T18:15:00+00:00","value":188.0},{"at":"2026-09-27T18:30:00+00:00","value":185.68},{"at":"2026-09-27T18:45:00+00:00","value":167.39},{"at":"2026-09-27T19:00:00+00:00","value":174.16},{"at":"2026-09-27T19:15:00+00:00","value":164.44},{"at":"2026-09-27T19:30:00+00:00","value":151.86},{"at":"2026-09-27T19:45:00+00:00","value":148.56},{"at":"2026-09-27T20:00:00+00:00","value":164.94},{"at":"2026-09-27T20:15:00+00:00","value":156.51},{"at":"2026-09-27T20:30:00+00:00","value":152.22},{"at":"2026-09-27T20:45:00+00:00","value":148.03},{"at":"2026-09-27T21:00:00+00:00","value":149.36},{"at":"2026-09-27T21:15:00+00:00","value":147.47},{"at":"2026-09-27T21:30:00+00:00","value":145.18},{"at":"2026-09-27T21:45:00+00:00","value":143.72},{"at":"2026-09-27T22:00:00+00:00","value":150.75},{"at":"2026-09-27T22:15:00+00:00","value":150.76},{"at":"2026-09-27T22:30:00+00:00","value":150.58},{"at":"2026-09-27T22:45:00+00:00","value":150.75},{"at":"2026-09-27T23:00:00+00:00","value":152.64},{"at":"2026-09-27T23:15:00+00:00","value":150.22},{"at":"2026-09-27T23:30:00+00:00","value":151.75},{"at":"2026-09-27T23:45:00+00:00","value":151.03},{"at":"2026-09-28T00:00:00+00:00","value":150.96},{"at":"2026-09-28T00:15:00+00:00","value":151.36},{"at":"2026-09-28T00:30:00+00:00","value":151.75},{"at":"2026-09-28T00:45:00+00:00","value":151.89},{"at":"2026-09-28T01:00:00+00:00","value":152.62},{"at":"2026-09-28T01:15:00+00:00","value":153.8},{"at":"2026-09-28T01:30:00+00:00","value":154.6},{"at":"2026-09-28T01:45:00+00:00","value":157.33},{"at":"2026-09-28T02:00:00+00:00","value":156.68},{"at":"2026-09-28T02:15:00+00:00","value":158.24},{"at":"2026-09-28T02:30:00+00:00","value":162.04},{"at":"2026-09-28T02:45:00+00:00","value":166.87},{"at":"2026-09-28T03:00:00+00:00","value":167.67},{"at":"2026-09-28T03:15:00+00:00","value":170.36},{"at":"2026-09-28T03:30:00+00:00","value":176.77},{"at":"2026-09-28T03:45:00+00:00","value":185.9},{"at":"2026-09-28T04:00:00+00:00","value":193.68},{"at":"2026-09-28T04:15:00+00:00","value":204.99},{"at":"2026-09-28T04:30:00+00:00","value":214.84},{"at":"2026-09-28T04:45:00+00:00","value":231.02},{"at":"2026-09-28T05:00:00+00:00","value":228.23},{"at":"2026-09-28T05:15:00+00:00","value":244.02},{"at":"2026-09-28T05:30:00+00:00","value":246.17},{"at":"2026-09-28T05:45:00+00:00","value":245.5},{"at":"2026-09-28T06:00:00+00:00","value":275.95},{"at":"2026-09-28T06:15:00+00:00","value":250.74},{"at":"2026-09-28T06:30:00+00:00","value":231.15},{"at":"2026-09-28T06:45:00+00:00","value":210.77},{"at":"2026-09-28T07:00:00+00:00","value":235.13},{"at":"2026-09-28T07:15:00+00:00","value":220.36},{"at":"2026-09-28T07:30:00+00:00","value":202.0},{"at":"2026-09-28T07:45:00+00:00","value":182.95},{"at":"2026-09-28T08:00:00+00:00","value":203.48},{"at":"2026-09-28T08:15:00+00:00","value":185.07},{"at":"2026-09-28T08:30:00+00:00","value":172.75},{"at":"2026-09-28T08:45:00+00:00","value":155.95},{"at":"2026-09-28T09:00:00+00:00","value":157.93},{"at":"2026-09-28T09:15:00+00:00","value":158.52},{"at":"2026-09-28T09:30:00+00:00","value":150.4},{"at":"2026-09-28T09:45:00+00:00","value":147.22},{"at":"2026-09-28T10:00:00+00:00","value":145.33},{"at":"2026-09-28T10:15:00+00:00","value":126.73},{"at":"2026-09-28T10:30:00+00:00","value":117.8},{"at":"2026-09-28T10:45:00+00:00","value":114.68},{"at":"2026-09-28T11:00:00+00:00","value":116.98},{"at":"2026-09-28T11:15:00+00:00","value":114.49},{"at":"2026-09-28T11:30:00+00:00","value":126.85},{"at":"2026-09-28T11:45:00+00:00","value":127.03},{"at":"2026-09-28T12:00:00+00:00","value":120.78},{"at":"2026-09-28T12:15:00+00:00","value":134.99},{"at":"2026-09-28T12:30:00+00:00","value":145.51},{"at":"2026-09-28T12:45:00+00:00","value":151.87},{"at":"2026-09-28T13:00:00+00:00","value":146.6},{"at":"2026-09-28T13:15:00+00:00","value":150.9},{"at":"2026-09-28T13:30:00+00:00","value":151.9},{"at":"2026-09-28T13:45:00+00:00","value":165.54},{"at":"2026-09-28T14:00:00+00:00","value":156.69},{"at":"2026-09-28T14:15:00+00:00","value":172.33},{"at":"2026-09-28T14:30:00+00:00","value":198.69},{"at":"2026-09-28T14:45:00+00:00","value":224.59},{"at":"2026-09-28T15:00:00+00:00","value":207.45},{"at":"2026-09-28T15:15:00+00:00","value":231.26},{"at":"2026-09-28T15:30:00+00:00","value":241.07},{"at":"2026-09-28T15:45:00+00:00","value":266.9},{"at":"2026-09-28T16:00:00+00:00","value":247.48},{"at":"2026-09-28T16:15:00+00:00","value":284.36},{"at":"2026-09-28T16:30:00+00:00","value":319.88},{"at":"2026-09-28T16:45:00+00:00","value":390.6},{"at":"2026-09-28T17:00:00+00:00","value":350.0},{"at":"2026-09-28T17:15:00+00:00","value":354.0},{"at":"2026-09-28T17:30:00+00:00","value":349.99},{"at":"2026-09-28T17:45:00+00:00","value":314.86},{"at":"2026-09-28T18:00:00+00:00","value":320.83},{"at":"2026-09-28T18:15:00+00:00","value":280.59},{"at":"2026-09-28T18:30:00+00:00","value":260.91},{"at":"2026-09-28T18:45:00+00:00","value":246.9},{"at":"2026-09-28T19:00:00+00:00","value":252.58},{"at":"2026-09-28T19:15:00+00:00","value":234.44},{"at":"2026-09-28T19:30:00+00:00","value":223.98},{"at":"2026-09-28T19:45:00+00:00","value":205.0},{"at":"2026-09-28T20:00:00+00:00","value":216.93},{"at":"2026-09-28T20:15:00+00:00","value":208.16},{"at":"2026-09-28T20:30:00+00:00","value":201.99},{"at":"2026-09-28T20:45:00+00:00","value":186.32},{"at":"2026-09-28T21:00:00+00:00","value":197.01},{"at":"2026-09-28T21:15:00+00:00","value":187.78},{"at":"2026-09-28T21:30:00+00:00","value":179.24},{"at":"2026-09-28T21:45:00+00:00","value":161.14},{"at":"2026-09-28T22:00:00+00:00","value":191.82},{"at":"2026-09-28T22:15:00+00:00","value":189.19},{"at":"2026-09-28T22:30:00+00:00","value":180.22},{"at":"2026-09-28T22:45:00+00:00","value":174.22},{"at":"2026-09-28T23:00:00+00:00","value":181.81},{"at":"2026-09-28T23:15:00+00:00","value":175.85},{"at":"2026-09-28T23:30:00+00:00","value":171.4},{"at":"2026-09-28T23:45:00+00:00","value":166.79},{"at":"2026-09-29T00:00:00+00:00","value":170.78},{"at":"2026-09-29T00:15:00+00:00","value":168.95},{"at":"2026-09-29T00:30:00+00:00","value":168.78},{"at":"2026-09-29T00:45:00+00:00","value":167.64},{"at":"2026-09-29T01:00:00+00:00","value":164.24},{"at":"2026-09-29T01:15:00+00:00","value":165.16},{"at":"2026-09-29T01:30:00+00:00","value":165.14},{"at":"2026-09-29T01:45:00+00:00","value":165.1},{"at":"2026-09-29T02:00:00+00:00","value":162.1},{"at":"2026-09-29T02:15:00+00:00","value":161.64},{"at":"2026-09-29T02:30:00+00:00","value":159.64},{"at":"2026-09-29T02:45:00+00:00","value":158.22},{"at":"2026-09-29T03:00:00+00:00","value":154.64},{"at":"2026-09-29T03:15:00+00:00","value":158.2},{"at":"2026-09-29T03:30:00+00:00","value":170.54},{"at":"2026-09-29T03:45:00+00:00","value":179.47},{"at":"2026-09-29T04:00:00+00:00","value":191.32},{"at":"2026-09-29T04:15:00+00:00","value":216.62},{"at":"2026-09-29T04:30:00+00:00","value":229.85},{"at":"2026-09-29T04:45:00+00:00","value":226.6},{"at":"2026-09-29T05:00:00+00:00","value":231.37},{"at":"2026-09-29T05:15:00+00:00","value":233.0},{"at":"2026-09-29T05:30:00+00:00","value":226.86},{"at":"2026-09-29T05:45:00+00:00","value":223.25},{"at":"2026-09-29T06:00:00+00:00","value":239.11},{"at":"2026-09-29T06:15:00+00:00","value":230.33},{"at":"2026-09-29T06:30:00+00:00","value":213.57},{"at":"2026-09-29T06:45:00+00:00","value":180.74},{"at":"2026-09-29T07:00:00+00:00","value":212.3},{"at":"2026-09-29T07:15:00+00:00","value":187.84},{"at":"2026-09-29T07:30:00+00:00","value":173.02},{"at":"2026-09-29T07:45:00+00:00","value":163.64},{"at":"2026-09-29T08:00:00+00:00","value":179.29},{"at":"2026-09-29T08:15:00+00:00","value":166.3},{"at":"2026-09-29T08:30:00+00:00","value":158.59},{"at":"2026-09-29T08:45:00+00:00","value":143.09},{"at":"2026-09-29T09:00:00+00:00","value":146.58},{"at":"2026-09-29T09:15:00+00:00","value":137.15},{"at":"2026-09-29T09:30:00+00:00","value":115.77},{"at":"2026-09-29T09:45:00+00:00","value":101.85},{"at":"2026-09-29T10:00:00+00:00","value":98.32},{"at":"2026-09-29T10:15:00+00:00","value":89.79},{"at":"2026-09-29T10:30:00+00:00","value":88.93},{"at":"2026-09-29T10:45:00+00:00","value":76.72},{"at":"2026-09-29T11:00:00+00:00","value":82.26},{"at":"2026-09-29T11:15:00+00:00","value":74.88},{"at":"2026-09-29T11:30:00+00:00","value":68.67},{"at":"2026-09-29T11:45:00+00:00","value":63.94},{"at":"2026-09-29T12:00:00+00:00","value":65.66},{"at":"2026-09-29T12:15:00+00:00","value":79.03},{"at":"2026-09-29T12:30:00+00:00","value":88.03},{"at":"2026-09-29T12:45:00+00:00","value":93.47},{"at":"2026-09-29T13:00:00+00:00","value":89.63},{"at":"2026-09-29T13:15:00+00:00","value":108.68},{"at":"2026-09-29T13:30:00+00:00","value":120.71},{"at":"2026-09-29T13:45:00+00:00","value":130.04},{"at":"2026-09-29T14:00:00+00:00","value":115.21},{"at":"2026-09-29T14:15:00+00:00","value":144.04},{"at":"2026-09-29T14:30:00+00:00","value":161.18},{"at":"2026-09-29T14:45:00+00:00","value":199.62},{"at":"2026-09-29T15:00:00+00:00","value":179.02},{"at":"2026-09-29T15:15:00+00:00","value":201.77},{"at":"2026-09-29T15:30:00+00:00","value":213.69},{"at":"2026-09-29T15:45:00+00:00","value":218.93},{"at":"2026-09-29T16:00:00+00:00","value":219.11},{"at":"2026-09-29T16:15:00+00:00","value":227.88},{"at":"2026-09-29T16:30:00+00:00","value":231.77},{"at":"2026-09-29T16:45:00+00:00","value":244.45},{"at":"2026-09-29T17:00:00+00:00","value":242.68},{"at":"2026-09-29T17:15:00+00:00","value":233.35},{"at":"2026-09-29T17:30:00+00:00","value":227.37},{"at":"2026-09-29T17:45:00+00:00","value":215.79},{"at":"2026-09-29T18:00:00+00:00","value":218.43},{"at":"2026-09-29T18:15:00+00:00","value":207.01},{"at":"2026-09-29T18:30:00+00:00","value":196.85},{"at":"2026-09-29T18:45:00+00:00","value":185.29},{"at":"2026-09-29T19:00:00+00:00","value":183.94},{"at":"2026-09-29T19:15:00+00:00","value":174.47},{"at":"2026-09-29T19:30:00+00:00","value":168.62},{"at":"2026-09-29T19:45:00+00:00","value":152.73},{"at":"2026-09-29T20:00:00+00:00","value":161.51},{"at":"2026-09-29T20:15:00+00:00","value":155.92},{"at":"2026-09-29T20:30:00+00:00","value":153.74},{"at":"2026-09-29T20:45:00+00:00","value":145.44},{"at":"2026-09-29T21:00:00+00:00","value":139.69},{"at":"2026-09-29T21:15:00+00:00","value":134.04},{"at":"2026-09-29T21:30:00+00:00","value":128.69},{"at":"2026-09-29T21:45:00+00:00","value":119.12},{"at":"2026-09-29T22:00:00+00:00","value":112.61},{"at":"2026-09-29T22:15:00+00:00","value":101.44},{"at":"2026-09-29T22:30:00+00:00","value":110.12},{"at":"2026-09-29T22:45:00+00:00","value":114.22},{"at":"2026-09-29T23:00:00+00:00","value":105.64},{"at":"2026-09-29T23:15:00+00:00","value":102.58},{"at":"2026-09-29T23:30:00+00:00","value":103.07},{"at":"2026-09-29T23:45:00+00:00","value":110.7},{"at":"2026-09-30T00:00:00+00:00","value":97.63},{"at":"2026-09-30T00:15:00+00:00","value":101.73},{"at":"2026-09-30T00:30:00+00:00","value":100.05},{"at":"2026-09-30T00:45:00+00:00","value":107.42},{"at":"2026-09-30T01:00:00+00:00","value":100.1},{"at":"2026-09-30T01:15:00+00:00","value":103.65},{"at":"2026-09-30T01:30:00+00:00","value":104.97},{"at":"2026-09-30T01:45:00+00:00","value":102.77},{"at":"2026-09-30T02:00:00+00:00","value":107.32},{"at":"2026-09-30T02:15:00+00:00","value":98.65},{"at":"2026-09-30T02:30:00+00:00","value":101.6},{"at":"2026-09-30T02:45:00+00:00","value":109.62},{"at":"2026-09-30T03:00:00+00:00","value":115.64},{"at":"2026-09-30T03:15:00+00:00","value":119.08},{"at":"2026-09-30T03:30:00+00:00","value":124.14},{"at":"2026-09-30T03:45:00+00:00","value":129.93},{"at":"2026-09-30T04:00:00+00:00","value":144.69},{"at":"2026-09-30T04:15:00+00:00","value":159.42},{"at":"2026-09-30T04:30:00+00:00","value":166.78},{"at":"2026-09-30T04:45:00+00:00","value":170.57},{"at":"2026-09-30T05:00:00+00:00","value":189.56},{"at":"2026-09-30T05:15:00+00:00","value":202.12},{"at":"2026-09-30T05:30:00+00:00","value":204.29},{"at":"2026-09-30T05:45:00+00:00","value":199.67},{"at":"2026-09-30T06:00:00+00:00","value":218.13},{"at":"2026-09-30T06:15:00+00:00","value":203.6},{"at":"2026-09-30T06:30:00+00:00","value":187.45},{"at":"2026-09-30T06:45:00+00:00","value":165.82},{"at":"2026-09-30T07:00:00+00:00","value":189.23},{"at":"2026-09-30T07:15:00+00:00","value":170.85},{"at":"2026-09-30T07:30:00+00:00","value":156.01},{"at":"2026-09-30T07:45:00+00:00","value":144.76},{"at":"2026-09-30T08:00:00+00:00","value":140.0},{"at":"2026-09-30T08:15:00+00:00","value":130.9},{"at":"2026-09-30T08:30:00+00:00","value":123.18},{"at":"2026-09-30T08:45:00+00:00","value":95.15},{"at":"2026-09-30T09:00:00+00:00","value":114.95},{"at":"2026-09-30T09:15:00+00:00","value":90.16},{"at":"2026-09-30T09:30:00+00:00","value":77.97},{"at":"2026-09-30T09:45:00+00:00","value":42.6},{"at":"2026-09-30T10:00:00+00:00","value":60.08},{"at":"2026-09-30T10:15:00+00:00","value":43.85},{"at":"2026-09-30T10:30:00+00:00","value":37.69},{"at":"2026-09-30T10:45:00+00:00","value":30.01},{"at":"2026-09-30T11:00:00+00:00","value":26.32},{"at":"2026-09-30T11:15:00+00:00","value":20.84},{"at":"2026-09-30T11:30:00+00:00","value":13.33},{"at":"2026-09-30T11:45:00+00:00","value":19.51},{"at":"2026-09-30T12:00:00+00:00","value":13.65},{"at":"2026-09-30T12:15:00+00:00","value":24.3},{"at":"2026-09-30T12:30:00+00:00","value":38.14},{"at":"2026-09-30T12:45:00+00:00","value":73.93},{"at":"2026-09-30T13:00:00+00:00","value":43.7},{"at":"2026-09-30T13:15:00+00:00","value":78.46},{"at":"2026-09-30T13:30:00+00:00","value":106.55},{"at":"2026-09-30T13:45:00+00:00","value":111.0},{"at":"2026-09-30T14:00:00+00:00","value":104.98},{"at":"2026-09-30T14:15:00+00:00","value":132.62},{"at":"2026-09-30T14:30:00+00:00","value":169.76},{"at":"2026-09-30T14:45:00+00:00","value":186.5},{"at":"2026-09-30T15:00:00+00:00","value":173.04},{"at":"2026-09-30T15:15:00+00:00","value":194.45},{"at":"2026-09-30T15:30:00+00:00","value":211.78},{"at":"2026-09-30T15:45:00+00:00","value":229.4},{"at":"2026-09-30T16:00:00+00:00","value":213.68},{"at":"2026-09-30T16:15:00+00:00","value":226.5},{"at":"2026-09-30T16:30:00+00:00","value":232.95},{"at":"2026-09-30T16:45:00+00:00","value":248.18},{"at":"2026-09-30T17:00:00+00:00","value":241.78},{"at":"2026-09-30T17:15:00+00:00","value":246.58},{"at":"2026-09-30T17:30:00+00:00","value":255.24},{"at":"2026-09-30T17:45:00+00:00","value":255.37},{"at":"2026-09-30T18:00:00+00:00","value":245.44},{"at":"2026-09-30T18:15:00+00:00","value":242.99},{"at":"2026-09-30T18:30:00+00:00","value":227.16},{"at":"2026-09-30T18:45:00+00:00","value":216.56},{"at":"2026-09-30T19:00:00+00:00","value":235.36},{"at":"2026-09-30T19:15:00+00:00","value":215.39},{"at":"2026-09-30T19:30:00+00:00","value":203.95},{"at":"2026-09-30T19:45:00+00:00","value":170.0},{"at":"2026-09-30T20:00:00+00:00","value":203.49},{"at":"2026-09-30T20:15:00+00:00","value":190.78},{"at":"2026-09-30T20:30:00+00:00","value":184.24},{"at":"2026-09-30T20:45:00+00:00","value":169.04},{"at":"2026-09-30T21:00:00+00:00","value":178.34},{"at":"2026-09-30T21:15:00+00:00","value":164.76},{"at":"2026-09-30T21:30:00+00:00","value":171.04},{"at":"2026-09-30T21:45:00+00:00","value":156.4},{"at":"2026-09-30T22:00:00+00:00","value":166.13},{"at":"2026-09-30T22:15:00+00:00","value":158.82},{"at":"2026-09-30T22:30:00+00:00","value":153.43},{"at":"2026-09-30T22:45:00+00:00","value":153.6},{"at":"2026-09-30T23:00:00+00:00","value":159.4},{"at":"2026-09-30T23:15:00+00:00","value":160.34},{"at":"2026-09-30T23:30:00+00:00","value":159.94},{"at":"2026-09-30T23:45:00+00:00","value":158.79},{"at":"2026-10-01T00:00:00+00:00","value":159.8},{"at":"2026-10-01T00:15:00+00:00","value":158.74},{"at":"2026-10-01T00:30:00+00:00","value":158.79},{"at":"2026-10-01T00:45:00+00:00","value":156.4},{"at":"2026-10-01T01:00:00+00:00","value":161.1},{"at":"2026-10-01T01:15:00+00:00","value":161.11},{"at":"2026-10-01T01:30:00+00:00","value":158.71},{"at":"2026-10-01T01:45:00+00:00","value":157.1},{"at":"2026-10-01T02:00:00+00:00","value":158.59},{"at":"2026-10-01T02:15:00+00:00","value":158.04},{"at":"2026-10-01T02:30:00+00:00","value":155.85},{"at":"2026-10-01T02:45:00+00:00","value":159.72},{"at":"2026-10-01T03:00:00+00:00","value":158.06},{"at":"2026-10-01T03:15:00+00:00","value":158.8},{"at":"2026-10-01T03:30:00+00:00","value":168.39},{"at":"2026-10-01T03:45:00+00:00","value":181.29},{"at":"2026-10-01T04:00:00+00:00","value":177.0},{"at":"2026-10-01T04:15:00+00:00","value":203.11},{"at":"2026-10-01T04:30:00+00:00","value":218.61},{"at":"2026-10-01T04:45:00+00:00","value":233.97},{"at":"2026-10-01T05:00:00+00:00","value":228.14},{"at":"2026-10-01T05:15:00+00:00","value":242.75},{"at":"2026-10-01T05:30:00+00:00","value":243.32},{"at":"2026-10-01T05:45:00+00:00","value":234.76},{"at":"2026-10-01T06:00:00+00:00","value":258.14},{"at":"2026-10-01T06:15:00+00:00","value":235.27},{"at":"2026-10-01T06:30:00+00:00","value":226.0},{"at":"2026-10-01T06:45:00+00:00","value":214.02},{"at":"2026-10-01T07:00:00+00:00","value":238.12},{"at":"2026-10-01T07:15:00+00:00","value":211.99},{"at":"2026-10-01T07:30:00+00:00","value":200.44},{"at":"2026-10-01T07:45:00+00:00","value":182.66},{"at":"2026-10-01T08:00:00+00:00","value":209.53},{"at":"2026-10-01T08:15:00+00:00","value":189.53},{"at":"2026-10-01T08:30:00+00:00","value":173.94},{"at":"2026-10-01T08:45:00+00:00","value":160.6},{"at":"2026-10-01T09:00:00+00:00","value":165.28},{"at":"2026-10-01T09:15:00+00:00","value":158.92},{"at":"2026-10-01T09:30:00+00:00","value":158.8},{"at":"2026-10-01T09:45:00+00:00","value":157.42},{"at":"2026-10-01T10:00:00+00:00","value":160.89},{"at":"2026-10-01T10:15:00+00:00","value":164.01},{"at":"2026-10-01T10:30:00+00:00","value":160.45},{"at":"2026-10-01T10:45:00+00:00","value":163.41},{"at":"2026-10-01T11:00:00+00:00","value":153.31},{"at":"2026-10-01T11:15:00+00:00","value":152.45},{"at":"2026-10-01T11:30:00+00:00","value":151.37},{"at":"2026-10-01T11:45:00+00:00","value":150.96},{"at":"2026-10-01T12:00:00+00:00","value":152.14},{"at":"2026-10-01T12:15:00+00:00","value":147.09},{"at":"2026-10-01T12:30:00+00:00","value":150.64},{"at":"2026-10-01T12:45:00+00:00","value":151.47},{"at":"2026-10-01T13:00:00+00:00","value":150.03},{"at":"2026-10-01T13:15:00+00:00","value":151.34},{"at":"2026-10-01T13:30:00+00:00","value":156.05},{"at":"2026-10-01T13:45:00+00:00","value":170.1},{"at":"2026-10-01T14:00:00+00:00","value":149.7},{"at":"2026-10-01T14:15:00+00:00","value":166.6},{"at":"2026-10-01T14:30:00+00:00","value":196.75},{"at":"2026-10-01T14:45:00+00:00","value":243.68},{"at":"2026-10-01T15:00:00+00:00","value":179.92},{"at":"2026-10-01T15:15:00+00:00","value":224.21},{"at":"2026-10-01T15:30:00+00:00","value":250.0},{"at":"2026-10-01T15:45:00+00:00","value":275.0},{"at":"2026-10-01T16:00:00+00:00","value":246.19},{"at":"2026-10-01T16:15:00+00:00","value":265.01},{"at":"2026-10-01T16:30:00+00:00","value":276.58},{"at":"2026-10-01T16:45:00+00:00","value":310.98},{"at":"2026-10-01T17:00:00+00:00","value":289.7},{"at":"2026-10-01T17:15:00+00:00","value":300.22},{"at":"2026-10-01T17:30:00+00:00","value":314.78},{"at":"2026-10-01T17:45:00+00:00","value":297.47},{"at":"2026-10-01T18:00:00+00:00","value":280.0},{"at":"2026-10-01T18:15:00+00:00","value":268.11},{"at":"2026-10-01T18:30:00+00:00","value":251.93},{"at":"2026-10-01T18:45:00+00:00","value":230.01},{"at":"2026-10-01T19:00:00+00:00","value":250.03},{"at":"2026-10-01T19:15:00+00:00","value":229.97},{"at":"2026-10-01T19:30:00+00:00","value":221.13},{"at":"2026-10-01T19:45:00+00:00","value":204.53},{"at":"2026-10-01T20:00:00+00:00","value":221.64},{"at":"2026-10-01T20:15:00+00:00","value":207.5},{"at":"2026-10-01T20:30:00+00:00","value":203.9},{"at":"2026-10-01T20:45:00+00:00","value":186.95},{"at":"2026-10-01T21:00:00+00:00","value":201.71},{"at":"2026-10-01T21:15:00+00:00","value":190.04},{"at":"2026-10-01T21:30:00+00:00","value":182.58},{"at":"2026-10-01T21:45:00+00:00","value":171.38},{"at":"2026-10-01T22:00:00+00:00","value":185.11},{"at":"2026-10-01T22:15:00+00:00","value":177.65},{"at":"2026-10-01T22:30:00+00:00","value":169.68},{"at":"2026-10-01T22:45:00+00:00","value":167.69},{"at":"2026-10-01T23:00:00+00:00","value":168.19},{"at":"2026-10-01T23:15:00+00:00","value":164.95},{"at":"2026-10-01T23:30:00+00:00","value":162.32},{"at":"2026-10-01T23:45:00+00:00","value":160.15},{"at":"2026-10-02T00:00:00+00:00","value":161.39},{"at":"2026-10-02T00:15:00+00:00","value":160.34},{"at":"2026-10-02T00:30:00+00:00","value":160.93},{"at":"2026-10-02T00:45:00+00:00","value":161.16},{"at":"2026-10-02T01:00:00+00:00","value":159.59},{"at":"2026-10-02T01:15:00+00:00","value":159.07},{"at":"2026-10-02T01:30:00+00:00","value":160.61},{"at":"2026-10-02T01:45:00+00:00","value":160.99},{"at":"2026-10-02T02:00:00+00:00","value":162.92},{"at":"2026-10-02T02:15:00+00:00","value":162.2},{"at":"2026-10-02T02:30:00+00:00","value":161.4},{"at":"2026-10-02T02:45:00+00:00","value":166.02},{"at":"2026-10-02T03:00:00+00:00","value":163.55},{"at":"2026-10-02T03:15:00+00:00","value":170.49},{"at":"2026-10-02T03:30:00+00:00","value":184.83},{"at":"2026-10-02T03:45:00+00:00","value":192.61},{"at":"2026-10-02T04:00:00+00:00","value":195.55},{"at":"2026-10-02T04:15:00+00:00","value":216.11},{"at":"2026-10-02T04:30:00+00:00","value":231.79},{"at":"2026-10-02T04:45:00+00:00","value":243.23},{"at":"2026-10-02T05:00:00+00:00","value":246.83},{"at":"2026-10-02T05:15:00+00:00","value":258.54},{"at":"2026-10-02T05:30:00+00:00","value":266.08},{"at":"2026-10-02T05:45:00+00:00","value":269.89},{"at":"2026-10-02T06:00:00+00:00","value":288.93},{"at":"2026-10-02T06:15:00+00:00","value":270.74},{"at":"2026-10-02T06:30:00+00:00","value":257.21},{"at":"2026-10-02T06:45:00+00:00","value":240.27},{"at":"2026-10-02T07:00:00+00:00","value":261.39},{"at":"2026-10-02T07:15:00+00:00","value":233.97},{"at":"2026-10-02T07:30:00+00:00","value":220.1},{"at":"2026-10-02T07:45:00+00:00","value":186.51},{"at":"2026-10-02T08:00:00+00:00","value":211.67},{"at":"2026-10-02T08:15:00+00:00","value":188.27},{"at":"2026-10-02T08:30:00+00:00","value":175.21},{"at":"2026-10-02T08:45:00+00:00","value":172.25},{"at":"2026-10-02T09:00:00+00:00","value":183.88},{"at":"2026-10-02T09:15:00+00:00","value":173.18},{"at":"2026-10-02T09:30:00+00:00","value":165.69},{"at":"2026-10-02T09:45:00+00:00","value":157.52},{"at":"2026-10-02T10:00:00+00:00","value":154.91},{"at":"2026-10-02T10:15:00+00:00","value":152.2},{"at":"2026-10-02T10:30:00+00:00","value":153.69},{"at":"2026-10-02T10:45:00+00:00","value":149.63},{"at":"2026-10-02T11:00:00+00:00","value":146.07},{"at":"2026-10-02T11:15:00+00:00","value":141.96},{"at":"2026-10-02T11:30:00+00:00","value":140.68},{"at":"2026-10-02T11:45:00+00:00","value":134.72},{"at":"2026-10-02T12:00:00+00:00","value":143.79},{"at":"2026-10-02T12:15:00+00:00","value":140.9},{"at":"2026-10-02T12:30:00+00:00","value":141.41},{"at":"2026-10-02T12:45:00+00:00","value":143.15},{"at":"2026-10-02T13:00:00+00:00","value":141.08},{"at":"2026-10-02T13:15:00+00:00","value":143.59},{"at":"2026-10-02T13:30:00+00:00","value":155.09},{"at":"2026-10-02T13:45:00+00:00","value":160.64},{"at":"2026-10-02T14:00:00+00:00","value":156.21},{"at":"2026-10-02T14:15:00+00:00","value":163.79},{"at":"2026-10-02T14:30:00+00:00","value":187.3},{"at":"2026-10-02T14:45:00+00:00","value":216.81},{"at":"2026-10-02T15:00:00+00:00","value":180.08},{"at":"2026-10-02T15:15:00+00:00","value":219.62},{"at":"2026-10-02T15:30:00+00:00","value":238.22},{"at":"2026-10-02T15:45:00+00:00","value":261.49},{"at":"2026-10-02T16:00:00+00:00","value":239.98},{"at":"2026-10-02T16:15:00+00:00","value":250.44},{"at":"2026-10-02T16:30:00+00:00","value":276.08},{"at":"2026-10-02T16:45:00+00:00","value":299.72},{"at":"2026-10-02T17:00:00+00:00","value":328.58},{"at":"2026-10-02T17:15:00+00:00","value":328.11},{"at":"2026-10-02T17:30:00+00:00","value":315.28},{"at":"2026-10-02T17:45:00+00:00","value":307.27},{"at":"2026-10-02T18:00:00+00:00","value":282.7},{"at":"2026-10-02T18:15:00+00:00","value":279.83},{"at":"2026-10-02T18:30:00+00:00","value":261.82},{"at":"2026-10-02T18:45:00+00:00","value":248.08},{"at":"2026-10-02T19:00:00+00:00","value":244.78},{"at":"2026-10-02T19:15:00+00:00","value":238.14},{"at":"2026-10-02T19:30:00+00:00","value":224.99},{"at":"2026-10-02T19:45:00+00:00","value":211.92},{"at":"2026-10-02T20:00:00+00:00","value":220.23},{"at":"2026-10-02T20:15:00+00:00","value":215.0},{"at":"2026-10-02T20:30:00+00:00","value":209.39},{"at":"2026-10-02T20:45:00+00:00","value":201.39},{"at":"2026-10-02T21:00:00+00:00","value":201.62},{"at":"2026-10-02T21:15:00+00:00","value":197.52},{"at":"2026-10-02T21:30:00+00:00","value":194.55},{"at":"2026-10-02T21:45:00+00:00","value":185.1}]},"licence":{"fr":"CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de","de":"CC BY 4.0 (creativecommons.org/licenses/by/4.0) from Bundesnetzagentur | SMARD.de"}}
 </script>
   <script>
     let snapshot = JSON.parse(document.getElementById('snapshot-data').textContent);
@@ -10295,6 +10363,7 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         button.setAttribute('aria-selected', String(button.dataset.page === page));
       }
       for (const section of document.querySelectorAll('.page')) section.hidden = section.id !== page;
+      if (page === 'power') {refreshPowerDirect();refreshRteDirect();}
     }
     document.querySelectorAll('.nav button, [data-open]').forEach(button => {
       button.addEventListener('click', event => {
@@ -10938,6 +11007,27 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
          'Ce niveau physique est un repère observé, sans prévision automatique du prix.');
     }
 
+    function renderMarketPowerPulse() {
+      const fr=powerPrices?.series?.fr||[],now=Date.now();
+      const active=[...fr].reverse().find(p=>Date.parse(p.at)<=now&&Date.parse(p.at)>=now-3600000);
+      const formatter=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',
+        month:'2-digit',day:'2-digit'});
+      const day=at=>{const parts=Object.fromEntries(formatter.formatToParts(new Date(at))
+        .filter(p=>['year','month','day'].includes(p.type)).map(p=>[p.type,p.value]));
+        return parts.year+'-'+parts.month+'-'+parts.day;};
+      const tomorrow=day(Date.parse(day(now)+'T12:00:00Z')+86400000);
+      const points=fr.slice(-300).filter(p=>day(p.at)===tomorrow&&Number.isFinite(p.value));
+      const step=fr.length>1 ? Math.max(15,Math.min(60,Math.round((Date.parse(fr[1].at)-Date.parse(fr[0].at))/60000))) : 60;
+      const complete=points.length>=Math.floor(24*60/step*.8);
+      document.getElementById('market-power-now').textContent=active?number(active.value,2)+' €':'—';
+      document.getElementById('market-power-tomorrow').textContent=complete?
+        number(points.reduce((sum,p)=>sum+p.value,0)/points.length,2)+' €':'—';
+      const verified=powerPrices.live_checked_at||powerPrices.generated_at;
+      document.getElementById('market-power-note').textContent=verified ?
+        'Prix fixés la veille · source '+(powerPrices.live_checked_at?'vérifiée ':'archivée ')+
+        parisTime(verified)+' · €/MWh' : 'Prix day-ahead en attente.';
+    }
+
     function renderPowerPrices() {
       const cards = document.getElementById('power-price-grid');
       const control = document.getElementById('power-price-span');
@@ -10946,17 +11036,31 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
       const reading = document.getElementById('power-price-reading');
       const context = document.getElementById('power-price-context');
       const licence = document.getElementById('power-price-license');
-      cards.replaceChildren(); control.replaceChildren(); chart.replaceChildren();
-      context.textContent = '';
+      const hero = document.getElementById('power-now-value');
+      const heroTime = document.getElementById('power-now-delivery');
+      const heroDelta = document.getElementById('power-now-delta');
+      const status = document.getElementById('power-price-status');
+      const hours = document.getElementById('power-price-hours');
+      const takeaway = document.getElementById('power-market-takeaway');
+      const evidence = document.getElementById('power-market-evidence');
+      const drivers = document.getElementById('power-driver-list');
+      const alerts = document.getElementById('power-alert-list');
+      cards.replaceChildren(); control.replaceChildren(); chart.replaceChildren(); hours.replaceChildren(); drivers.replaceChildren(); alerts.replaceChildren();
+      context.textContent = ''; hero.textContent = '—'; heroTime.textContent = 'Période de livraison en attente';
+      heroDelta.textContent = 'Prix fixé lors de l’enchère de la veille.';
       const series = powerPrices?.series || {};
       const fr = Array.isArray(series.fr) ? series.fr.filter(point => Number.isFinite(point.value) &&
         Number.isFinite(Date.parse(point.at))) : [];
       const de = Array.isArray(series.de) ? series.de.filter(point => Number.isFinite(point.value) &&
         Number.isFinite(Date.parse(point.at))) : [];
+      renderMarketPowerPulse();
       if (!fr.length) {
         chart.append(line('Prix day-ahead non publiés dans le cockpit : collecte ou licence de la source en attente.', 'span', 'empty'));
         meta.textContent = snapshot.sources?.power_price_fr?.status === 'error' ?
           'Source indisponible lors de la dernière collecte ; aucun prix inventé.' : 'Collecte des prix en attente.';
+        status.textContent = 'Prix · indisponibles'; status.className='badge warn';
+        takeaway.textContent='Aucune donnée de prix vérifiée disponible pour cette période.';
+        evidence.textContent='Les mesures physiques restent consultables ci-dessous.';
         reading.textContent = ''; return;
       }
       const attribution = powerPrices.licence?.fr;
@@ -10969,35 +11073,67 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         button.addEventListener('click',()=>{powerPriceSpan=days;renderPowerPrices();});
         control.append(button);
       }
-      const localDay = at => new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',
-        month:'2-digit',day:'2-digit'}).format(new Date(at));
+      const dayFormatter = new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',
+        month:'2-digit',day:'2-digit'});
+      const localDay = at => {const parts=Object.fromEntries(dayFormatter.formatToParts(new Date(at))
+        .filter(p=>['year','month','day'].includes(p.type)).map(p=>[p.type,p.value]));
+        return parts.year+'-'+parts.month+'-'+parts.day;};
       const today = localDay(Date.now());
-      const tomorrow = localDay(Date.now()+86400000);
+      const tomorrow = localDay(Date.parse(today+'T12:00:00Z')+86400000);
       const latestFor = (items, now) => [...items].reverse().find(p => Date.parse(p.at)<=now &&
         Date.parse(p.at)>=now-3600000);
       const now = Date.now(), current = latestFor(fr,now);
-      const counterpart = current && de.find(p => p.at===current.at);
+      const counterpart = current && de.find(p => Date.parse(p.at)===Date.parse(current.at));
       const delivery = fr.filter(p => localDay(p.at)===tomorrow);
       const todayDelivery = fr.filter(p => localDay(p.at)===today);
-      const todayAverage = todayDelivery.length >= 80 ?
+      const interval = fr.length>1 ? Math.max(15,Math.min(60,Math.round((Date.parse(fr[1].at)-Date.parse(fr[0].at))/60000))) : 60;
+      const complete = items => items.length >= Math.floor(24*60/interval*.8);
+      const todayAverage = complete(todayDelivery) ?
         todayDelivery.reduce((sum,p)=>sum+p.value,0)/todayDelivery.length : null;
-      const average = delivery.length ? delivery.reduce((sum,p)=>sum+p.value,0)/delivery.length : null;
-      const peak = delivery.length ? delivery.reduce((a,b)=>a.value>b.value?a:b) : null;
+      const average = complete(delivery) ? delivery.reduce((sum,p)=>sum+p.value,0)/delivery.length : null;
+      const peak = average!==null ? delivery.reduce((a,b)=>a.value>b.value?a:b) : null;
       const countNegative = delivery.filter(p=>p.value<0).length;
+      const previous = current && fr.find(p=>Date.parse(p.at)===Date.parse(current.at)-86400000);
+      const latestCheck = powerPrices.live_checked_at || powerPrices.generated_at || snapshot.generated_at;
+      const age = Date.now()-Date.parse(latestCheck||0);
+      const direct = Boolean(powerPrices.live_checked_at) && age<10*60000;
+      status.textContent = direct ? 'Prix · API vérifiée '+parisTime(latestCheck) :
+        'Prix · archive '+(latestCheck?parisTime(latestCheck):'sans date');
+      status.className = 'badge '+(direct || age<4*3600000 ? 'good' : 'warn');
+      hero.textContent=current ? number(current.value,2) : '—';
+      heroTime.textContent=current ? 'Livraison '+parisTime(current.at) : 'Créneau actuel non publié';
+      heroDelta.textContent=current&&previous ? 'Même créneau il y a 24 h : '+
+        (current.value-previous.value>=0?'+':'')+number(current.value-previous.value,2)+
+        ' €/MWh · comparaison des enchères' : 'Prix fixé lors de l’enchère de la veille · pas une cotation intraday.';
       for (const [title,value,detail] of [
-        ['France · période en cours',current ? number(current.value,2)+' €/MWh' : '—',
-          current ? 'Livraison '+parisTime(current.at) : 'Prix de la période non publié'],
-        ['France · demain, moyenne',average!==null ? number(average,2)+' €/MWh' : '—',
-          average!==null ? delivery.length+' périodes de livraison' : 'Enchère en attente'],
-        ['France − DE-LU · période',current&&counterpart ?
+        ['Demain · moyenne France',average!==null ? number(average,2)+' €/MWh' : '—',
+          average!==null ? delivery.length+' créneaux publiés' : delivery.length ? 'Publication partielle' : 'Enchère en attente'],
+        ['Demain vs aujourd’hui',average!==null&&todayAverage!==null ?
+          (average>=todayAverage?'+':'')+number(average-todayAverage,2)+' €/MWh' : '—',
+          average!==null&&todayAverage!==null ? 'Moyennes des jours de livraison' : 'Deux journées complètes requises'],
+        ['France − DE-LU · maintenant',current&&counterpart ?
           number(current.value-counterpart.value,2)+' €/MWh' : '—',
-          current&&counterpart ? 'Même créneau · positif = France plus chère' : 'Couplage des données en attente'],
-        ['France · pic demain',peak ? number(peak.value,2)+' €/MWh' : '—',
-          peak ? parisTime(peak.at)+' · '+countNegative+' périodes négatives' : 'À venir']
+          current&&counterpart ? 'Même livraison · positif = France plus chère' : 'Créneau comparable en attente'],
+        ['Demain · point haut',peak ? number(peak.value,2)+' €/MWh' : '—',
+          peak ? parisTime(peak.at)+' · '+countNegative*interval+' min négatives' : 'Publication à venir']
       ]) {
         const card=line('','article');
         card.append(line(title,'small'),line(value,'strong'),line(detail,'span'));
         cards.append(card);
+      }
+      if(average!==null){
+        const hour=p=>Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',hour:'2-digit',hourCycle:'h23'}).format(new Date(p.at)));
+        for(const [from,to] of [[0,6],[6,12],[12,18],[18,24]]){
+          const block=delivery.filter(p=>hour(p)>=from&&hour(p)<to);
+          if(!block.length)continue;
+          const mean=block.reduce((sum,p)=>sum+p.value,0)/block.length;
+          const tile=line('','article');
+          tile.append(line(String(from).padStart(2,'0')+'–'+String(to).padStart(2,'0')+' h · Paris','small'),
+            line(number(mean,1)+' €/MWh','strong'),
+            line('de '+number(Math.min(...block.map(p=>p.value)),0)+' à '+
+              number(Math.max(...block.map(p=>p.value)),0)+' · '+block.length+' créneaux','span'));
+          hours.append(tile);
+        }
       }
       const end = Math.max(Date.parse(fr[fr.length-1].at),de.length ? Date.parse(de[de.length-1].at) : 0);
       const start = end-powerPriceSpan*86400000;
@@ -11044,20 +11180,69 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         (snapshot.sources?.power_price_fr?.status==='error'?' · source en erreur : archive':'');
       const rte = snapshot.history?.power_fr || [];
       const observed = rte[rte.length-1];
-      const paired = observed && [...fr].reverse().find(p=>Date.parse(p.at)<=Date.parse(observed.at)&&
-        Date.parse(p.at)>=Date.parse(observed.at)-3600000);
-      reading.textContent=(peak ? 'Demain : pic day-ahead '+number(peak.value,2)+' €/MWh vers '+parisTime(peak.at)+
-        '; '+countNegative+' périodes à prix négatif. ' : '')+
-        (average!==null&&todayAverage!==null ? 'Moyenne demain '+
-        (average>=todayAverage?'+':'')+number(average-todayAverage,2)+
-        ' €/MWh face aux '+todayDelivery.length+' périodes d’aujourd’hui. ' : '')+
-        (paired&&observed.eolien!==undefined&&observed.solaire!==undefined ?
-        'Dernier créneau observé : prix fixé la veille '+number(paired.value,2)+' €/MWh ; demande résiduelle RTE '+
-        number(observed.load-observed.eolien-observed.solaire,0)+' MW. Ces deux mesures ne prouvent pas un effet causal.' :
-        'Prix et télémesures ont des dates et des définitions différentes : vérifier les créneaux avant comparaison.');
+      const direction=average!==null&&todayAverage!==null ? average-todayAverage : null;
+      takeaway.textContent=direction!==null ?
+        'Le marché valorise la livraison de demain à '+number(average,2)+' €/MWh en moyenne ('+
+        (direction>=0?'+':'')+number(direction,2)+' €/MWh face à aujourd’hui). '+
+        (peak?'Point haut '+number(peak.value,2)+' €/MWh à '+parisTime(peak.at)+'.':'') :
+        'Le profil day-ahead de demain est encore en attente ou incomplet : la comparaison journalière est suspendue.';
+      evidence.textContent=(current&&counterpart ? 'France − DE-LU sur le créneau livré : '+
+        (current.value-counterpart.value>=0?'+':'')+number(current.value-counterpart.value,2)+' €/MWh. ' : '')+
+        (average!==null ? countNegative*interval+' minute(s) à prix négatif demain. ' : '')+
+        'Prix de l’enchère, pas des transactions intraday en cours.';
+      const addAlert=(label,value,note,warm=false)=>{
+        const tile=line('','article','power-alert'+(warm?' warm':''));
+        tile.append(line(label,'small'),line(value,'strong'),line(note,'span'));alerts.append(tile);
+      };
+      addAlert('REPRICING J+1',direction!==null ?
+        (direction>=0?'+':'')+number(direction,2)+' €/MWh' : 'En attente',
+        direction!==null?'Moyenne demain vs aujourd’hui · enchère day-ahead':'Deux jours complets requis',
+        direction!==null&&Math.abs(direction)>=20);
+      addAlert('HEURE DE POINTE',peak ? number(peak.value,2)+' €/MWh' : 'En attente',
+        peak ? 'Livraison '+parisTime(peak.at)+' · '+number(peak.value-average,1)+
+          ' €/MWh au-dessus de la moyenne de demain':'Enchère de demain non complète',
+        peak&&peak.value-average>=50);
+      addAlert('ÉCART FRANCE / DE-LU',current&&counterpart ?
+        (current.value-counterpart.value>=0?'+':'')+number(current.value-counterpart.value,2)+' €/MWh' : 'En attente',
+        'Même créneau de livraison · positif = France plus chère',
+        current&&counterpart&&Math.abs(current.value-counterpart.value)>=20);
+      if(countNegative&&average!==null)addAlert('PRIX NÉGATIFS DEMAIN',countNegative*interval+' min',
+        'Durée publiée à prix inférieur à 0 €/MWh',true);
+      reading.textContent='Le prix day-ahead est fixé la veille pour chaque période de livraison. '+
+        (observed ? 'Dernière mesure physique RTE : '+parisTime(observed.at)+'. ' : '')+
+        'Pour expliquer un mouvement, examiner aussi la météo, les disponibilités des centrales, les interconnexions et le gaz ; ces facteurs ne sont pas tous mesurés ici.';
       const byTime = new Map(fr.map(p=>[Date.parse(p.at),p.value]));
       const historicRte = Array.isArray(powerHistory?.points) && powerHistory.points.length ?
         powerHistory.points : rte;
+      const latestRte=historicRte[historicRte.length-1];
+      const rteAge=latestRte ? now-Date.parse(latestRte.at) : Infinity;
+      const previousRte=latestRte&&historicRte.reduce((best,p)=>{
+        const gap=Math.abs(Date.parse(p.at)-(Date.parse(latestRte.at)-86400000));
+        return gap<=3600000&&(!best||gap<best.gap)?{row:p,gap}:best;
+      },null)?.row;
+      const addDriver=(label,value,description)=>{
+        const row=line('','div','power-driver');
+        row.append(line(label,'small'),line(value,'strong'),line(description,'span'));
+        drivers.append(row);
+      };
+      if(latestRte&&previousRte){
+        const residual=p=>p.load-p.eolien-p.solaire;
+        const delta=residual(latestRte)-residual(previousRte);
+        const renewable=(latestRte.eolien+latestRte.solaire)-(previousRte.eolien+previousRte.solaire);
+        const gas=latestRte.gaz-previousRte.gaz;
+        const prefix=rteAge>6*3600000?'Archive RTE · ':'RTE · ';
+        addDriver('Demande résiduelle vs même heure J−1',
+          (delta>=0?'+':'')+number(delta,0)+' MW',prefix+parisTime(latestRte.at)+
+          '. Hausse = besoin pilotable potentiellement accru ; le prix n’en découle pas mécaniquement.');
+        addDriver('Éolien + solaire vs J−1',(renewable>=0?'+':'')+number(renewable,0)+' MW',
+          'Production observée à la même heure. Une hausse peut détendre la résiduelle.');
+        addDriver('Production au gaz vs J−1',(gas>=0?'+':'')+number(gas,0)+' MW',
+          'Moyens gaz effectivement mobilisés ; ce chiffre ne mesure pas leur coût marginal.');
+      } else addDriver('Observations physiques','—','Historique RTE insuffisant pour une comparaison à la même heure hier.');
+      if(latestRte&&Number.isFinite(latestRte.ech_physiques))addDriver('Échanges physiques France',
+        number(Math.abs(latestRte.ech_physiques),0)+' MW',
+        latestRte.ech_physiques<0?'Exportations nettes observées.':
+        latestRte.ech_physiques>0?'Importations nettes observées.':'Solde net proche de zéro.');
       const matched = historicRte.filter(p=>Date.parse(p.at)<=now&&Date.parse(p.at)>=now-7*86400000 &&
         Number.isFinite(p.load)&&Number.isFinite(p.eolien)&&Number.isFinite(p.solaire))
         .map(p=>({residual:p.load-p.eolien-p.solaire,price:byTime.get(Date.parse(p.at))}))
@@ -11068,7 +11253,8 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         const lower=matched.filter(p=>p.residual<pivot),upper=matched.filter(p=>p.residual>=pivot);
         const mean=items=>items.reduce((sum,p)=>sum+p.price,0)/items.length;
         context.textContent=lower.length&&upper.length ?
-          'Sur '+matched.length+' créneaux appariés des 7 derniers jours : prix day-ahead moyen '+
+          'Repère historique · '+matched.length+' créneaux prix/RTE appariés sur 7 jours : '+
+          'prix day-ahead moyen '+
           number(mean(upper),2)+' €/MWh quand la demande résiduelle observée est ≥ '+number(pivot,0)+
           ' MW (n='+upper.length+'), contre '+number(mean(lower),2)+' €/MWh en dessous (n='+lower.length+
           '). Lecture descriptive : prix fixé la veille, demande mesurée ensuite, autres facteurs non isolés.' :
@@ -11077,6 +11263,118 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         context.textContent='Comparaison prix et demande résiduelle : '+matched.length+
           ' créneaux exactement appariés sur 7 jours ; 48 requis pour afficher un repère.';
       }
+    }
+
+    let priceFetchBusy = false;
+    let priceLastAttempt = 0;
+    async function refreshPowerDirect(force = false) {
+      if (priceFetchBusy || (!force && Date.now()-priceLastAttempt < 60000)) return;
+      priceFetchBusy = true; priceLastAttempt = Date.now();
+      const status = document.getElementById('power-price-status');
+      status.textContent = 'Prix · vérification API…';
+      try {
+        const start = new Date(Date.now()-2*86400000).toISOString().slice(0,10);
+        const end = new Date(Date.now()+2*86400000).toISOString().slice(0,10);
+        const read = async zone => {
+          const url = 'https://api.energy-charts.info/price?bzn='+encodeURIComponent(zone)+
+            '&start='+start+'&end='+end;
+          const response = await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(12000)});
+          if(!response.ok)throw new Error('Prix '+zone+' HTTP '+response.status);
+          const data = await response.json();
+          if(typeof data.license_info!=='string'||!data.license_info.includes('CC BY 4.0')||
+             !String(data.unit||'').toUpperCase().includes('EUR')||
+             !Array.isArray(data.unix_seconds)||!Array.isArray(data.price)||
+             data.unix_seconds.length!==data.price.length)throw new Error('Prix '+zone+' non validés');
+          const points=data.unix_seconds.map((stamp,i)=>({stamp,value:data.price[i]}))
+            .filter(p=>Number.isInteger(p.stamp)&&Number.isFinite(p.value)&&
+              p.value>=-5000&&p.value<=5000&&p.stamp*1000<Date.now()+3*86400000)
+            .map(p=>({at:new Date(p.stamp*1000).toISOString(),value:p.value}))
+            .sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+          if(points.length<20||Date.parse(points[points.length-1].at)<Date.now()-86400000)
+            throw new Error('Prix '+zone+' incomplets');
+          return {points,licence:data.license_info};
+        };
+        const [fr,de]=await Promise.all([read('FR'),read('DE-LU')]);
+        const merge=(old,incoming)=>{
+          const cutoff=Date.now()-365*86400000,byTime=new Map();
+          for(const row of [...(old||[]),...incoming]){
+            const stamp=Date.parse(row.at);
+            if(Number.isFinite(stamp)&&stamp>=cutoff&&stamp<Date.now()+3*86400000&&
+               Number.isFinite(row.value))byTime.set(stamp,{at:new Date(stamp).toISOString(),value:row.value});
+          }
+          return [...byTime.values()].sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+        };
+        powerPrices={...powerPrices,series:{fr:merge(powerPrices.series?.fr,fr.points),
+          de:merge(powerPrices.series?.de,de.points)},licence:{fr:fr.licence,de:de.licence},
+          live_checked_at:new Date().toISOString()};
+        renderPowerPrices();
+      } catch(error) {
+        console.warn('API prix directe indisponible, archive conservée :',error);
+        renderPowerPrices();
+        status.textContent += ' · accès direct indisponible';
+        status.className='badge warn';
+      } finally {priceFetchBusy=false;}
+    }
+
+    let rteFetchBusy = false;
+    let rteLastAttempt = 0;
+    async function refreshRteDirect(force = false) {
+      if (rteFetchBusy || (!force && Date.now()-rteLastAttempt < 10*60000)) return;
+      rteFetchBusy=true;rteLastAttempt=Date.now();
+      try {
+        const url='https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/'+
+          'eco2mix-national-tr/records?limit=100&where=date_heure%20%3C%3D%20now%28%29'+
+          '&order_by=date_heure%20desc';
+        const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(12000)});
+        if(!response.ok)throw new Error('RTE HTTP '+response.status);
+        const data=await response.json();
+        if(!Array.isArray(data.results))throw new Error('RTE : format invalide');
+        const fields=['prevision_j','prevision_j1','nucleaire','gaz','eolien','solaire',
+          'hydraulique','bioenergies','charbon','fioul','ech_physiques','pompage','taux_co2'];
+        const points=data.results.map(row=>{
+          const t=Date.parse(row.date_heure),load=Number(row.consommation);
+          if(!Number.isFinite(t)||t>Date.now()||t<Date.now()-48*3600000||
+             !Number.isFinite(load)||load<5000||load>120000)return null;
+          const point={at:new Date(t).toISOString(),load:Math.round(load)};
+          for(const key of fields){
+            if(row[key]===null||row[key]===undefined||row[key]==='')continue;
+            const value=Number(row[key]);
+            if(Number.isFinite(value)&&value>=-35000&&value<=120000)point[key]=Math.round(value);
+          }
+          return point;
+        }).filter(Boolean).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+        const latest=points[points.length-1];
+        if(points.length<12||Date.now()-Date.parse(latest.at)>3*3600000||
+          !['eolien','solaire','gaz','ech_physiques'].every(k=>Number.isFinite(latest[k])))
+          throw new Error('RTE : relevés incomplets ou trop anciens');
+        const byTime=new Map((powerHistory.points||[]).map(p=>[Date.parse(p.at),p]));
+        for(const row of points){
+          const stamp=Date.parse(row.at),hour=Math.floor(stamp/3600000)*3600000;
+          const older=[...byTime.keys()].find(t=>Math.floor(t/3600000)*3600000===hour);
+          if(older!==undefined&&older<stamp)byTime.delete(older);
+          if(older===undefined||older<=stamp)byTime.set(stamp,row);
+        }
+        const cutoff=Date.now()-365*86400000;
+        const historic=[...byTime.values()].filter(p=>Date.parse(p.at)>=cutoff)
+          .sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+        powerHistory={...powerHistory,points:historic,first_at:historic[0]?.at,
+          last_at:historic[historic.length-1]?.at,generated_at:new Date().toISOString()};
+        snapshot.history.power_fr=points.slice(-96);
+        snapshot.sources.rte_power={status:'ok',as_of:latest.at,checked_at:new Date().toISOString(),
+          url:'https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/',direct:true};
+        const values={power_load:['Demande France',latest.load],power_gaz:['Gaz électrique',latest.gaz],
+          power_eolien:['Éolien',latest.eolien],power_solaire:['Solaire',latest.solaire],
+          power_exchange:['Solde des échanges physiques',latest.ech_physiques],
+          power_residual:['Demande résiduelle indicative',latest.load-latest.eolien-latest.solaire],
+          power_load_gap:['Écart à prévision de demande J',latest.load-latest.prevision_j]};
+        for(const [id,[label,value]] of Object.entries(values)){
+          delete byId[id];
+          if(Number.isFinite(value))byId[id]={id,sector:'power',label,value,unit:'MW',
+            as_of:latest.at.slice(0,10),source:'RTE éCO2mix',comparison:'observé'};
+        }
+        refreshPanels();
+      } catch(error) {console.warn('RTE direct indisponible, archive conservée :',error);}
+      finally {rteFetchBusy=false;}
     }
 
     function renderPower() {
@@ -11093,8 +11391,9 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         'RTE · première collecte en attente';
       rte.classList.toggle('good', !!latest && !powerOld && source.status === 'ok');
       rte.classList.toggle('warn', !latest || powerOld || source.status === 'error');
-      document.getElementById('power-updated').textContent = snapshot.generated_at ?
-        'Dernière collecte : ' + parisTime(snapshot.generated_at) : 'Instantané local';
+      const checked=source.checked_at||snapshot.generated_at;
+      document.getElementById('power-updated').textContent = checked ?
+        (source.direct?'RTE vérifié : ':'Instantané : ')+parisTime(checked) : 'Instantané local';
       const picks = [
         ['power_load', 'consommation observée'],
         ['power_gaz', 'production électrique au gaz'],
@@ -11245,12 +11544,23 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
         const response = await fetch(url, {cache:'no-store'});
         if (!response.ok) throw new Error('HTTP ' + response.status);
         const next = await response.json();
-        if (!next.generated_at || !Array.isArray(next.metrics) || !next.history ||
-            Date.parse(next.generated_at) <= Date.parse(snapshot.generated_at || 0)) {
-          button.textContent = 'Données déjà à jour'; return;
+        if (!next.generated_at || !Array.isArray(next.metrics) || !next.history) {
+          throw new Error('Instantané incomplet');
         }
-        snapshot = next; metrics = next.metrics;
-        byId = Object.fromEntries(metrics.map(item => [item.id,item]));
+        const newer=Date.parse(next.generated_at)>Date.parse(snapshot.generated_at||0);
+        if(newer){
+          const liveSource=snapshot.sources?.rte_power?.direct&&snapshot.sources.rte_power;
+          const livePoints=liveSource&&snapshot.history?.power_fr;
+          const liveMetrics=liveSource&&Object.fromEntries(Object.entries(byId)
+            .filter(([id])=>id.startsWith('power_')));
+          snapshot=next;metrics=next.metrics;
+          byId=Object.fromEntries(metrics.map(item=>[item.id,item]));
+          if(liveSource&&Date.parse(liveSource.checked_at)>Date.parse(next.generated_at)){
+            snapshot.history.power_fr=livePoints;
+            snapshot.sources.rte_power=liveSource;
+            Object.assign(byId,liveMetrics);
+          }
+        }
         try {
           const powerResponse = await fetch('https://raw.githubusercontent.com/TheoTaillandier/Test2/main/data/power_fr.json?t=' + Date.now(), {cache:'no-store'});
           if (powerResponse.ok) {
@@ -11264,18 +11574,48 @@ Les clés restent dans les secrets GitHub et ne sont jamais insérées dans les 
           if (priceResponse.ok) {
             const prices = await priceResponse.json();
             if (prices.schema===1&&Array.isArray(prices.series?.fr)&&
-                Date.parse(prices.generated_at)>=Date.parse(powerPrices.generated_at||0)) powerPrices=prices;
+                Date.parse(prices.generated_at)>=Date.parse(powerPrices.generated_at||0)) {
+              const recent=powerPrices.live_checked_at&&
+                Date.parse(powerPrices.live_checked_at)>Date.parse(prices.generated_at);
+              if(recent){
+                const combine=(archive,live)=>{
+                  const byTime=new Map();
+                  for(const p of [...(archive||[]),...(live||[])]){
+                    const t=Date.parse(p.at);
+                    if(Number.isFinite(t)&&Number.isFinite(p.value))byTime.set(t,p);
+                  }
+                  return [...byTime.values()].sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+                };
+                powerPrices={...prices,series:{fr:combine(prices.series.fr,powerPrices.series?.fr),
+                  de:combine(prices.series.de,powerPrices.series?.de)},
+                  licence:powerPrices.licence,live_checked_at:powerPrices.live_checked_at};
+              } else powerPrices=prices;
+            }
           }
         } catch (error) { console.warn('Prix Power non synchronisés :', error); }
         refreshPanels();
-        button.textContent = 'Données synchronisées';
+        button.textContent = newer ? 'Données synchronisées' : 'Données déjà à jour';
       } catch (error) {
         button.textContent = 'Hors connexion · instantané daté';
         console.warn('Synchronisation impossible :', error);
       } finally { button.disabled = false; }
     }
     document.getElementById('refresh-data').addEventListener('click', refreshSnapshot);
-    refreshSnapshot();
+    document.getElementById('power-refresh').addEventListener('click',async()=>{
+      const button=document.getElementById('power-refresh');
+      button.disabled=true;button.textContent='Vérification…';
+      try {await refreshSnapshot();await Promise.all([refreshPowerDirect(true),refreshRteDirect(true)]);}
+      finally {button.disabled=false;button.textContent='Rafraîchir ↻';}
+    });
+    refreshSnapshot().then(()=>refreshPowerDirect());
+    let lastDeliverySlot=Math.floor(Date.now()/900000);
+    setInterval(()=>{const slot=Math.floor(Date.now()/900000);
+      if(slot===lastDeliverySlot)return;
+      lastDeliverySlot=slot;
+      if(!document.getElementById('power').hidden)renderPowerPrices();
+      else renderMarketPowerPulse();},60000);
+    setInterval(()=>{if(!document.hidden)refreshPowerDirect();},1800000);
+    setInterval(()=>{if(!document.hidden&&!document.getElementById('power').hidden)refreshRteDirect();},900000);
   </script>
 </body>
 </html>
