@@ -7,27 +7,27 @@
   <style>
     :root {
       color-scheme: dark;
-      --bg: #08110f;
-      --surface: #101d18;
-      --surface-2: #172820;
-      --border: #2a4336;
-      --text: #f0f5f1;
-      --muted: #a4b9ab;
-      --accent: #78dda8;
-      --warm: #f1c984;
-      --red: #f29a90;
+      --bg: #090f17;
+      --surface: #121d27;
+      --surface-2: #1b2a35;
+      --border: #30414e;
+      --text: #f1f6f7;
+      --muted: #a9bbc5;
+      --accent: #71dfc2;
+      --warm: #facb80;
+      --red: #f58e91;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.48 system-ui, -apple-system, Segoe UI, sans-serif; }
+    body { margin: 0; background: radial-gradient(ellipse 80% 500px at 70% -200px,#193a45 0%,transparent 75%),var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
     button { font: inherit; cursor: pointer; }
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
-    .header { min-height: 62px; padding: 8px 18px; display: flex; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
+    .header { min-height: 68px; padding: 9px clamp(16px,2.5vw,38px); display: flex; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); background:#0d1720f5; }
     .brand strong { font-size: 17px; letter-spacing: -.025em; }
     .brand span { color: var(--muted); font-size: 11px; margin-left: 9px; }
     .nav { display: flex; gap: 5px; }
     .nav button, .filters button { border: 1px solid transparent; background: transparent; color: var(--muted); border-radius: 6px; padding: 8px 14px; }
-    .nav button[aria-selected="true"], .filters button.active { background: #1b3629; border-color: var(--border); color: var(--text); }
+    .nav button[aria-selected="true"], .filters button.active { background: #21423e; border-color: #397e70; color: var(--text); }
     .page[hidden] { display: none !important; }
     .ticker { display: flex; gap: 8px; align-items: center; min-height: 65px; overflow-x: auto; padding: 8px 14px; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
     .ticker a { flex: 0 0 auto; border: 1px solid var(--border); border-radius: 7px; min-width: 145px; padding: 5px 10px; color: var(--text); }
@@ -39,7 +39,7 @@
     .live-tile .widget { height:72px; }
     .live-tile a { font-size:10px; padding:0 5px; }
     .live-caption { padding:0 14px 7px; color:var(--muted); font-size:10px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; min-height: 0; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 13px; overflow: hidden; min-height: 0; box-shadow:0 12px 35px #040a101c; }
     .bar { min-height: 46px; padding: 8px 13px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
     .bar h2 { margin: 0; font-size: 13px; }
     .bar small { font-size: 10px; color: var(--muted); }
@@ -98,14 +98,22 @@
     .agenda-row p { margin: 2px 0 0; color: var(--muted); font-size: 10px; }
     .market-context { padding: 0 12px 18px; }
     .market-context h2 { font-size: 13px; margin: 4px 0 9px; }
+    .market-power-pulse { display:flex; align-items:center; gap:22px; padding:13px 19px; margin:5px 12px 0; background:linear-gradient(110deg,#173735,#14242d 65%); border-color:#3d716e; }
+    .market-power-pulse h2 { font-size:18px; margin:4px 0; }
+    .market-power-pulse p { color:var(--muted); font-size:11px; margin:3px 0 0; }
+    .market-power-stats { display:flex; gap:22px; margin-left:auto; }
+    .market-power-stats div { min-width:135px; }
+    .market-power-stats small { display:block; color:var(--muted); font-size:10px; }
+    .market-power-stats strong { font-size:19px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .market-power-pulse a { white-space:nowrap; font-weight:700; }
     .mini-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
     .mini { padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; }
     .mini small, .metric small { display: block; color: var(--muted); font-size: 10px; }
     .mini strong { display: block; font-size: 18px; margin: 4px 0 1px; }
     .mini span { color: var(--warm); font-size: 10px; }
-    .workspace { max-width: 1460px; margin: auto; padding: 18px; }
+    .workspace { max-width: 1460px; margin: auto; padding: clamp(16px,2.4vw,34px); }
     .page-intro { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 15px; }
-    .page-intro h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -.025em; }
+    .page-intro h1 { font-size: clamp(24px,2.6vw,38px); margin: 0 0 4px; letter-spacing: -.04em; line-height:1.14; }
     .page-intro p { color: var(--muted); margin: 0; }
     .stamp { border: 1px solid var(--border); background: var(--surface-2); border-radius: 6px; padding: 7px 10px; color: var(--muted); font-size: 10px; white-space: nowrap; }
     .source-status { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 15px; }
@@ -195,6 +203,61 @@
     .power-forecast div { background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:10px; }
     .power-forecast small, .power-forecast span { display:block; color:var(--muted); font-size:10px; }
     .power-forecast strong { display:block; font-size:18px; margin:3px 0; }
+    .eyebrow { color:var(--accent); font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+    .power-intro { align-items:center; margin:3px 0 19px; }
+    .power-intro p { font-size:13px; margin-top:8px; }
+    .power-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+    .power-actions button { color:var(--text); background:var(--surface-2); font-size:12px; }
+    .power-actions button:hover { border-color:var(--accent); }
+    .power-head { margin-bottom:14px; }
+    .power-head .badge { font-size:11px; padding:6px 11px; }
+    .power-lead { display:grid; grid-template-columns:minmax(280px,.43fr) minmax(0,1fr); gap:12px; align-items:stretch; }
+    .power-hero { padding:22px 24px; background:linear-gradient(140deg,#153d42,#13302f 50%,#14232e); border-color:#40877e; position:relative; }
+    .power-hero:after { content:''; position:absolute; width:170px; height:170px; border:1px solid #71dfc230; border-radius:50%; right:-60px; top:-70px; pointer-events:none; }
+    .power-hero strong { display:block; font-size:clamp(36px,4.3vw,60px); font-variant-numeric:tabular-nums; line-height:1.08; margin:20px 0 0; letter-spacing:-.055em; }
+    .power-unit { color:var(--accent); font-weight:700; font-size:15px; }
+    .power-hero-time { margin-top:15px; color:var(--text); font-weight:600; font-size:12px; }
+    .power-hero-delta { margin-top:7px; color:#c8dcda; font-size:11px; }
+    .power-lead .price-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:0; }
+    .power-lead .price-grid article { border:1px solid var(--border); border-radius:13px; background:var(--surface); padding:17px 19px; min-height:116px; }
+    .power-lead .price-grid small { color:var(--muted); font-size:11px; }
+    .power-lead .price-grid strong { color:var(--text); font-size:clamp(19px,2.1vw,27px); font-variant-numeric:tabular-nums; letter-spacing:-.035em; }
+    .power-lead .price-grid span { color:var(--muted); font-size:11px; }
+    .power-brief { margin:12px 0; padding:19px 22px; border-color:#487765; background:linear-gradient(100deg,#18372f,#172b31 72%); }
+    .power-section-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+    .power-section-header h2 { margin:5px 0 0; font-size:18px; letter-spacing:-.02em; }
+    .power-brief p { font-size:17px; color:var(--text); margin:13px 0 6px; line-height:1.5; }
+    .power-brief-sub { color:#bed2cf; font-size:12px; }
+    .power-alerts { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:12px; }
+    .power-alert { padding:13px 15px; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:9px; }
+    .power-alert.warm { border-left-color:var(--warm); }
+    .power-alert small,.power-alert span { display:block; color:var(--muted); font-size:11px; }
+    .power-alert strong { display:block; margin:3px 0; font-size:14px; }
+    .power-analysis-layout { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(315px,.85fr); gap:12px; align-items:stretch; }
+    .power-analysis-layout .power-history-panel { margin:0; padding:20px; }
+    .power-analysis-layout .power-history-panel p { font-size:12px; }
+    .power-analysis-layout .power-price-chart { height:255px; margin:8px 0 0; }
+    .power-analysis-layout .power-price-chart svg { height:255px; }
+    .power-legend-inline { color:var(--muted); white-space:nowrap; font-size:11px; margin-top:7px; }
+    .power-legend-inline i { display:inline-block; width:15px; height:3px; margin:0 5px 3px 12px; background:var(--accent); }
+    .power-legend-inline i:nth-of-type(2) { background:var(--warm); }
+    .power-hours { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin:13px 0; }
+    .power-hours article { background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; }
+    .power-hours small,.power-hours span { display:block; color:var(--muted); font-size:10px; }
+    .power-hours strong { font-variant-numeric:tabular-nums; font-size:15px; display:block; margin:2px 0; }
+    .power-source { border-top:1px solid var(--border); padding-top:9px; overflow-wrap:anywhere; }
+    .power-insights { display:grid; gap:12px; grid-template-rows:auto auto; }
+    .power-insight-card { padding:19px; }
+    .power-insight-card h2 { margin:5px 0 10px; font-size:18px; }
+    .power-insight-card p { margin:8px 0 12px; color:var(--muted); font-size:12px; }
+    .power-driver { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; border-top:1px solid var(--border); padding:11px 0; }
+    .power-driver small { color:var(--muted); font-size:11px; }
+    .power-driver strong { font-size:15px; font-variant-numeric:tabular-nums; }
+    .power-driver span { grid-column:1/-1; font-size:11px; color:var(--muted); }
+    .power-intraday-empty { padding:11px; border:1px solid #997247; border-radius:7px; color:var(--warm)!important; background:#4b3a252a; font-weight:700; }
+    .power-chapter { font-size:17px; letter-spacing:-.02em; margin:23px 0 7px; }
+    .power-grid { margin-top:9px; }
+    .power-card { border-top:2px solid #3e8277; }
     .empty { padding: 20px; color: var(--muted); }
     .footer { max-width: 1460px; margin: auto; padding: 10px 18px 24px; font-size: 10px; color: var(--muted); }
     @media (max-width: 1050px) {
@@ -207,6 +270,9 @@
       .physical-side { grid-template-columns: 1fr 1fr; }
       .power-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .power-layout { grid-template-columns:1fr; }
+      .power-analysis-layout { grid-template-columns:1fr; }
+      .power-insights { grid-template-columns:1fr 1fr; }
+      .power-alerts { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .chart { min-height:0; }
       .chart-duo { grid-template-columns:1fr; }
     }
@@ -226,9 +292,20 @@
       .page-intro { display: block; }
       .stamp { display: inline-block; margin-top: 10px; }
       .physical-side { grid-template-columns: 1fr; }
-      .power-grid, .power-bottom, .price-grid { grid-template-columns:1fr; }
+      .power-grid, .power-bottom { grid-template-columns:1fr; }
+      .power-lead { grid-template-columns:1fr; }
+      .power-lead .price-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .power-lead .price-grid article { padding:12px; min-height:110px; }
+      .power-lead .price-grid strong { font-size:20px; }
+      .power-hours { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .power-insights { grid-template-columns:1fr; }
+      .power-alerts { grid-template-columns:1fr; }
+      .power-brief p { font-size:15px; }
+      .power-section-header { flex-wrap:wrap; }
       .power-forecast { grid-template-columns:1fr; }
       .price-links,.signal-grid { grid-template-columns:1fr; }
+      .market-power-pulse { flex-wrap:wrap; gap:10px; }
+      .market-power-stats { margin-left:0; width:100%; justify-content:space-between; }
     }
   </style>
 </head>
@@ -245,6 +322,7 @@
   <section class="page" id="markets">
     <div class="live-strip" id="live-strip" aria-label="Cotations en séance"></div>
     <div class="live-caption">Cotation indicative OANDA via TradingView, actualisée par le fournisseur en séance. Ce n’est pas le contrat Brent ICE. Vérifier l’heure et le délai chez le fournisseur avant toute décision.</div>
+    <div class="card market-power-pulse"><div><div class="eyebrow">POWER FR · REPÈRE DE MARCHÉ</div><h2>Électricité française</h2><p id="market-power-note">Prix day-ahead en attente.</p></div><div class="market-power-stats"><div><small>Livraison en cours</small><strong id="market-power-now">—</strong></div><div><small>Demain · moyenne</small><strong id="market-power-tomorrow">—</strong></div></div><a href="#power" data-open="power">Analyser ↗</a></div>
     <main class="market-grid">
       <section class="card chart">
         <div class="bar"><h2 id="market-chart-title">Brent · indicatif OANDA</h2><a id="market-chart-link" href="https://www.tradingview.com/symbols/BCOUSD/?exchange=OANDA" target="_blank" rel="noopener noreferrer">Ouvrir ↗</a></div>
@@ -294,37 +372,41 @@
 
   <section class="page" id="power" hidden>
     <main class="workspace">
-      <div class="page-intro"><div><h1>Power · France</h1><p>Demande, mix et échanges physiques RTE ; prévisions J-1 ENTSO-E avec clé.</p></div><span class="stamp" id="power-updated">Instantané en attente</span></div>
-      <div class="power-head"><span class="badge" id="power-rte-status">RTE : collecte en attente</span><span class="badge" id="power-entsoe-status">ENTSO-E : clé en attente</span><span class="badge">Observations ≠ prix de marché</span></div>
+      <div class="page-intro power-intro"><div><div class="eyebrow">POWER INTELLIGENCE · FRANCE</div><h1>Le marché électrique, en clair.</h1><p>Prix de livraison, écarts européens et signaux physiques. Chaque chiffre porte sa source et sa date.</p></div><div class="power-actions"><span class="stamp" id="power-updated">Instantané en attente</span><button type="button" class="stamp" id="power-refresh">Rafraîchir ↻</button></div></div>
+      <div class="power-head"><span class="badge" id="power-price-status">Prix : vérification en cours</span><span class="badge" id="power-rte-status">RTE : collecte en attente</span><span class="badge" id="power-entsoe-status">ENTSO-E : collecte en attente</span></div>
+      <section class="power-lead" aria-label="Tableau de bord des prix">
+        <div class="card power-hero"><div class="eyebrow">FRANCE · DAY-AHEAD · CRÉNEAU LIVRÉ</div><strong id="power-now-value">—</strong><div class="power-unit">€/MWh</div><div id="power-now-delivery" class="power-hero-time">Période de livraison en attente</div><div id="power-now-delta" class="power-hero-delta">Prix fixé lors de l’enchère de la veille.</div></div>
+        <div class="price-grid" id="power-price-grid"></div>
+      </section>
+      <section class="card power-brief"><div class="power-section-header"><div><div class="eyebrow">SYNTHÈSE</div><h2>Ce qui change sur le marché</h2></div><span class="badge">Calculé à partir des publications</span></div><p id="power-market-takeaway">Lecture des prix en cours…</p><div id="power-market-evidence" class="power-brief-sub"></div></section>
+      <div class="power-alerts" id="power-alert-list" aria-label="Repères de marché calculés"></div>
+      <div class="power-analysis-layout">
+        <section class="card power-history-panel" id="power-prices-panel">
+          <div class="power-section-header"><div><div class="eyebrow">MARCHÉ DE GROS</div><h2>France vs DE-LU · enchère day-ahead</h2></div><span class="power-legend-inline"><i></i> France <i></i> DE-LU</span></div>
+          <p>Chaque point est le prix fixé la veille pour un créneau de livraison. L’échelle est commune aux deux marchés.</p>
+          <div class="power-controls" id="power-price-span" aria-label="Période des prix"></div>
+          <div class="power-price-chart" id="power-price-chart"><span class="empty">Collecte des prix en attente.</span></div>
+          <div class="power-meta" id="power-price-meta"></div>
+          <div id="power-price-hours" class="power-hours"></div>
+          <p class="power-source"><a href="https://www.energy-charts.info/charts/price_spot_market/chart.htm?c=FR" target="_blank" rel="noopener noreferrer">Fraunhofer ISE Energy-Charts ↗</a> · <span id="power-price-license">Licence vérifiée dans la réponse source.</span> Graphique et indicateurs recalculés ici.</p>
+        </section>
+        <aside class="power-insights">
+          <section class="card power-insight-card"><div class="eyebrow">LECTURE DES FACTEURS</div><h2>Pourquoi surveiller ces prix ?</h2><p>Les écarts ci-dessous sont des observations physiques. Ils éclairent le marché sans attribuer à eux seuls une variation de prix.</p><div id="power-driver-list"></div><p id="power-price-context"></p></section>
+          <section class="card power-insight-card"><div class="eyebrow">AUTRE MARCHÉ</div><h2>Intraday continu · France</h2><p class="power-intraday-empty">Prix ID1 / ID3 indisponible dans le cockpit</p><p>EPEX publie des indices intraday pour des produits de livraison précis. Une série continue réutilisable n’est pas fournie par notre flux ouvert. Le prix d’équilibrage RTE ne mesure pas ces transactions.</p><a href="https://www.epexspot.com/en/market-results" target="_blank" rel="noopener noreferrer">Consulter les résultats EPEX ↗</a></section>
+        </aside>
+      </div>
+      <section class="card power-history-panel"><div class="power-section-header"><div><div class="eyebrow">TRANSPARENCE</div><h2>Comment lire les variations</h2></div></div><p id="power-price-reading"></p><p>Une hausse du prix day-ahead de demain reflète l’enchère pour demain. Les mesures RTE ci-dessous décrivent des heures déjà écoulées ; les comparer permet de formuler des hypothèses, pas de prouver la cause d’un prix futur.</p></section>
+      <h2 class="power-chapter">Le système physique · observations RTE</h2>
       <div class="power-grid" id="power-grid"></div>
       <div class="power-layout">
-        <section class="card"><h2>Demande et demande résiduelle · 24 h</h2><p>Résiduelle indicative = consommation − production éolienne − solaire ; un indicateur de tension physique, pas une prévision de prix.</p><div id="power-curve" class="empty">Collecte RTE en attente.</div><div class="power-legend" id="power-axis"></div></section>
-        <section class="card"><h2>Production française · dernière observation</h2><p>Puissance par filière, en MW. Les parts portent sur la production affichée, pas sur la consommation.</p><div id="power-mix" class="empty">Collecte RTE en attente.</div><small id="power-mix-time" class="detail"></small></section>
+        <section class="card"><h2>Demande et résiduelle · 24 h</h2><p>Résiduelle indicative = consommation − éolien − solaire. Une valeur plus élevée peut solliciter des moyens pilotables.</p><div id="power-curve" class="empty">Collecte RTE en attente.</div><div class="power-legend" id="power-axis"></div></section>
+        <section class="card"><h2>Production française · dernière observation</h2><p>Puissance par filière en MW. L’échelle des barres montre la part de la production affichée.</p><div id="power-mix" class="empty">Collecte RTE en attente.</div><small id="power-mix-time" class="detail"></small></section>
       </div>
-      <section class="card power-history-panel">
-        <h2>Historique physique · RTE</h2>
-        <p>Observations horaires conservées au fil des collectes. Le choix « 1 an » montre uniquement la période réellement disponible ; les valeurs absentes ne sont pas reconstruites.</p>
-        <div class="power-controls" id="power-span" aria-label="Période du graphique"></div>
-        <div class="power-controls" id="power-series" aria-label="Mesure du graphique"></div>
-        <div class="power-history-chart" id="power-history-chart"><span class="empty">Historique RTE en attente.</span></div>
-        <div class="power-meta" id="power-history-meta"></div>
-        <p id="power-history-reading"></p>
-      </section>
-      <section class="card power-history-panel" id="power-prices-panel">
-        <h2>Prix Power · enchère day-ahead France / DE-LU</h2>
-        <p>Prix fixés la veille pour chaque période de livraison en €/MWh. France et Allemagne/Luxembourg partagent une échelle et une heure de livraison ; le graphique ne représente pas les transactions intraday en cours.</p>
-        <div class="price-grid" id="power-price-grid"></div>
-        <div class="power-controls" id="power-price-span" aria-label="Période des prix"></div>
-        <div class="power-price-chart" id="power-price-chart"><span class="empty">Collecte des prix en attente.</span></div>
-        <div class="power-meta" id="power-price-meta"></div>
-        <p id="power-price-reading"></p>
-        <p id="power-price-context"></p>
-        <p><a href="https://www.energy-charts.info/charts/price_spot_market/chart.htm?c=FR" target="_blank" rel="noopener noreferrer">Fraunhofer ISE Energy-Charts ↗</a> · <span id="power-price-license">Licence vérifiée dans la réponse source.</span> Graphiques et indicateurs recalculés ici.</p>
-      </section>
+      <section class="card power-history-panel"><div class="power-section-header"><div><div class="eyebrow">HISTORIQUE PHYSIQUE</div><h2>RTE · demande, gaz, renouvelables et échanges</h2></div></div><p>Observations horaires accumulées sans compléter les trous. « 1 an » affiche la période réellement collectée.</p><div class="power-controls" id="power-span" aria-label="Période du graphique"></div><div class="power-controls" id="power-series" aria-label="Mesure du graphique"></div><div class="power-history-chart" id="power-history-chart"><span class="empty">Historique RTE en attente.</span></div><div class="power-meta" id="power-history-meta"></div><p id="power-history-reading"></p></section>
       <div class="power-bottom">
         <section class="card"><h2>Pour surveiller le gaz et les échanges</h2><p id="power-readout">Le gaz électrique, l'éolien, le solaire et le solde d'import/export seront affichés après la première collecte RTE.</p><p>Un solde RTE négatif signifie une exportation nette ; positif, une importation nette. Les données sont des télémesures complétées d'estimations.</p><a href="https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/" target="_blank" rel="noopener noreferrer">Source RTE éCO2mix ↗</a></section>
         <section class="card"><h2>Demande anticipée · France et DE-LU</h2><p>Point haut prévu dans les prochaines 24 h, prévision day-ahead ENTSO-E sous licence CC BY 4.0. Chaque marché a sa taille : comparer la trajectoire, pas les niveaux bruts.</p><div class="power-forecast" id="power-forecast"></div><p id="power-forecast-note"></p><a href="https://transparency.entsoe.eu/" target="_blank" rel="noopener noreferrer">Transparence ENTSO-E ↗</a></section>
-        <section class="card"><h2>Intraday continu · France</h2><p>Le day-ahead ci-dessus est une enchère close la veille. Le marché intraday continu échange ensuite jusqu'à l'approche de la livraison. ENTSO-E rend le day-ahead obligatoire, mais l'intraday n'y est publié que volontairement ; nous n'avons pas de série française continue vérifiée et redistribuable. Le prix d'équilibrage RTE est encore un autre mécanisme.</p><p>Un spread day-ahead/intraday demande les deux prix pour la même période de livraison.</p><a href="https://www.epexspot.com/en/market-results" target="_blank" rel="noopener noreferrer">Résultats intraday EPEX ↗</a> · <a href="https://www.rte-france.com/en/data-publications/eco2mix/market-data" target="_blank" rel="noopener noreferrer">Marché RTE ↗</a></section>
+        <section class="card"><h2>Références de marché</h2><p>Prix day-ahead : enchère de la veille. Intraday continu : échanges ultérieurs du même créneau, avec indices ID1 / ID3. Prix d’équilibrage : règlement d’un mécanisme différent. Un spread exige des valeurs comparables et datées.</p><a href="https://www.epexspot.com/en/indices" target="_blank" rel="noopener noreferrer">Définitions EPEX ↗</a> · <a href="https://transparency.entsoe.eu/" target="_blank" rel="noopener noreferrer">Transparence ENTSO-E ↗</a></section>
         <section class="card"><h2>Méthode et qualité des mesures</h2><p><b>Observé provisoire</b> : RTE éCO2mix, dernier relevé de chaque heure UTC. <b>Calculé</b> : demande résiduelle = consommation − éolien − solaire ; ce calcul ne représente pas le dispatch réel d'une centrale ni un prix. Les trous de collecte restent visibles dans la courbe.</p><p>La couverture réelle, la date de mesure et l'heure de collecte sont affichées. Le fichier HTML embarque l'historique ; « Actualiser les données » le synchronise depuis GitHub si le réseau le permet.</p><p>Les jetons ENTSO-E et GIE restent dans les secrets GitHub.</p></section>
       </div>
     </main>
@@ -10262,6 +10344,7 @@
         button.setAttribute('aria-selected', String(button.dataset.page === page));
       }
       for (const section of document.querySelectorAll('.page')) section.hidden = section.id !== page;
+      if (page === 'power') {refreshPowerDirect();refreshRteDirect();}
     }
     document.querySelectorAll('.nav button, [data-open]').forEach(button => {
       button.addEventListener('click', event => {
@@ -10905,6 +10988,27 @@
          'Ce niveau physique est un repère observé, sans prévision automatique du prix.');
     }
 
+    function renderMarketPowerPulse() {
+      const fr=powerPrices?.series?.fr||[],now=Date.now();
+      const active=[...fr].reverse().find(p=>Date.parse(p.at)<=now&&Date.parse(p.at)>=now-3600000);
+      const formatter=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',
+        month:'2-digit',day:'2-digit'});
+      const day=at=>{const parts=Object.fromEntries(formatter.formatToParts(new Date(at))
+        .filter(p=>['year','month','day'].includes(p.type)).map(p=>[p.type,p.value]));
+        return parts.year+'-'+parts.month+'-'+parts.day;};
+      const tomorrow=day(Date.parse(day(now)+'T12:00:00Z')+86400000);
+      const points=fr.slice(-300).filter(p=>day(p.at)===tomorrow&&Number.isFinite(p.value));
+      const step=fr.length>1 ? Math.max(15,Math.min(60,Math.round((Date.parse(fr[1].at)-Date.parse(fr[0].at))/60000))) : 60;
+      const complete=points.length>=Math.floor(24*60/step*.8);
+      document.getElementById('market-power-now').textContent=active?number(active.value,2)+' €':'—';
+      document.getElementById('market-power-tomorrow').textContent=complete?
+        number(points.reduce((sum,p)=>sum+p.value,0)/points.length,2)+' €':'—';
+      const verified=powerPrices.live_checked_at||powerPrices.generated_at;
+      document.getElementById('market-power-note').textContent=verified ?
+        'Prix fixés la veille · source '+(powerPrices.live_checked_at?'vérifiée ':'archivée ')+
+        parisTime(verified)+' · €/MWh' : 'Prix day-ahead en attente.';
+    }
+
     function renderPowerPrices() {
       const cards = document.getElementById('power-price-grid');
       const control = document.getElementById('power-price-span');
@@ -10913,17 +11017,31 @@
       const reading = document.getElementById('power-price-reading');
       const context = document.getElementById('power-price-context');
       const licence = document.getElementById('power-price-license');
-      cards.replaceChildren(); control.replaceChildren(); chart.replaceChildren();
-      context.textContent = '';
+      const hero = document.getElementById('power-now-value');
+      const heroTime = document.getElementById('power-now-delivery');
+      const heroDelta = document.getElementById('power-now-delta');
+      const status = document.getElementById('power-price-status');
+      const hours = document.getElementById('power-price-hours');
+      const takeaway = document.getElementById('power-market-takeaway');
+      const evidence = document.getElementById('power-market-evidence');
+      const drivers = document.getElementById('power-driver-list');
+      const alerts = document.getElementById('power-alert-list');
+      cards.replaceChildren(); control.replaceChildren(); chart.replaceChildren(); hours.replaceChildren(); drivers.replaceChildren(); alerts.replaceChildren();
+      context.textContent = ''; hero.textContent = '—'; heroTime.textContent = 'Période de livraison en attente';
+      heroDelta.textContent = 'Prix fixé lors de l’enchère de la veille.';
       const series = powerPrices?.series || {};
       const fr = Array.isArray(series.fr) ? series.fr.filter(point => Number.isFinite(point.value) &&
         Number.isFinite(Date.parse(point.at))) : [];
       const de = Array.isArray(series.de) ? series.de.filter(point => Number.isFinite(point.value) &&
         Number.isFinite(Date.parse(point.at))) : [];
+      renderMarketPowerPulse();
       if (!fr.length) {
         chart.append(line('Prix day-ahead non publiés dans le cockpit : collecte ou licence de la source en attente.', 'span', 'empty'));
         meta.textContent = snapshot.sources?.power_price_fr?.status === 'error' ?
           'Source indisponible lors de la dernière collecte ; aucun prix inventé.' : 'Collecte des prix en attente.';
+        status.textContent = 'Prix · indisponibles'; status.className='badge warn';
+        takeaway.textContent='Aucune donnée de prix vérifiée disponible pour cette période.';
+        evidence.textContent='Les mesures physiques restent consultables ci-dessous.';
         reading.textContent = ''; return;
       }
       const attribution = powerPrices.licence?.fr;
@@ -10936,35 +11054,67 @@
         button.addEventListener('click',()=>{powerPriceSpan=days;renderPowerPrices();});
         control.append(button);
       }
-      const localDay = at => new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',
-        month:'2-digit',day:'2-digit'}).format(new Date(at));
+      const dayFormatter = new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',
+        month:'2-digit',day:'2-digit'});
+      const localDay = at => {const parts=Object.fromEntries(dayFormatter.formatToParts(new Date(at))
+        .filter(p=>['year','month','day'].includes(p.type)).map(p=>[p.type,p.value]));
+        return parts.year+'-'+parts.month+'-'+parts.day;};
       const today = localDay(Date.now());
-      const tomorrow = localDay(Date.now()+86400000);
+      const tomorrow = localDay(Date.parse(today+'T12:00:00Z')+86400000);
       const latestFor = (items, now) => [...items].reverse().find(p => Date.parse(p.at)<=now &&
         Date.parse(p.at)>=now-3600000);
       const now = Date.now(), current = latestFor(fr,now);
-      const counterpart = current && de.find(p => p.at===current.at);
+      const counterpart = current && de.find(p => Date.parse(p.at)===Date.parse(current.at));
       const delivery = fr.filter(p => localDay(p.at)===tomorrow);
       const todayDelivery = fr.filter(p => localDay(p.at)===today);
-      const todayAverage = todayDelivery.length >= 80 ?
+      const interval = fr.length>1 ? Math.max(15,Math.min(60,Math.round((Date.parse(fr[1].at)-Date.parse(fr[0].at))/60000))) : 60;
+      const complete = items => items.length >= Math.floor(24*60/interval*.8);
+      const todayAverage = complete(todayDelivery) ?
         todayDelivery.reduce((sum,p)=>sum+p.value,0)/todayDelivery.length : null;
-      const average = delivery.length ? delivery.reduce((sum,p)=>sum+p.value,0)/delivery.length : null;
-      const peak = delivery.length ? delivery.reduce((a,b)=>a.value>b.value?a:b) : null;
+      const average = complete(delivery) ? delivery.reduce((sum,p)=>sum+p.value,0)/delivery.length : null;
+      const peak = average!==null ? delivery.reduce((a,b)=>a.value>b.value?a:b) : null;
       const countNegative = delivery.filter(p=>p.value<0).length;
+      const previous = current && fr.find(p=>Date.parse(p.at)===Date.parse(current.at)-86400000);
+      const latestCheck = powerPrices.live_checked_at || powerPrices.generated_at || snapshot.generated_at;
+      const age = Date.now()-Date.parse(latestCheck||0);
+      const direct = Boolean(powerPrices.live_checked_at) && age<10*60000;
+      status.textContent = direct ? 'Prix · API vérifiée '+parisTime(latestCheck) :
+        'Prix · archive '+(latestCheck?parisTime(latestCheck):'sans date');
+      status.className = 'badge '+(direct || age<4*3600000 ? 'good' : 'warn');
+      hero.textContent=current ? number(current.value,2) : '—';
+      heroTime.textContent=current ? 'Livraison '+parisTime(current.at) : 'Créneau actuel non publié';
+      heroDelta.textContent=current&&previous ? 'Même créneau il y a 24 h : '+
+        (current.value-previous.value>=0?'+':'')+number(current.value-previous.value,2)+
+        ' €/MWh · comparaison des enchères' : 'Prix fixé lors de l’enchère de la veille · pas une cotation intraday.';
       for (const [title,value,detail] of [
-        ['France · période en cours',current ? number(current.value,2)+' €/MWh' : '—',
-          current ? 'Livraison '+parisTime(current.at) : 'Prix de la période non publié'],
-        ['France · demain, moyenne',average!==null ? number(average,2)+' €/MWh' : '—',
-          average!==null ? delivery.length+' périodes de livraison' : 'Enchère en attente'],
-        ['France − DE-LU · période',current&&counterpart ?
+        ['Demain · moyenne France',average!==null ? number(average,2)+' €/MWh' : '—',
+          average!==null ? delivery.length+' créneaux publiés' : delivery.length ? 'Publication partielle' : 'Enchère en attente'],
+        ['Demain vs aujourd’hui',average!==null&&todayAverage!==null ?
+          (average>=todayAverage?'+':'')+number(average-todayAverage,2)+' €/MWh' : '—',
+          average!==null&&todayAverage!==null ? 'Moyennes des jours de livraison' : 'Deux journées complètes requises'],
+        ['France − DE-LU · maintenant',current&&counterpart ?
           number(current.value-counterpart.value,2)+' €/MWh' : '—',
-          current&&counterpart ? 'Même créneau · positif = France plus chère' : 'Couplage des données en attente'],
-        ['France · pic demain',peak ? number(peak.value,2)+' €/MWh' : '—',
-          peak ? parisTime(peak.at)+' · '+countNegative+' périodes négatives' : 'À venir']
+          current&&counterpart ? 'Même livraison · positif = France plus chère' : 'Créneau comparable en attente'],
+        ['Demain · point haut',peak ? number(peak.value,2)+' €/MWh' : '—',
+          peak ? parisTime(peak.at)+' · '+countNegative*interval+' min négatives' : 'Publication à venir']
       ]) {
         const card=line('','article');
         card.append(line(title,'small'),line(value,'strong'),line(detail,'span'));
         cards.append(card);
+      }
+      if(average!==null){
+        const hour=p=>Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',hour:'2-digit',hourCycle:'h23'}).format(new Date(p.at)));
+        for(const [from,to] of [[0,6],[6,12],[12,18],[18,24]]){
+          const block=delivery.filter(p=>hour(p)>=from&&hour(p)<to);
+          if(!block.length)continue;
+          const mean=block.reduce((sum,p)=>sum+p.value,0)/block.length;
+          const tile=line('','article');
+          tile.append(line(String(from).padStart(2,'0')+'–'+String(to).padStart(2,'0')+' h · Paris','small'),
+            line(number(mean,1)+' €/MWh','strong'),
+            line('de '+number(Math.min(...block.map(p=>p.value)),0)+' à '+
+              number(Math.max(...block.map(p=>p.value)),0)+' · '+block.length+' créneaux','span'));
+          hours.append(tile);
+        }
       }
       const end = Math.max(Date.parse(fr[fr.length-1].at),de.length ? Date.parse(de[de.length-1].at) : 0);
       const start = end-powerPriceSpan*86400000;
@@ -11011,20 +11161,69 @@
         (snapshot.sources?.power_price_fr?.status==='error'?' · source en erreur : archive':'');
       const rte = snapshot.history?.power_fr || [];
       const observed = rte[rte.length-1];
-      const paired = observed && [...fr].reverse().find(p=>Date.parse(p.at)<=Date.parse(observed.at)&&
-        Date.parse(p.at)>=Date.parse(observed.at)-3600000);
-      reading.textContent=(peak ? 'Demain : pic day-ahead '+number(peak.value,2)+' €/MWh vers '+parisTime(peak.at)+
-        '; '+countNegative+' périodes à prix négatif. ' : '')+
-        (average!==null&&todayAverage!==null ? 'Moyenne demain '+
-        (average>=todayAverage?'+':'')+number(average-todayAverage,2)+
-        ' €/MWh face aux '+todayDelivery.length+' périodes d’aujourd’hui. ' : '')+
-        (paired&&observed.eolien!==undefined&&observed.solaire!==undefined ?
-        'Dernier créneau observé : prix fixé la veille '+number(paired.value,2)+' €/MWh ; demande résiduelle RTE '+
-        number(observed.load-observed.eolien-observed.solaire,0)+' MW. Ces deux mesures ne prouvent pas un effet causal.' :
-        'Prix et télémesures ont des dates et des définitions différentes : vérifier les créneaux avant comparaison.');
+      const direction=average!==null&&todayAverage!==null ? average-todayAverage : null;
+      takeaway.textContent=direction!==null ?
+        'Le marché valorise la livraison de demain à '+number(average,2)+' €/MWh en moyenne ('+
+        (direction>=0?'+':'')+number(direction,2)+' €/MWh face à aujourd’hui). '+
+        (peak?'Point haut '+number(peak.value,2)+' €/MWh à '+parisTime(peak.at)+'.':'') :
+        'Le profil day-ahead de demain est encore en attente ou incomplet : la comparaison journalière est suspendue.';
+      evidence.textContent=(current&&counterpart ? 'France − DE-LU sur le créneau livré : '+
+        (current.value-counterpart.value>=0?'+':'')+number(current.value-counterpart.value,2)+' €/MWh. ' : '')+
+        (average!==null ? countNegative*interval+' minute(s) à prix négatif demain. ' : '')+
+        'Prix de l’enchère, pas des transactions intraday en cours.';
+      const addAlert=(label,value,note,warm=false)=>{
+        const tile=line('','article','power-alert'+(warm?' warm':''));
+        tile.append(line(label,'small'),line(value,'strong'),line(note,'span'));alerts.append(tile);
+      };
+      addAlert('REPRICING J+1',direction!==null ?
+        (direction>=0?'+':'')+number(direction,2)+' €/MWh' : 'En attente',
+        direction!==null?'Moyenne demain vs aujourd’hui · enchère day-ahead':'Deux jours complets requis',
+        direction!==null&&Math.abs(direction)>=20);
+      addAlert('HEURE DE POINTE',peak ? number(peak.value,2)+' €/MWh' : 'En attente',
+        peak ? 'Livraison '+parisTime(peak.at)+' · '+number(peak.value-average,1)+
+          ' €/MWh au-dessus de la moyenne de demain':'Enchère de demain non complète',
+        peak&&peak.value-average>=50);
+      addAlert('ÉCART FRANCE / DE-LU',current&&counterpart ?
+        (current.value-counterpart.value>=0?'+':'')+number(current.value-counterpart.value,2)+' €/MWh' : 'En attente',
+        'Même créneau de livraison · positif = France plus chère',
+        current&&counterpart&&Math.abs(current.value-counterpart.value)>=20);
+      if(countNegative&&average!==null)addAlert('PRIX NÉGATIFS DEMAIN',countNegative*interval+' min',
+        'Durée publiée à prix inférieur à 0 €/MWh',true);
+      reading.textContent='Le prix day-ahead est fixé la veille pour chaque période de livraison. '+
+        (observed ? 'Dernière mesure physique RTE : '+parisTime(observed.at)+'. ' : '')+
+        'Pour expliquer un mouvement, examiner aussi la météo, les disponibilités des centrales, les interconnexions et le gaz ; ces facteurs ne sont pas tous mesurés ici.';
       const byTime = new Map(fr.map(p=>[Date.parse(p.at),p.value]));
       const historicRte = Array.isArray(powerHistory?.points) && powerHistory.points.length ?
         powerHistory.points : rte;
+      const latestRte=historicRte[historicRte.length-1];
+      const rteAge=latestRte ? now-Date.parse(latestRte.at) : Infinity;
+      const previousRte=latestRte&&historicRte.reduce((best,p)=>{
+        const gap=Math.abs(Date.parse(p.at)-(Date.parse(latestRte.at)-86400000));
+        return gap<=3600000&&(!best||gap<best.gap)?{row:p,gap}:best;
+      },null)?.row;
+      const addDriver=(label,value,description)=>{
+        const row=line('','div','power-driver');
+        row.append(line(label,'small'),line(value,'strong'),line(description,'span'));
+        drivers.append(row);
+      };
+      if(latestRte&&previousRte){
+        const residual=p=>p.load-p.eolien-p.solaire;
+        const delta=residual(latestRte)-residual(previousRte);
+        const renewable=(latestRte.eolien+latestRte.solaire)-(previousRte.eolien+previousRte.solaire);
+        const gas=latestRte.gaz-previousRte.gaz;
+        const prefix=rteAge>6*3600000?'Archive RTE · ':'RTE · ';
+        addDriver('Demande résiduelle vs même heure J−1',
+          (delta>=0?'+':'')+number(delta,0)+' MW',prefix+parisTime(latestRte.at)+
+          '. Hausse = besoin pilotable potentiellement accru ; le prix n’en découle pas mécaniquement.');
+        addDriver('Éolien + solaire vs J−1',(renewable>=0?'+':'')+number(renewable,0)+' MW',
+          'Production observée à la même heure. Une hausse peut détendre la résiduelle.');
+        addDriver('Production au gaz vs J−1',(gas>=0?'+':'')+number(gas,0)+' MW',
+          'Moyens gaz effectivement mobilisés ; ce chiffre ne mesure pas leur coût marginal.');
+      } else addDriver('Observations physiques','—','Historique RTE insuffisant pour une comparaison à la même heure hier.');
+      if(latestRte&&Number.isFinite(latestRte.ech_physiques))addDriver('Échanges physiques France',
+        number(Math.abs(latestRte.ech_physiques),0)+' MW',
+        latestRte.ech_physiques<0?'Exportations nettes observées.':
+        latestRte.ech_physiques>0?'Importations nettes observées.':'Solde net proche de zéro.');
       const matched = historicRte.filter(p=>Date.parse(p.at)<=now&&Date.parse(p.at)>=now-7*86400000 &&
         Number.isFinite(p.load)&&Number.isFinite(p.eolien)&&Number.isFinite(p.solaire))
         .map(p=>({residual:p.load-p.eolien-p.solaire,price:byTime.get(Date.parse(p.at))}))
@@ -11035,7 +11234,8 @@
         const lower=matched.filter(p=>p.residual<pivot),upper=matched.filter(p=>p.residual>=pivot);
         const mean=items=>items.reduce((sum,p)=>sum+p.price,0)/items.length;
         context.textContent=lower.length&&upper.length ?
-          'Sur '+matched.length+' créneaux appariés des 7 derniers jours : prix day-ahead moyen '+
+          'Repère historique · '+matched.length+' créneaux prix/RTE appariés sur 7 jours : '+
+          'prix day-ahead moyen '+
           number(mean(upper),2)+' €/MWh quand la demande résiduelle observée est ≥ '+number(pivot,0)+
           ' MW (n='+upper.length+'), contre '+number(mean(lower),2)+' €/MWh en dessous (n='+lower.length+
           '). Lecture descriptive : prix fixé la veille, demande mesurée ensuite, autres facteurs non isolés.' :
@@ -11044,6 +11244,118 @@
         context.textContent='Comparaison prix et demande résiduelle : '+matched.length+
           ' créneaux exactement appariés sur 7 jours ; 48 requis pour afficher un repère.';
       }
+    }
+
+    let priceFetchBusy = false;
+    let priceLastAttempt = 0;
+    async function refreshPowerDirect(force = false) {
+      if (priceFetchBusy || (!force && Date.now()-priceLastAttempt < 60000)) return;
+      priceFetchBusy = true; priceLastAttempt = Date.now();
+      const status = document.getElementById('power-price-status');
+      status.textContent = 'Prix · vérification API…';
+      try {
+        const start = new Date(Date.now()-2*86400000).toISOString().slice(0,10);
+        const end = new Date(Date.now()+2*86400000).toISOString().slice(0,10);
+        const read = async zone => {
+          const url = 'https://api.energy-charts.info/price?bzn='+encodeURIComponent(zone)+
+            '&start='+start+'&end='+end;
+          const response = await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(12000)});
+          if(!response.ok)throw new Error('Prix '+zone+' HTTP '+response.status);
+          const data = await response.json();
+          if(typeof data.license_info!=='string'||!data.license_info.includes('CC BY 4.0')||
+             !String(data.unit||'').toUpperCase().includes('EUR')||
+             !Array.isArray(data.unix_seconds)||!Array.isArray(data.price)||
+             data.unix_seconds.length!==data.price.length)throw new Error('Prix '+zone+' non validés');
+          const points=data.unix_seconds.map((stamp,i)=>({stamp,value:data.price[i]}))
+            .filter(p=>Number.isInteger(p.stamp)&&Number.isFinite(p.value)&&
+              p.value>=-5000&&p.value<=5000&&p.stamp*1000<Date.now()+3*86400000)
+            .map(p=>({at:new Date(p.stamp*1000).toISOString(),value:p.value}))
+            .sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+          if(points.length<20||Date.parse(points[points.length-1].at)<Date.now()-86400000)
+            throw new Error('Prix '+zone+' incomplets');
+          return {points,licence:data.license_info};
+        };
+        const [fr,de]=await Promise.all([read('FR'),read('DE-LU')]);
+        const merge=(old,incoming)=>{
+          const cutoff=Date.now()-365*86400000,byTime=new Map();
+          for(const row of [...(old||[]),...incoming]){
+            const stamp=Date.parse(row.at);
+            if(Number.isFinite(stamp)&&stamp>=cutoff&&stamp<Date.now()+3*86400000&&
+               Number.isFinite(row.value))byTime.set(stamp,{at:new Date(stamp).toISOString(),value:row.value});
+          }
+          return [...byTime.values()].sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+        };
+        powerPrices={...powerPrices,series:{fr:merge(powerPrices.series?.fr,fr.points),
+          de:merge(powerPrices.series?.de,de.points)},licence:{fr:fr.licence,de:de.licence},
+          live_checked_at:new Date().toISOString()};
+        renderPowerPrices();
+      } catch(error) {
+        console.warn('API prix directe indisponible, archive conservée :',error);
+        renderPowerPrices();
+        status.textContent += ' · accès direct indisponible';
+        status.className='badge warn';
+      } finally {priceFetchBusy=false;}
+    }
+
+    let rteFetchBusy = false;
+    let rteLastAttempt = 0;
+    async function refreshRteDirect(force = false) {
+      if (rteFetchBusy || (!force && Date.now()-rteLastAttempt < 10*60000)) return;
+      rteFetchBusy=true;rteLastAttempt=Date.now();
+      try {
+        const url='https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/'+
+          'eco2mix-national-tr/records?limit=100&where=date_heure%20%3C%3D%20now%28%29'+
+          '&order_by=date_heure%20desc';
+        const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(12000)});
+        if(!response.ok)throw new Error('RTE HTTP '+response.status);
+        const data=await response.json();
+        if(!Array.isArray(data.results))throw new Error('RTE : format invalide');
+        const fields=['prevision_j','prevision_j1','nucleaire','gaz','eolien','solaire',
+          'hydraulique','bioenergies','charbon','fioul','ech_physiques','pompage','taux_co2'];
+        const points=data.results.map(row=>{
+          const t=Date.parse(row.date_heure),load=Number(row.consommation);
+          if(!Number.isFinite(t)||t>Date.now()||t<Date.now()-48*3600000||
+             !Number.isFinite(load)||load<5000||load>120000)return null;
+          const point={at:new Date(t).toISOString(),load:Math.round(load)};
+          for(const key of fields){
+            if(row[key]===null||row[key]===undefined||row[key]==='')continue;
+            const value=Number(row[key]);
+            if(Number.isFinite(value)&&value>=-35000&&value<=120000)point[key]=Math.round(value);
+          }
+          return point;
+        }).filter(Boolean).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+        const latest=points[points.length-1];
+        if(points.length<12||Date.now()-Date.parse(latest.at)>3*3600000||
+          !['eolien','solaire','gaz','ech_physiques'].every(k=>Number.isFinite(latest[k])))
+          throw new Error('RTE : relevés incomplets ou trop anciens');
+        const byTime=new Map((powerHistory.points||[]).map(p=>[Date.parse(p.at),p]));
+        for(const row of points){
+          const stamp=Date.parse(row.at),hour=Math.floor(stamp/3600000)*3600000;
+          const older=[...byTime.keys()].find(t=>Math.floor(t/3600000)*3600000===hour);
+          if(older!==undefined&&older<stamp)byTime.delete(older);
+          if(older===undefined||older<=stamp)byTime.set(stamp,row);
+        }
+        const cutoff=Date.now()-365*86400000;
+        const historic=[...byTime.values()].filter(p=>Date.parse(p.at)>=cutoff)
+          .sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+        powerHistory={...powerHistory,points:historic,first_at:historic[0]?.at,
+          last_at:historic[historic.length-1]?.at,generated_at:new Date().toISOString()};
+        snapshot.history.power_fr=points.slice(-96);
+        snapshot.sources.rte_power={status:'ok',as_of:latest.at,checked_at:new Date().toISOString(),
+          url:'https://opendata.reseaux-energies.fr/explore/dataset/eco2mix-national-tr/',direct:true};
+        const values={power_load:['Demande France',latest.load],power_gaz:['Gaz électrique',latest.gaz],
+          power_eolien:['Éolien',latest.eolien],power_solaire:['Solaire',latest.solaire],
+          power_exchange:['Solde des échanges physiques',latest.ech_physiques],
+          power_residual:['Demande résiduelle indicative',latest.load-latest.eolien-latest.solaire],
+          power_load_gap:['Écart à prévision de demande J',latest.load-latest.prevision_j]};
+        for(const [id,[label,value]] of Object.entries(values)){
+          delete byId[id];
+          if(Number.isFinite(value))byId[id]={id,sector:'power',label,value,unit:'MW',
+            as_of:latest.at.slice(0,10),source:'RTE éCO2mix',comparison:'observé'};
+        }
+        refreshPanels();
+      } catch(error) {console.warn('RTE direct indisponible, archive conservée :',error);}
+      finally {rteFetchBusy=false;}
     }
 
     function renderPower() {
@@ -11060,8 +11372,9 @@
         'RTE · première collecte en attente';
       rte.classList.toggle('good', !!latest && !powerOld && source.status === 'ok');
       rte.classList.toggle('warn', !latest || powerOld || source.status === 'error');
-      document.getElementById('power-updated').textContent = snapshot.generated_at ?
-        'Dernière collecte : ' + parisTime(snapshot.generated_at) : 'Instantané local';
+      const checked=source.checked_at||snapshot.generated_at;
+      document.getElementById('power-updated').textContent = checked ?
+        (source.direct?'RTE vérifié : ':'Instantané : ')+parisTime(checked) : 'Instantané local';
       const picks = [
         ['power_load', 'consommation observée'],
         ['power_gaz', 'production électrique au gaz'],
@@ -11212,12 +11525,23 @@
         const response = await fetch(url, {cache:'no-store'});
         if (!response.ok) throw new Error('HTTP ' + response.status);
         const next = await response.json();
-        if (!next.generated_at || !Array.isArray(next.metrics) || !next.history ||
-            Date.parse(next.generated_at) <= Date.parse(snapshot.generated_at || 0)) {
-          button.textContent = 'Données déjà à jour'; return;
+        if (!next.generated_at || !Array.isArray(next.metrics) || !next.history) {
+          throw new Error('Instantané incomplet');
         }
-        snapshot = next; metrics = next.metrics;
-        byId = Object.fromEntries(metrics.map(item => [item.id,item]));
+        const newer=Date.parse(next.generated_at)>Date.parse(snapshot.generated_at||0);
+        if(newer){
+          const liveSource=snapshot.sources?.rte_power?.direct&&snapshot.sources.rte_power;
+          const livePoints=liveSource&&snapshot.history?.power_fr;
+          const liveMetrics=liveSource&&Object.fromEntries(Object.entries(byId)
+            .filter(([id])=>id.startsWith('power_')));
+          snapshot=next;metrics=next.metrics;
+          byId=Object.fromEntries(metrics.map(item=>[item.id,item]));
+          if(liveSource&&Date.parse(liveSource.checked_at)>Date.parse(next.generated_at)){
+            snapshot.history.power_fr=livePoints;
+            snapshot.sources.rte_power=liveSource;
+            Object.assign(byId,liveMetrics);
+          }
+        }
         try {
           const powerResponse = await fetch('https://raw.githubusercontent.com/TheoTaillandier/Test2/main/data/power_fr.json?t=' + Date.now(), {cache:'no-store'});
           if (powerResponse.ok) {
@@ -11231,18 +11555,48 @@
           if (priceResponse.ok) {
             const prices = await priceResponse.json();
             if (prices.schema===1&&Array.isArray(prices.series?.fr)&&
-                Date.parse(prices.generated_at)>=Date.parse(powerPrices.generated_at||0)) powerPrices=prices;
+                Date.parse(prices.generated_at)>=Date.parse(powerPrices.generated_at||0)) {
+              const recent=powerPrices.live_checked_at&&
+                Date.parse(powerPrices.live_checked_at)>Date.parse(prices.generated_at);
+              if(recent){
+                const combine=(archive,live)=>{
+                  const byTime=new Map();
+                  for(const p of [...(archive||[]),...(live||[])]){
+                    const t=Date.parse(p.at);
+                    if(Number.isFinite(t)&&Number.isFinite(p.value))byTime.set(t,p);
+                  }
+                  return [...byTime.values()].sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+                };
+                powerPrices={...prices,series:{fr:combine(prices.series.fr,powerPrices.series?.fr),
+                  de:combine(prices.series.de,powerPrices.series?.de)},
+                  licence:powerPrices.licence,live_checked_at:powerPrices.live_checked_at};
+              } else powerPrices=prices;
+            }
           }
         } catch (error) { console.warn('Prix Power non synchronisés :', error); }
         refreshPanels();
-        button.textContent = 'Données synchronisées';
+        button.textContent = newer ? 'Données synchronisées' : 'Données déjà à jour';
       } catch (error) {
         button.textContent = 'Hors connexion · instantané daté';
         console.warn('Synchronisation impossible :', error);
       } finally { button.disabled = false; }
     }
     document.getElementById('refresh-data').addEventListener('click', refreshSnapshot);
-    refreshSnapshot();
+    document.getElementById('power-refresh').addEventListener('click',async()=>{
+      const button=document.getElementById('power-refresh');
+      button.disabled=true;button.textContent='Vérification…';
+      try {await refreshSnapshot();await Promise.all([refreshPowerDirect(true),refreshRteDirect(true)]);}
+      finally {button.disabled=false;button.textContent='Rafraîchir ↻';}
+    });
+    refreshSnapshot().then(()=>refreshPowerDirect());
+    let lastDeliverySlot=Math.floor(Date.now()/900000);
+    setInterval(()=>{const slot=Math.floor(Date.now()/900000);
+      if(slot===lastDeliverySlot)return;
+      lastDeliverySlot=slot;
+      if(!document.getElementById('power').hidden)renderPowerPrices();
+      else renderMarketPowerPulse();},60000);
+    setInterval(()=>{if(!document.hidden)refreshPowerDirect();},1800000);
+    setInterval(()=>{if(!document.hidden&&!document.getElementById('power').hidden)refreshRteDirect();},900000);
   </script>
 </body>
 </html>

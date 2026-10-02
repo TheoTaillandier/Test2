@@ -190,7 +190,7 @@ Cotton Bolls Opening - Selected States'''
                          'sendOut':'245.7','status':'C'},
                        {'code':'FR','gasDayStart':'2026-09-23','inventory':'455.2',
                          'sendOut':'203.7','status':'C'}]}
-        parsed_lng = parse_alsi(json.dumps(lng).encode(), 'fr')
+        parsed_lng = parse_alsi(json.dumps(lng).encode(), 'fr', date(2026, 9, 25))
         gas = {item['id']: item for item in parsed_lng['metrics']}
         self.assertEqual(gas['lng_fr_inventory']['unit'], '10³ m³ GNL')
         self.assertEqual(gas['lng_fr_sendout']['change'], 42)
